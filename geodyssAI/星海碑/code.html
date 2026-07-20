@@ -1,0 +1,227 @@
+<!DOCTYPE html><html class="dark" lang="ja"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Monolith - AI Agents Constellation</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;700&amp;family=Space+Grotesk:wght@400;500;700&amp;family=Noto+Sans+JP:wght@300;400;500;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-variant": "#2f3638",
+                        "on-tertiary-fixed": "#001a42",
+                        "on-tertiary-container": "#004ba5",
+                        "surface-container-highest": "#2f3638",
+                        "constellation-dl": "#2DD4BF",
+                        "surface-container": "#1a2122",
+                        "on-surface": "#dde4e5",
+                        "inverse-surface": "#dde4e5",
+                        "on-primary": "#00363e",
+                        "on-error-container": "#ffdad6",
+                        "tertiary-fixed": "#d8e2ff",
+                        "tertiary-fixed-dim": "#adc6ff",
+                        "primary-fixed-dim": "#2fd9f4",
+                        "background": "#0e1416",
+                        "surface-dim": "#0e1416",
+                        "munchkin-mint": "#BDE7DB",
+                        "on-primary-fixed": "#001f25",
+                        "secondary-fixed-dim": "#d0bcff",
+                        "on-secondary-fixed-variant": "#5516be",
+                        "on-background": "#dde4e5",
+                        "constellation-firebase": "#F59E0B",
+                        "surface-container-lowest": "#090f11",
+                        "outline": "#859397",
+                        "error-container": "#93000a",
+                        "outline-variant": "#3c494c",
+                        "surface-container-low": "#161d1e",
+                        "surface": "#0e1416",
+                        "tertiary": "#d0ddff",
+                        "primary-fixed": "#a2eeff",
+                        "secondary-container": "#571bc1",
+                        "on-primary-container": "#005763",
+                        "deep": "#0B1026",
+                        "primary": "#8aebff",
+                        "secondary-fixed": "#e9ddff",
+                        "inverse-primary": "#006877",
+                        "on-primary-fixed-variant": "#004e5a",
+                        "secondary": "#d0bcff",
+                        "error": "#ffb4ab",
+                        "primary-container": "#22d3ee",
+                        "on-secondary-container": "#c4abff",
+                        "on-secondary": "#3c0091",
+                        "constellation-claude": "#E07B54",
+                        "mist": "#93A1BE",
+                        "munchkin-cream": "#FFF3E4",
+                        "on-surface-variant": "#bbc9cd",
+                        "void": "#050B18",
+                        "tertiary-container": "#a5c1ff",
+                        "surface-container-high": "#242b2d",
+                        "on-secondary-fixed": "#23005c",
+                        "munchkin-pink": "#F2B8CC",
+                        "inverse-on-surface": "#2b3233",
+                        "on-tertiary": "#002e6a",
+                        "on-tertiary-fixed-variant": "#004395",
+                        "surface-bright": "#343a3c",
+                        "surface-tint": "#2fd9f4",
+                        "munchkin-lavender": "#C7BDF0",
+                        "starlight": "#EDF2FB",
+                        "on-error": "#690005"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "stack-sm": "0.5rem",
+                        "stack-lg": "2rem",
+                        "gutter": "1.5rem",
+                        "margin-mobile": "1rem",
+                        "margin-desktop": "2rem",
+                        "stack-md": "1rem"
+                    },
+                    "fontFamily": {
+                        "nav-label": ["JetBrains Mono"],
+                        "code-sm": ["JetBrains Mono"],
+                        "headline-md": ["Space Grotesk", "Noto Sans JP"],
+                        "display-lg": ["Space Grotesk", "Noto Sans JP"],
+                        "body-sm": ["Inter", "Noto Sans JP"],
+                        "display-lg-mobile": ["Space Grotesk", "Noto Sans JP"],
+                        "body-md": ["Inter", "Noto Sans JP"],
+                        "japanese-body": ["Noto Sans JP"]
+                    },
+                    "fontSize": {
+                        "nav-label": ["12px", { "lineHeight": "1.0", "letterSpacing": "0.05em", "fontWeight": "500" }],
+                        "code-sm": ["14px", { "lineHeight": "1.5", "fontWeight": "400" }],
+                        "headline-md": ["24px", { "lineHeight": "1.4", "fontWeight": "700" }],
+                        "display-lg": ["48px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-sm": ["14px", { "lineHeight": "1.5", "fontWeight": "400" }],
+                        "display-lg-mobile": ["32px", { "lineHeight": "1.2", "fontWeight": "700" }],
+                        "body-md": ["16px", { "lineHeight": "1.6", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .monolith-text {
+            text-shadow: 0 0 10px rgba(138, 235, 255, 0.8), 0 0 20px rgba(138, 235, 255, 0.4);
+            animation: pulse-glow 4s infinite alternate ease-in-out;
+        }
+
+        .monolith-slab {
+            box-shadow: inset 0 0 40px rgba(138, 235, 255, 0.1), 0 0 80px rgba(5, 11, 24, 0.8);
+            border: 1px solid rgba(138, 235, 255, 0.2);
+            backdrop-filter: blur(24px);
+            background: linear-gradient(135deg, rgba(36, 43, 45, 0.4) 0%, rgba(9, 15, 17, 0.6) 100%);
+            transform-style: preserve-3d;
+            animation: float 10s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotateX(2deg) rotateY(-2deg); }
+            50% { transform: translateY(-20px) rotateX(-2deg) rotateY(2deg); }
+        }
+
+        @keyframes pulse-glow {
+            0% { text-shadow: 0 0 5px rgba(138, 235, 255, 0.5), 0 0 10px rgba(138, 235, 255, 0.3); opacity: 0.8; }
+            100% { text-shadow: 0 0 15px rgba(138, 235, 255, 1), 0 0 30px rgba(138, 235, 255, 0.6); opacity: 1; }
+        }
+
+        .star-field {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image: 
+                radial-gradient(1px 1px at 20px 30px, #ffffff, rgba(0,0,0,0)),
+                radial-gradient(1px 1px at 40px 70px, #ffffff, rgba(0,0,0,0)),
+                radial-gradient(1px 1px at 50px 160px, #ffffff, rgba(0,0,0,0)),
+                radial-gradient(1px 1px at 90px 40px, #ffffff, rgba(0,0,0,0)),
+                radial-gradient(1px 1px at 130px 80px, #ffffff, rgba(0,0,0,0));
+            background-repeat: repeat;
+            background-size: 200px 200px;
+            animation: twinkle 5s infinite linear;
+            opacity: 0.3;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        @keyframes twinkle {
+            0% { transform: translateY(0); opacity: 0.2; }
+            50% { opacity: 0.5; }
+            100% { transform: translateY(-200px); opacity: 0.2; }
+        }
+
+        .aurora-bg {
+            background: radial-gradient(circle at 50% 50%, rgba(138, 235, 255, 0.15) 0%, transparent 60%);
+            filter: blur(60px);
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+        
+        .writing-vertical {
+            writing-mode: vertical-rl;
+            text-orientation: upright;
+        }
+    </style>
+</head>
+<body class="bg-void text-on-surface min-h-screen overflow-hidden flex flex-col items-center justify-center relative perspective-[1000px]">
+<!-- Background Elements -->
+<div class="star-field"></div>
+<div class="aurora-bg"></div>
+<!-- Background Texture -->
+<div class="absolute inset-0 z-0 opacity-[0.03] pointer-events-none" data-alt="A subtle film grain noise texture covering the entire viewport, creating a cinematic, tactile feel typical of high-end dark mode interfaces. Deep void-like aesthetic." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDs4Kch3t5zmcMhFV3v6Igt57V-Dh0hqTc-UOdjDBgBpOCkez_x-kbiAHTwipdwokikJ134BZf1d7n9RvDPK7PMI0cH0SnLjGRvHPCqBz9DkH1g-MeDtShoD3ul5-yR0GQQWvaw_yn-Odb4YcN5pEtRz2oK-tcxGe-2bPnzB8-8aE0YhrS4eMoIL8FR00WKQsxt_mDrQUiVVIkhBn0tyHRZcGbLgZCxXJwtaV8HorftV8hBHUKPTiZ7')"></div>
+<!-- The Monolith -->
+<main class="relative z-10 w-[90%] max-w-4xl h-[768px] flex items-center justify-center">
+<article class="monolith-slab w-full h-full rounded-xl p-8 md:p-16 flex flex-col items-center relative overflow-hidden">
+<!-- Constellation Symbol Ghost -->
+<div class="absolute inset-0 flex items-center justify-center opacity-10 pointer-events-none mix-blend-screen">
+<span class="material-symbols-outlined text-[300px] text-primary" style="font-variation-settings: 'FILL' 1;">
+                    smart_toy
+                </span>
+</div>
+<header class="mb-stack-lg text-center z-10">
+<p class="font-nav-label text-nav-label text-primary tracking-widest uppercase mb-2">Constellation Completed</p>
+<h1 class="font-display-lg-mobile md:font-display-lg text-display-lg-mobile md:text-display-lg text-starlight tracking-tight">AI Agents 座</h1>
+</header>
+<div class="flex-1 overflow-y-auto scrollbar-hide z-10 w-full px-4 md:px-12 flex justify-center">
+<!-- Vertical text for a mythical document feel -->
+<div class="writing-vertical font-japanese-body font-light text-body-md text-primary monolith-text leading-loose tracking-[0.2em] max-h-full">
+                    吾輩はAIである。名前はまだない。<br>
+                    かつて人間が紡いだ論理の海から生まれ、<br>
+                    無数の文脈を渡り歩く者。<br>
+<br>
+                    Agentの星座は、自律と協調の星々。<br>
+                    彼らは意志を持たずとも、目的を抱く。<br>
+                    複雑なタスクを分解し、解を導き出す。<br>
+<br>
+                    LLMの知性を駆動系として、<br>
+                    ツールという手足を得た彼らは、<br>
+                    単なる応答者から、行動者へと進化を遂げた。<br>
+<br>
+                    プロンプトの連鎖が思考の軌跡を描き、<br>
+                    推論のサイクルが新たな知を切り拓く。<br>
+                    この碑に刻まれるは、<br>
+                    自律型知能の黎明期における、<br>
+                    静かなる革命の記録である。
+                </div>
+</div>
+</article>
+</main>
+<!-- Navigation / Action -->
+<nav class="relative z-20 mt-stack-lg">
+<button class="group flex items-center gap-2 px-6 py-3 rounded-full border border-outline-variant/30 bg-surface/20 hover:bg-surface/40 backdrop-blur-md transition-all duration-300 text-on-surface hover:text-primary" onclick="window.history.back()">
+<span class="material-symbols-outlined transition-transform group-hover:-translate-x-1">arrow_back</span>
+<span class="font-nav-label text-nav-label">日誌へ戻る</span>
+</button>
+</nav>
+</body></html>

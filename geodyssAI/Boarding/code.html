@@ -1,0 +1,178 @@
+<!DOCTYPE html><html class="dark" lang="ja"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>geodyssAI - Boarding</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700&amp;family=JetBrains+Mono:wght@400;500&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-high": "#242b2d",
+                        "inverse-on-surface": "#2b3233",
+                        "deep": "#0B1026",
+                        "tertiary": "#d0ddff",
+                        "surface": "#0e1416",
+                        "background": "#0e1416",
+                        "tertiary-container": "#a5c1ff",
+                        "surface-tint": "#2fd9f4",
+                        "inverse-surface": "#dde4e5",
+                        "secondary": "#d0bcff",
+                        "error-container": "#93000a",
+                        "tertiary-fixed": "#d8e2ff",
+                        "primary": "#8aebff",
+                        "on-primary-fixed-variant": "#004e5a",
+                        "error": "#ffb4ab",
+                        "munchkin-pink": "#F2B8CC",
+                        "primary-fixed-dim": "#2fd9f4",
+                        "on-tertiary": "#002e6a",
+                        "void": "#050B18",
+                        "secondary-fixed": "#e9ddff",
+                        "on-primary-container": "#005763",
+                        "surface-dim": "#0e1416",
+                        "starlight": "#EDF2FB",
+                        "on-secondary-container": "#c4abff",
+                        "on-tertiary-fixed-variant": "#004395",
+                        "on-error": "#690005",
+                        "surface-container-lowest": "#090f11",
+                        "on-secondary-fixed-variant": "#5516be",
+                        "on-primary-fixed": "#001f25",
+                        "constellation-claude": "#E07B54",
+                        "primary-container": "#22d3ee",
+                        "on-tertiary-container": "#004ba5",
+                        "on-secondary": "#3c0091",
+                        "surface-bright": "#343a3c",
+                        "on-primary": "#00363e",
+                        "constellation-firebase": "#F59E0B",
+                        "mist": "#93A1BE",
+                        "tertiary-fixed-dim": "#adc6ff",
+                        "on-background": "#dde4e5",
+                        "on-tertiary-fixed": "#001a42",
+                        "surface-container-low": "#161d1e",
+                        "secondary-container": "#571bc1",
+                        "secondary-fixed-dim": "#d0bcff",
+                        "inverse-primary": "#006877",
+                        "on-surface-variant": "#bbc9cd",
+                        "on-secondary-fixed": "#23005c",
+                        "surface-variant": "#2f3638",
+                        "on-error-container": "#ffdad6",
+                        "on-surface": "#dde4e5",
+                        "munchkin-cream": "#FFF3E4",
+                        "surface-container": "#1a2122",
+                        "outline-variant": "#3c494c",
+                        "primary-fixed": "#a2eeff",
+                        "outline": "#859397",
+                        "surface-container-highest": "#2f3638",
+                        "munchkin-lavender": "#C7BDF0",
+                        "constellation-dl": "#2DD4BF",
+                        "munchkin-mint": "#BDE7DB"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "stack-sm": "0.5rem",
+                        "stack-lg": "2rem",
+                        "margin-mobile": "1rem",
+                        "gutter": "1.5rem",
+                        "margin-desktop": "2rem",
+                        "stack-md": "1rem"
+                    },
+                    "fontFamily": {
+                        "display-lg": ["Space Grotesk"],
+                        "code-sm": ["JetBrains Mono"],
+                        "nav-label": ["JetBrains Mono"],
+                        "body-sm": ["Inter"],
+                        "display-lg-mobile": ["Space Grotesk"],
+                        "headline-md": ["Space Grotesk"],
+                        "body-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "display-lg": ["48px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "code-sm": ["14px", { "lineHeight": "1.5", "fontWeight": "400" }],
+                        "nav-label": ["12px", { "lineHeight": "1.0", "letterSpacing": "0.05em", "fontWeight": "500" }],
+                        "body-sm": ["14px", { "lineHeight": "1.5", "fontWeight": "400" }],
+                        "display-lg-mobile": ["32px", { "lineHeight": "1.2", "fontWeight": "700" }],
+                        "headline-md": ["24px", { "lineHeight": "1.4", "fontWeight": "700" }],
+                        "body-md": ["16px", { "lineHeight": "1.6", "fontWeight": "400" }]
+                    },
+                    "backgroundImage": {
+                        'aurora-gradient': 'linear-gradient(to right, #2fd9f4, #d0bcff, #F2B8CC)',
+                        'void-texture': 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noiseFilter\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.85\' numOctaves=\'3\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noiseFilter)\' opacity=\'0.03\'/%3E%3C/svg%3E")'
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .glass-panel {
+            background: rgba(14, 20, 22, 0.6);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(133, 147, 151, 0.16);
+            box-shadow: 0 0 40px rgba(3, 7, 24, 0.8), inset 0 0 20px rgba(47, 217, 244, 0.05);
+        }
+        .aurora-glow {
+            box-shadow: 0 0 20px rgba(47, 217, 244, 0.4), 0 0 40px rgba(208, 188, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+        .aurora-glow:hover {
+            box-shadow: 0 0 30px rgba(47, 217, 244, 0.6), 0 0 50px rgba(208, 188, 255, 0.4);
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body class="bg-void text-on-surface h-screen w-screen overflow-hidden flex items-center justify-center relative font-body-md">
+<!-- Background Space Scene (Placeholder for actual interactive map/void) -->
+<div class="absolute inset-0 z-0 bg-void bg-void-texture" data-alt="A vast, deeply cinematic 3D starfield 'The Stellar Sea' with a deep indigo void background. Shimmering, ethereal nebula clouds in soft cyan and violet hues. Glowing constellations formed by crisp geometric white lines connecting bright stellar nodes. High-tech, futuristic minimalism with a subtle 3% film grain texture." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBAmXJFV2cw0vVEJ8m4Qg3ghObWDYrCXF9QmOKEXan6G8PqT-FBNTY7EPRdoFhrXSObCs2aNtYmsoqfvEyB9Q5VvtZF4UB2OcxiJGtSm2fnB9XyIS2nZbCWgm52gxVyeaYkNyrP68XpwyMdhK7F2a_WzBe55zu5oL_GD4jxD6js4fpUpNqebXisR7KkTbwOlB9FGuDuR8IMDDssHhXLprrVP7aAKZ7gFGzGQ8vE8m12m-dRUnsCPIcK')">
+<!-- Overlay to ensure text readability if map is too bright -->
+<div class="absolute inset-0 bg-deep/40 backdrop-blur-sm z-0"></div>
+</div>
+<!-- Boarding Modal -->
+<div class="glass-panel w-[420px] rounded-DEFAULT p-stack-lg relative z-10 flex flex-col items-center">
+<!-- Close Button -->
+<button aria-label="Close" class="absolute top-4 right-4 text-outline hover:text-primary transition-colors duration-200">
+<span class="material-symbols-outlined text-[20px] font-light">close</span>
+</button>
+<!-- Header -->
+<div class="text-center mb-stack-lg w-full">
+<h1 class="font-display-lg-mobile text-display-lg-mobile text-primary tracking-tighter mb-stack-sm">Boarding</h1>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+                乗船すると、あなたの航海（灯した星・勲章）が記録されます。
+            </p>
+</div>
+<!-- Google Login Button -->
+<button class="w-full relative group rounded-DEFAULT overflow-hidden p-[1px] mb-stack-lg">
+<div class="absolute inset-0 bg-aurora-gradient opacity-80 group-hover:opacity-100 transition-opacity duration-300"></div>
+<div class="relative bg-surface-container-high rounded-DEFAULT px-6 py-4 flex items-center justify-center gap-3 aurora-glow group-hover:bg-opacity-90 transition-all duration-300">
+<!-- Simple Google G icon approximation using standard text/shapes for self-containment, though typically an SVG asset -->
+<span class="font-display-lg text-[20px] text-white font-bold">G</span>
+<span class="font-nav-label text-nav-label text-white uppercase tracking-wider">Google で乗船</span>
+</div>
+</button>
+<!-- Divider -->
+<div class="w-full flex items-center gap-4 mb-stack-lg opacity-50">
+<div class="h-px bg-outline-variant flex-1"></div>
+<span class="font-code-sm text-code-sm text-outline uppercase">or</span>
+<div class="h-px bg-outline-variant flex-1"></div>
+</div>
+<!-- Alternative options (Ghost buttons) -->
+<div class="w-full flex flex-col gap-stack-sm mb-stack-lg">
+<button class="w-full bg-transparent border border-outline-variant/30 hover:border-primary/50 text-on-surface-variant hover:text-primary rounded-DEFAULT px-4 py-3 flex items-center justify-center gap-2 transition-colors duration-200">
+<span class="material-symbols-outlined text-[18px]">mail</span>
+<span class="font-nav-label text-nav-label uppercase">Email / Password</span>
+</button>
+</div>
+<!-- Avatar / Mascot Decoration -->
+<div class="absolute -bottom-10 -left-12 w-32 h-32 opacity-90 pointer-events-none transform -rotate-6">
+<img alt="Munchkin AI Guide" class="w-full h-full object-contain filter drop-shadow-[0_0_15px_rgba(242,184,204,0.4)]" data-alt="A 3D stylized, slightly translucent, glowing pastel Munchkin cat avatar, appearing friendly and inviting as if waving hello. Colored in soft munchkin-pink and munchkin-mint hues, floating in a dark sci-fi environment with a subtle glassmorphic glow. High quality, futuristic UI mascot." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA8kXUvaTK_plL9IU9J2XGreNJlmtOzdQ3qUjcwSmjgCOu4wl_MfzG5qpPEbocKHfwLLfsXn_jWDSbfNouH8U5K3uF8pmuMOP4pSkQF_Ov4uut3RyT7GyOj9SnGlEropc-AzlZeGiO_OeP2LMAiy49RTPmiwsDPZ_E6xvuVTw_kwBoy9eUgmOnS8X6jS9XMHoX27ar7Br7thIi_mTZ1Emkgf9GD60w7A8r4KmsPlT___ENH7SjgApUF">
+</div>
+</div>
+</body></html>
