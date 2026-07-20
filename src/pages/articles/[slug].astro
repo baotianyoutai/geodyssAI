@@ -1,0 +1,283 @@
+---
+// src/pages/articles/[slug].astro
+import { getArticles } from '../../lib/firebase-server';
+import MunchkinSpeech from '../../components/MunchkinSpeech.astro';
+import InfoBox from '../../components/InfoBox.astro';
+import { marked } from 'marked';
+import '../../styles/global.css';
+
+// ビルド時に全記事の静的ルーティングパスを生成
+export async function getStaticPaths() {
+  const articles = await getArticles();
+  return articles.map(art => ({
+    params: { slug: decodeURIComponent(art.slug) },
+    props: { article: art, allArticles: articles }
+  }));
+}
+
+const { article, allArticles } = Astro.props;
+
+// コサイン近傍の3つの記事を取得 (StellarChart上で「光の糸」で結ばれている星々)
+const neighborArticles = article.neighbors
+  ? allArticles.filter(art => article.neighbors.includes(art.slug))
+  : [];
+
+// カスタムブロックタグ解析用のパーサーロジック
+// Markdown 中の <MunchkinSpeech> や <InfoBox> を検知し、Astroコンポーネントとしてサーバーサイドで分割レンダリングします
+interface Segment {
+  type: 'markdown' | 'speech' | 'infobox';
+  content: string;
+  props: Record<string, string>;
+}
+
+function parseAttributes(attrStr: string): Record<string, string> {
+  const attrs: Record<string, string> = {};
+  const regex = /(\w+)="([^"]*)"/g;
+  let match;
+  while ((match = regex.exec(attrStr)) !== null) {
+    attrs[match[1]] = match[2];
+  }
+  return attrs;
+}
+
+const segments: Segment[] = [];
+const contentMd = article.contentMd || '';
+// カスタムタグ検知用の正規表現 (MunchkinSpeech または InfoBox)
+const tagRegex = /<(MunchkinSpeech|InfoBox)([^>]*)>([\s\S]*?)<\/\1>/g;
+
+let lastIndex = 0;
+let match;
+
+while ((match = tagRegex.exec(contentMd)) !== null) {
+  const index = match.index;
+  const tagName = match[1];
+  const attrStr = match[2];
+  const tagContent = match[3];
+
+  // タグの前の通常のMarkdown部分をプッシュ
+  if (index > lastIndex) {
+    segments.push({
+      type: 'markdown',
+      content: contentMd.substring(lastIndex, index),
+      props: {}
+    });
+  }
+
+  // カスタムタグセグメントをプッシュ
+  segments.push({
+    type: tagName === 'MunchkinSpeech' ? 'speech' : 'infobox',
+    content: tagContent.trim(),
+    props: parseAttributes(attrStr)
+  });
+
+  lastIndex = tagRegex.lastIndex;
+}
+
+// 残りのMarkdown部分をプッシュ
+if (lastIndex < contentMd.length) {
+  segments.push({
+    type: 'markdown',
+    content: contentMd.substring(lastIndex),
+    props: {}
+  });
+}
+---
+
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width" />
+    <title>{article.title} — geodyssAI</title>
+    <meta name="description" content={article.excerpt} />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  </head>
+  <body class="bg-[#050B18] text-slate-100 font-body antialiased min-h-screen">
+    
+    <!-- 1. フローティングヘッダー (Glassmorphism) -->
+    <header class="sticky top-0 z-50 w-full bg-slate-950/70 border-b border-slate-800/80 backdrop-blur-md">
+      <div class="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
+        <a href="/" class="flex items-center gap-2 text-xs font-mono text-primary font-bold tracking-wider hover:text-white transition-colors duration-200">
+          <span>←</span>
+          <span>STELLAR CHART (星海図へ戻る)</span>
+        </a>
+        <div class="text-xs font-mono text-slate-400">
+          Voyage ID: <span class="text-secondary">{article.slug}</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-6 py-12 grid grid-cols-1 lg:grid-cols-3 gap-12">
+      
+      {/* 2. 本文コンテンツエリア (2/3幅) */}
+      <article class="lg:col-span-2 space-y-8">
+        
+        {/* メタ情報 */}
+        <header class="space-y-4">
+          <div class="flex items-center gap-2">
+            <span class="px-2.5 py-0.5 rounded text-[10px] font-bold font-mono tracking-wider text-slate-950 bg-primary">
+              {article.category.toUpperCase()}
+            </span>
+            <span class="text-xs text-slate-500 font-mono">
+              Difficulty: <span class="text-sky-400">{'✦'.repeat(article.difficulty)}</span>
+            </span>
+          </div>
+          
+          <h1 class="text-3xl sm:text-4xl font-display font-bold leading-tight text-white">
+            {article.title}
+          </h1>
+
+          <div class="flex items-center gap-4 text-xs font-mono text-slate-400 border-b border-slate-800/60 pb-6">
+            <span>Reading: {article.readingTime} min</span>
+            {article.tags && article.tags.length > 0 && (
+              <div class="flex gap-1.5 overflow-hidden">
+                {article.tags.map((t: string) => <span class="text-indigo-400">#{t}</span>)}
+              </div>
+            )}
+          </div>
+        </header>
+
+        {/* 記事詳細 Markdown レンダリング部分 */}
+        <div class="prose prose-invert max-w-none text-slate-300 leading-relaxed space-y-6 text-[15px] sm:text-base">
+          {segments.map((seg) => {
+            if (seg.type === 'markdown') {
+              // marked を使用して Markdown を HTML にコンパイル
+              return <div class="markdown-body" set:html={marked.parse(seg.content)} />;
+            } else if (seg.type === 'speech') {
+              return (
+                <MunchkinSpeech name={seg.props.name} icon={seg.props.icon}>
+                  {seg.content}
+                </MunchkinSpeech>
+              );
+            } else if (seg.type === 'infobox') {
+              return (
+                <InfoBox kind={seg.props.kind as any} title={seg.props.title}>
+                  {seg.content}
+                </InfoBox>
+              );
+            }
+          })}
+        </div>
+
+      </article>
+
+      {/* 3. サイドバー情報エリア (1/3幅) */}
+      <aside class="lg:col-span-1 space-y-8">
+        
+        {/* 近傍星のリンク表示 (光の糸) */}
+        <div class="p-6 bg-slate-950/40 border border-slate-800/60 rounded-xl backdrop-blur-sm space-y-4">
+          <h2 class="text-xs font-mono font-bold text-slate-400 tracking-wider border-b border-slate-800/60 pb-2">
+            THREADS OF LIGHT (関連する星)
+          </h2>
+          {neighborArticles.length > 0 ? (
+            <div class="space-y-4">
+              {neighborArticles.map(art => (
+                <a href={`/articles/${decodeURIComponent(art.slug)}`} class="block group space-y-2 p-3 rounded-lg hover:bg-slate-900/40 border border-transparent hover:border-slate-800/60 transition-all duration-200">
+                  <div class="flex items-center gap-2">
+                    <span class="w-1.5 h-1.5 rounded-full bg-primary group-hover:animate-ping" />
+                    <span class="text-[10px] font-mono text-slate-500 uppercase">{art.category}</span>
+                  </div>
+                  <h3 class="text-sm font-bold text-slate-200 group-hover:text-primary transition-colors duration-200 line-clamp-2">
+                    {art.title}
+                  </h3>
+                </a>
+              ))}
+            </div>
+          ) : (
+            <p class="text-xs text-slate-500 italic">No connected stars found.</p>
+          )}
+        </div>
+
+        {/* ナビゲーションガイド */}
+        <div class="p-6 bg-slate-950/30 border border-slate-800/40 rounded-xl text-xs text-slate-400 space-y-3 leading-relaxed">
+          <p>
+            <span class="font-bold text-secondary">Lighthouse (灯台)</span><br />
+            各記事は星海図の座標空間を照らす灯台として機能します。難易度が高い記事ほど深海アビスの底に位置しています。
+          </p>
+        </div>
+
+      </aside>
+
+    </main>
+
+    <footer class="border-t border-slate-800/40 mt-20 py-8 bg-slate-950/20 text-center text-xs font-mono text-slate-500">
+      © 2026 geodyssAI. Built on Astro & React Three Fiber.
+    </footer>
+  </body>
+</html>
+
+<style is:global>
+  /* Markdown のタイポグラフィとマークアップ微調整 */
+  .markdown-body h2 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #ffffff;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    border-left: 3px solid var(--color-primary);
+    padding-left: 0.75rem;
+  }
+  .markdown-body h3 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #ffffff;
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+  }
+  .markdown-body p {
+    margin-bottom: 1.25rem;
+    line-height: 1.7;
+  }
+  .markdown-body ul, .markdown-body ol {
+    margin-bottom: 1.25rem;
+    padding-left: 1.5rem;
+    list-style-type: disc;
+  }
+  .markdown-body li {
+    margin-bottom: 0.5rem;
+  }
+  .markdown-body a {
+    color: var(--color-primary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .markdown-body a:hover {
+    color: #ffffff;
+  }
+  .markdown-body code {
+    font-family: 'JetBrains Mono', monospace;
+    background-color: var(--color-surface-container-high);
+    padding: 0.2rem 0.4rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.9em;
+    color: var(--color-secondary-container);
+  }
+  .markdown-body pre {
+    background-color: var(--color-surface-container-lowest);
+    border: 1px border-slate-800/80;
+    padding: 1rem;
+    border-radius: var(--radius-md);
+    overflow-x: auto;
+    margin-bottom: 1.25rem;
+  }
+  .markdown-body pre code {
+    background-color: transparent;
+    padding: 0;
+    color: #e2e8f0;
+    font-size: 0.85rem;
+  }
+  .markdown-body blockquote {
+    border-left: 4px solid var(--color-secondary);
+    padding-left: 1rem;
+    margin-left: 0;
+    margin-bottom: 1.25rem;
+    color: var(--color-on-surface-variant);
+    font-style: italic;
+  }
+</style>
