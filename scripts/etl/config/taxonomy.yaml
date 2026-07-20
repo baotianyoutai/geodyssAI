@@ -1,0 +1,46 @@
+# 7 星座（海域）の定義
+# Antigravity の ETL スクリプトがここを読み、記事を自動分類する
+# 分類後はオーナーが review-list.md と照合して最終確認する
+
+constellations:
+  genai-foundations:
+    label: GenAI 基礎
+    label_ja: GenAI 基礎座
+    color: "#3B82F6"
+    keywords: [RAG, Embedding, ChromaDB, Gemini, ベクトル, 類似度]
+
+  ai-agents:
+    label: AI Agents
+    label_ja: AI Agents 座
+    color: "#8B5CF6"
+    keywords: [ADK, MCP, Antigravity, エージェント, Agent, Agentic]
+
+  firebase-cloud:
+    label: Firebase & Cloud
+    label_ja: Firebase 座
+    color: "#F59E0B"
+    keywords: [Firebase, Firestore, Cloud Run, App Check, AI Logic, GCP]
+
+  claude:
+    label: Claude
+    label_ja: Claude 座
+    color: "#E07B54"
+    keywords: [Claude, Anthropic, claude.ai]
+
+  deep-learning:
+    label: Deep Learning
+    label_ja: Deep Learning 座
+    color: "#2DD4BF"
+    keywords: [深層学習, Deep Learning, LLM, ニューラルネットワーク, PyTorch]
+
+  logical-thinking:
+    label: Logical Thinking
+    label_ja: Logical Thinking 座
+    color: "#F2B8CC"
+    keywords: [フェルミ推定, ケース面接, ロジカルシンキング, コンサル, 経営]
+
+  design-tools:
+    label: Design & Tools
+    label_ja: Design 座
+    color: "#7DD3C0"
+    keywords: [Stitch, デザインスプリント, PowerPoint, Design, UI, UX]

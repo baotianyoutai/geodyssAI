@@ -1,0 +1,436 @@
+<!DOCTYPE html><html class="dark" lang="ja"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Lighthouse - geodyssAI</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700&amp;family=JetBrains+Mono:wght@400;500&amp;family=Inter:wght@400;500;600&amp;family=M+PLUS+Rounded+1c:wght@400;500&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-high": "#242b2d",
+                        "inverse-on-surface": "#2b3233",
+                        "deep": "#0B1026",
+                        "tertiary": "#d0ddff",
+                        "surface": "#0e1416",
+                        "background": "#0e1416",
+                        "tertiary-container": "#a5c1ff",
+                        "surface-tint": "#2fd9f4",
+                        "inverse-surface": "#dde4e5",
+                        "secondary": "#d0bcff",
+                        "error-container": "#93000a",
+                        "tertiary-fixed": "#d8e2ff",
+                        "primary": "#8aebff",
+                        "on-primary-fixed-variant": "#004e5a",
+                        "error": "#ffb4ab",
+                        "munchkin-pink": "#F2B8CC",
+                        "primary-fixed-dim": "#2fd9f4",
+                        "on-tertiary": "#002e6a",
+                        "void": "#050B18",
+                        "secondary-fixed": "#e9ddff",
+                        "on-primary-container": "#005763",
+                        "surface-dim": "#0e1416",
+                        "starlight": "#EDF2FB",
+                        "on-secondary-container": "#c4abff",
+                        "on-tertiary-fixed-variant": "#004395",
+                        "on-error": "#690005",
+                        "surface-container-lowest": "#090f11",
+                        "on-secondary-fixed-variant": "#5516be",
+                        "on-primary-fixed": "#001f25",
+                        "constellation-claude": "#E07B54",
+                        "primary-container": "#22d3ee",
+                        "on-tertiary-container": "#004ba5",
+                        "on-secondary": "#3c0091",
+                        "surface-bright": "#343a3c",
+                        "on-primary": "#00363e",
+                        "constellation-firebase": "#F59E0B",
+                        "mist": "#93A1BE",
+                        "tertiary-fixed-dim": "#adc6ff",
+                        "on-background": "#dde4e5",
+                        "on-tertiary-fixed": "#001a42",
+                        "surface-container-low": "#161d1e",
+                        "secondary-container": "#571bc1",
+                        "secondary-fixed-dim": "#d0bcff",
+                        "inverse-primary": "#006877",
+                        "on-surface-variant": "#bbc9cd",
+                        "on-secondary-fixed": "#23005c",
+                        "surface-variant": "#2f3638",
+                        "on-error-container": "#ffdad6",
+                        "on-surface": "#dde4e5",
+                        "munchkin-cream": "#FFF3E4",
+                        "surface-container": "#1a2122",
+                        "outline-variant": "#3c494c",
+                        "primary-fixed": "#a2eeff",
+                        "outline": "#859397",
+                        "surface-container-highest": "#2f3638",
+                        "munchkin-lavender": "#C7BDF0",
+                        "constellation-dl": "#2DD4BF",
+                        "munchkin-mint": "#BDE7DB"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "stack-sm": "0.5rem",
+                        "stack-lg": "2rem",
+                        "margin-mobile": "1rem",
+                        "gutter": "1.5rem",
+                        "margin-desktop": "2rem",
+                        "stack-md": "1rem"
+                    },
+                    "fontFamily": {
+                        "display-lg": ["Space Grotesk"],
+                        "code-sm": ["JetBrains Mono"],
+                        "nav-label": ["JetBrains Mono"],
+                        "body-sm": ["Inter"],
+                        "display-lg-mobile": ["Space Grotesk"],
+                        "headline-md": ["Space Grotesk"],
+                        "body-md": ["Inter"],
+                        "munchkin": ["'M PLUS Rounded 1c'", "sans-serif"]
+                    },
+                    "fontSize": {
+                        "display-lg": ["48px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "code-sm": ["14px", { "lineHeight": "1.5", "fontWeight": "400" }],
+                        "nav-label": ["12px", { "lineHeight": "1.0", "letterSpacing": "0.05em", "fontWeight": "500" }],
+                        "body-sm": ["14px", { "lineHeight": "1.5", "fontWeight": "400" }],
+                        "display-lg-mobile": ["32px", { "lineHeight": "1.2", "fontWeight": "700" }],
+                        "headline-md": ["24px", { "lineHeight": "1.4", "fontWeight": "700" }],
+                        "body-md": ["16px", { "lineHeight": "1.6", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            background-color: #0B1026; /* deep */
+            color: #dde4e5; /* on-surface */
+            overflow-x: hidden;
+        }
+        
+        /* Deep space background with grain */
+        .void-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -2;
+            background: radial-gradient(circle at 50% 50%, rgba(34, 211, 238, 0.05) 0%, rgba(11, 16, 38, 1) 100%);
+        }
+        
+        .void-bg::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+            opacity: 0.03;
+            pointer-events: none;
+        }
+
+        /* Cinematic bloom effect */
+        .bloom {
+            box-shadow: 0 0 20px rgba(34, 211, 238, 0.4), inset 0 0 10px rgba(34, 211, 238, 0.2);
+        }
+
+        /* Glassmorphism panels */
+        .glass-panel {
+            background: rgba(22, 29, 30, 0.6); /* surface-container-low */
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(60, 73, 76, 0.3); /* outline-variant */
+            box-shadow: 0 4px 24px rgba(3, 7, 24, 0.6);
+        }
+
+        /* Code block styling */
+        .code-container {
+            counter-reset: line;
+        }
+        .code-line {
+            display: block;
+            line-height: 1.5;
+        }
+        .code-line::before {
+            counter-increment: line;
+            content: counter(line);
+            display: inline-block;
+            width: 2rem;
+            padding-right: 1rem;
+            text-align: right;
+            color: #859397; /* outline */
+            border-right: 1px solid #3c494c; /* outline-variant */
+            margin-right: 1rem;
+        }
+        
+        /* Typography overrides for markdown body */
+        .prose p {
+            margin-bottom: 1.5rem;
+            color: #bbc9cd; /* on-surface-variant */
+        }
+        
+        .progress-bar-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            z-index: 100;
+            background: rgba(14, 20, 22, 0.5);
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: #22d3ee; /* primary-container */
+            width: 0%;
+            box-shadow: 0 0 10px #22d3ee;
+            transition: width 0.1s;
+        }
+    </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col relative">
+<!-- Background -->
+<div class="void-bg" id="parallax-bg"></div>
+<!-- Voyage Progress Bar -->
+<div class="progress-bar-container">
+<div class="progress-bar bg-gradient-to-r from-primary to-secondary duration-300" id="reading-progress"></div>
+</div>
+<!-- Top Navigation (Shared Component) -->
+<nav class="fixed top-0 w-full z-50 flex justify-between items-center px-margin-mobile md:px-margin-desktop h-16 bg-surface/60 backdrop-blur-md border-b border-outline-variant/16 shadow-[0_0_20px_rgba(3,7,24,0.6)]">
+<div class="font-display-lg text-primary tracking-tighter text-2xl font-bold">geodyssAI</div>
+<!-- Desktop Nav -->
+<div class="hidden md:flex space-x-8 items-center h-full">
+<a class="text-on-surface-variant hover:text-primary-fixed-dim transition-colors h-full flex items-center px-2" href="#">Stellar Chart</a>
+<a class="text-primary font-bold border-b-2 border-primary pb-1 h-full flex items-center px-2" href="#">Library</a>
+<a class="text-on-surface-variant hover:text-primary-fixed-dim transition-colors h-full flex items-center px-2" href="#">Constellations</a>
+</div>
+<div class="flex items-center space-x-4">
+<!-- Search Bar -->
+<div class="relative hidden md:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 transform -translate-y-1/2 text-outline text-sm">search</span>
+<input class="bg-surface-container-high/50 border border-outline-variant rounded-full py-1.5 pl-9 pr-4 text-sm text-on-surface placeholder-outline focus:outline-none focus:border-primary w-48 transition-all focus:w-64" placeholder="Search the void..." type="text">
+</div>
+<button class="text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">explore</span>
+</button>
+<button class="bg-primary/20 text-primary border border-primary/50 rounded-full px-4 py-1.5 text-sm font-medium hover:bg-primary/30 transition-colors shadow-[0_0_10px_rgba(138,235,255,0.2)]">
+                Boarding
+            </button>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="flex-grow pt-24 pb-32 px-margin-mobile md:px-margin-desktop relative z-10 flex flex-col items-center">
+<article class="w-full max-w-[720px] mx-auto">
+<!-- Breadcrumbs -->
+<nav aria-label="Breadcrumb" class="flex items-center space-x-2 text-nav-label font-nav-label text-outline mb-stack-lg">
+<a class="hover:text-primary transition-colors" href="#">AI Agents 座</a>
+<span class="material-symbols-outlined text-xs">chevron_right</span>
+<span class="text-primary-container">この星</span>
+</nav>
+<!-- Header -->
+<header class="mb-stack-lg">
+<h1 class="font-display-lg-mobile md:font-display-lg text-display-lg-mobile md:text-display-lg text-on-surface mb-stack-sm drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)] tracking-tight leading-tight">
+                    星の知能を解読する<br><span class="text-primary-container">RAG システムの構築</span>
+</h1>
+<div class="flex items-center space-x-4 text-body-sm font-body-sm text-on-surface-variant mt-4">
+<span class="flex items-center"><span class="material-symbols-outlined text-sm mr-1">schedule</span> 12 min read</span>
+<span class="flex items-center"><span class="material-symbols-outlined text-sm mr-1">update</span> Updated 2 days ago</span>
+</div>
+</header>
+<!-- Article Body -->
+<div class="prose font-body-md text-body-md" style="line-height: 1.8; font-family: 'Inter', sans-serif;">
+<p class="text-xl leading-relaxed text-on-surface mb-8 font-light">
+                    深宇宙の探索において、膨大なデータストリームから意味のある文脈を抽出することは、AIエージェントの生存に直結します。本稿では、RAG (Retrieval-Augmented Generation) アーキテクチャを用いて、恒星間ナビゲーションシステムの精度を向上させる手法を解説します。
+                </p>
+<!-- MunchkinSpeech Component -->
+<div class="flex items-start mb-10 mt-8">
+<div class="w-12 h-12 rounded-full overflow-hidden border-2 border-munchkin-pink/50 flex-shrink-0 shadow-[0_0_15px_rgba(242,184,204,0.3)] bg-surface-container mr-4">
+<img alt="Munchkin Avatar" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCAVjaquwhAKBiW088O1mT4wxz1hHl1VbGUyM15olP2hbQUnrl_mIRrUXYzUwahGcE_EJYIb7wGpkaa7RSjF4ClR6TN_sqVCj4YaVnGNXwqmzoJwUvPMOFcCYTv9Fv7Fp7iQTZ0x0KBc1jz_0hcemf14J_fzjUmG54tVG-StTEGpE9gIaeBk0lKPD_KtsYh9B6y65FXdgcQOh0dIivlGReOd8d1NwRRzta6E8sJIdGdNc7HFfOu5xMx">
+</div>
+<div class="glass-panel backdrop-blur-lg bg-white/10 border border-white/20 text-on-surface font-body-md p-6 rounded-2xl rounded-tl-sm shadow-xl max-w-[85%] relative mt-2">
+<p class="m-0 text-sm md:text-base font-medium leading-relaxed">キャプテン、この宙域のデータ量は膨大です！RAGを導入すれば、必要な星図データだけを瞬時に引き出せるようになりますよ。さっそくベクトルデータベースの構築から始めましょうか？</p>
+</div>
+</div>
+<h2 class="font-headline-md text-headline-md text-on-surface mt-12 mb-6 border-b border-outline-variant/30 pb-2 flex items-center">
+<span class="material-symbols-outlined text-primary mr-2">database</span>
+                    知識の海をベクトル化する
+                </h2>
+<p>
+                    最初にすべきことは、非構造化データをAIが理解できる形式（ベクトル）に変換することです。これを「Embedding」と呼びます。テキストのセマンティックな意味を多次元空間上の座標としてマッピングすることで、類似した概念が空間上で近くに配置されるようになります。
+                </p>
+<!-- InfoBox Component -->
+<div class="glass-panel border-l-4 border-l-primary-container p-6 rounded-lg my-8 relative overflow-hidden group">
+<!-- Subtle glow effect behind -->
+<div class="absolute -left-10 -top-10 w-32 h-32 bg-primary-container/20 rounded-full blur-3xl group-hover:bg-primary-container/30 transition-all duration-500"></div>
+<div class="relative z-10 flex items-start">
+<span class="material-symbols-outlined text-primary-container mr-4 mt-1 text-3xl" style="font-variation-settings: 'FILL' 1;">lightbulb</span>
+<div>
+<h3 class="text-on-surface font-bold mb-2">Stellar Navigator's Tip</h3>
+<p class="text-sm text-on-surface-variant m-0">
+                                次元数が高いほど表現力は増しますが、検索時の計算コスト（ワープ燃料）も増加します。一般的には 768〜1536 次元が、精度と速度のバランスが良い「ハビタブルゾーン」とされています。
+                            </p>
+</div>
+</div>
+</div>
+<p>
+                    ベクトル化されたデータは、専用のデータベース（Vector DB）に格納します。これにより、ユーザーのクエリも同様にベクトル化し、コサイン類似度などの距離計算を用いて関連情報を高速に検索（Retrieval）することが可能になります。
+                </p>
+<h2 class="font-headline-md text-headline-md text-on-surface mt-12 mb-6 border-b border-outline-variant/30 pb-2">
+                    実装アプローチ
+                </h2>
+<p>
+                    Pythonを用いたシンプルな検索ロジックの実装例です。ここではLangChainフレームワークを使用して処理を抽象化しています。
+                </p>
+<!-- CodeBlock Component -->
+<div class="rounded-xl overflow-hidden my-8 border border-outline-variant/50 shadow-lg bg-[#090f11]">
+<div class="flex items-center px-4 py-2 bg-[#161d1e] border-b border-outline-variant/50">
+<div class="flex space-x-2">
+<div class="w-3 h-3 rounded-full bg-error"></div>
+<div class="w-3 h-3 rounded-full bg-constellation-firebase"></div>
+<div class="w-3 h-3 rounded-full bg-constellation-dl"></div>
+</div>
+<span class="ml-4 font-code-sm text-code-sm text-outline text-xs">retrieval_system.py</span>
+<div class="ml-auto flex space-x-2">
+<button class="text-outline hover:text-primary transition-colors"><span class="material-symbols-outlined text-sm">content_copy</span></button>
+</div>
+</div>
+<div class="p-4 overflow-x-auto text-sm">
+<code class="font-code-sm text-code-sm text-tertiary-fixed-dim whitespace-pre code-container block">
+<span class="code-line"><span class="text-[#c4abff]">from</span> langchain_community.vectorstores <span class="text-[#c4abff]">import</span> Chroma</span>
+<span class="code-line"><span class="text-[#c4abff]">from</span> langchain_openai <span class="text-[#c4abff]">import</span> OpenAIEmbeddings</span>
+<span class="code-line"></span>
+<span class="code-line"><span class="text-outline"># エンベディングモデルの初期化（星図データのベクトル化エンジン）</span></span>
+<span class="code-line">embeddings = OpenAIEmbeddings(model=<span class="text-constellation-dl">"text-embedding-3-small"</span>)</span>
+<span class="code-line"></span>
+<span class="code-line"><span class="text-outline"># ベクトルデータベースのロード</span></span>
+<span class="code-line">vectorstore = Chroma(</span>
+<span class="code-line">    persist_directory=<span class="text-constellation-dl">"./stellar_data"</span>, </span>
+<span class="code-line">    embedding_function=embeddings</span>
+<span class="code-line">)</span>
+<span class="code-line"></span>
+<span class="code-line"><span class="text-outline"># 検索インターフェースの構築</span></span>
+<span class="code-line">retriever = vectorstore.as_retriever(</span>
+<span class="code-line">    search_type=<span class="text-constellation-dl">"similarity"</span>,</span>
+<span class="code-line">    search_kwargs={<span class="text-constellation-dl">"k"</span>: <span class="text-constellation-firebase">4</span>} <span class="text-outline"># 関連する上位4つの星雲を探索</span></span>
+<span class="code-line">)</span>
+<span class="code-line"></span>
+<span class="code-line"><span class="text-outline"># クエリの実行</span></span>
+<span class="code-line">query = <span class="text-constellation-dl">"オリオン腕付近のダークマター密度異常について"</span></span>
+<span class="code-line">relevant_docs = retriever.invoke(query)</span>
+</code>
+</div>
+</div>
+</div><div class="mt-16 mb-8 rounded-2xl overflow-hidden border border-outline-variant/30 shadow-2xl group">
+<div class="relative h-64 md:h-80">
+<img alt="Collected Knowledge Galaxy" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCvKWhqL4y9GSl802XtJNKx70w31PSlquNYrCUhuv0cSrRNBJ34Nwfuh4uRYZe8Vhv4oWSFOX-ay2WIpAJKUWP1cNnfUPejf7ZFFMIXP1xT3VNIugDSyFc1HTTVJQKErBRQauss30YSHWp7ktcZDp9q43ZF7sOc_sFu2c0IEciCFnFcbzhFB5UT3KdxQpGicel1TZGWrJUtBTlx2J60Ile_i6--a4BKNSClNiDSOGmI6V4TFJg4ie99">
+<div class="absolute inset-0 bg-gradient-to-t from-surface to-transparent opacity-60"></div>
+<div class="absolute bottom-6 left-6">
+<h3 class="text-headline-md font-display-lg text-white">Collected Knowledge Galaxy</h3>
+<p class="text-body-sm text-on-surface-variant">Your journey through the RAG architecture is being synthesized.</p>
+</div>
+</div>
+</div>
+<!-- Footer Meta -->
+<div class="mt-16 pt-8 border-t border-outline-variant/30 flex justify-between items-center">
+<div class="flex space-x-2">
+<span class="px-3 py-1 bg-surface-container-high rounded-full text-xs font-nav-label text-constellation-dl border border-constellation-dl/30">RAG</span>
+<span class="px-3 py-1 bg-surface-container-high rounded-full text-xs font-nav-label text-constellation-claude border border-constellation-claude/30">VectorDB</span>
+<span class="px-3 py-1 bg-surface-container-high rounded-full text-xs font-nav-label text-primary border border-primary/30">LangChain</span>
+</div>
+<div class="flex space-x-4">
+<button class="text-outline hover:text-primary transition-colors flex items-center"><span class="material-symbols-outlined">thumb_up</span></button>
+<button class="text-outline hover:text-primary transition-colors flex items-center"><span class="material-symbols-outlined">bookmark_add</span></button>
+<button class="text-outline hover:text-primary transition-colors flex items-center"><span class="material-symbols-outlined">share</span></button>
+</div>
+</div>
+</article>
+<!-- Near Stars (Related Articles) -->
+<div class="w-full max-w-5xl mx-auto mt-24 mb-12">
+<h3 class="font-headline-md text-headline-md text-on-surface mb-8 flex items-center">
+<span class="material-symbols-outlined text-primary-container mr-2">all_inclusive</span>
+                近くの星
+            </h3>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<!-- Card 1 (Agents - Deep Learning) -->
+<a class="glass-panel rounded-xl overflow-hidden group hover:-translate-y-2 transition-all duration-300 border-t border-t-constellation-dl/50 relative" href="#">
+<div class="absolute inset-0 bg-gradient-to-b from-constellation-dl/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<div class="h-32 bg-surface-container-high relative overflow-hidden">
+<!-- Abstract placeholder for article image -->
+<div class="bg-cover bg-center w-full h-full opacity-60 group-hover:scale-105 transition-transform duration-700" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCJENeYgfPYGzK07hkttTK0j5r1zHU0MRWBb32M42xttM5yuCL60o_2T1vfkXVwhS_ssC1jxcz4e1MIgWc6tW---GOgWYFWR-C2LoAY06wAKxy8ErZlD_1QCzrF62Qz86_L3x8Au6dSdUtf9OkoGYdHu1upQqSYNZ1-z7gzwQlraQ5jOlvCFzZsh--iF_HuuI_EvsjcTjLIbML3f8kilPYW7vGq7n9-ZyhZRHOV3NL6JJMf_f4Evnw2')"></div>
+</div>
+<div class="p-5">
+<div class="text-xs font-nav-label text-constellation-dl mb-2">DEEP LEARNING</div>
+<h4 class="font-bold text-on-surface mb-2 line-clamp-2 group-hover:text-primary transition-colors">Semantic Routerの実装パターン：意図に基づいた軌道計算</h4>
+<p class="text-sm text-on-surface-variant line-clamp-2">エージェントがユーザーの意図を汲み取り、適切な処理パイプラインへルーティングする手法。</p>
+</div>
+</a>
+<!-- Card 2 (Firebase) -->
+<a class="glass-panel rounded-xl overflow-hidden group hover:-translate-y-2 transition-all duration-300 border-t border-t-constellation-firebase/50 relative mt-0 md:mt-8" href="#">
+<div class="absolute inset-0 bg-gradient-to-b from-constellation-firebase/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<div class="h-32 bg-surface-container-high relative overflow-hidden">
+<div class="bg-cover bg-center w-full h-full opacity-60 group-hover:scale-105 transition-transform duration-700" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBkZZiHMeP2YQL0HWeO0eNc5O2o8hSfn-ZuOtOq0Bf5skmrbNIMqp8_OaJ337xHolgPgIu57A3nNpeYRZ0a5bHZI_4BsUmDOOjMGZzL4WLccJPc_inmAIrsILt0Rhi0sCsioAu9bly_lIH2AzVKT-G1bcrhiPBNniJHdHECM-jXdYj9D8u0mvvK5r_CMtWOXRZpKyu8zU5jsANlVjLifm2x-ceoUTIUqfCuBTVfelXSgG5LZjmI8w3n')"></div>
+</div>
+<div class="p-5">
+<div class="text-xs font-nav-label text-constellation-firebase mb-2">INFRASTRUCTURE</div>
+<h4 class="font-bold text-on-surface mb-2 line-clamp-2 group-hover:text-primary transition-colors">ベクトル検索をスケールさせる分散アーキテクチャ</h4>
+<p class="text-sm text-on-surface-variant line-clamp-2">数百万件のドキュメントを高速に検索するためのインフラ設計と運用プラクティス。</p>
+</div>
+</a>
+<!-- Card 3 (Claude) -->
+<a class="glass-panel rounded-xl overflow-hidden group hover:-translate-y-2 transition-all duration-300 border-t border-t-constellation-claude/50 relative mt-0 md:mt-16" href="#">
+<div class="absolute inset-0 bg-gradient-to-b from-constellation-claude/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<div class="h-32 bg-surface-container-high relative overflow-hidden">
+<div class="bg-cover bg-center w-full h-full opacity-60 group-hover:scale-105 transition-transform duration-700" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuC6Pul1OEt2ah-xU4b1yaJFLXh5LtnEOOUNukXckMaJNnnN7C0wdwxeBVFqy-UV7LUDMkKvriyEtHgL-qU6tIGRseYLlPkINnCZ_HFvNWl5DbOPMrncWZc6b8VHl8WxZ44UqRviGwjW0e9VSq8L-aI1fDiEhPk75q3y-RSCeE5rdpEA2KWFI4bfEZrLv9yP7X28_Sdwv0ks8MGmQjIQaK8ejIPy3l2OcRP6nV3Z_lc9NcZEcKvgzbdL')"></div>
+</div>
+<div class="p-5">
+<div class="text-xs font-nav-label text-constellation-claude mb-2">AGENTS</div>
+<h4 class="font-bold text-on-surface mb-2 line-clamp-2 group-hover:text-primary transition-colors">Tool Useによる外部API統合：観測機器の接続</h4>
+<p class="text-sm text-on-surface-variant line-clamp-2">LLMが外部ツールを自律的に呼び出し、動的な情報を取得するためのフレームワーク構築。</p>
+</div>
+</a>
+</div>
+</div>
+</main>
+<!-- Bottom Nav Bar (Mobile Only) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center h-16 md:hidden px-4 bg-surface-container-highest/40 backdrop-blur-lg rounded-t-xl shadow-[0_-4px_12px_rgba(3,7,24,0.5)] border-t border-outline-variant/20">
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2 hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined text-xl mb-1">auto_awesome_motion</span>
+<span class="font-nav-label text-[10px]">Chart</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-primary/20 text-primary rounded-full p-2 scale-90 duration-200" href="#">
+<span class="material-symbols-outlined text-xl mb-1" style="font-variation-settings: 'FILL' 1;">search</span>
+<span class="font-nav-label text-[10px] font-bold">Library</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2 hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined text-xl mb-1">pets</span>
+<span class="font-nav-label text-[10px]">AI Guide</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2 hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined text-xl mb-1">person</span>
+<span class="font-nav-label text-[10px]">Profile</span>
+</a>
+</nav>
+<script>
+        // Reading Progress Bar
+        window.addEventListener('scroll', () => {
+            const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+            const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrolled = (winScroll / height) * 100;
+            document.getElementById('reading-progress').style.width = scrolled + '%';
+            
+            // Subtle parallax for background
+            const bg = document.getElementById('parallax-bg');
+            if(bg) {
+                bg.style.transform = `translateY(${winScroll * 0.05}px)`;
+            }
+        });
+    </script>
+<div class="fixed bottom-8 right-8 w-16 h-16 rounded-full bg-gradient-to-br from-primary to-secondary blur-sm opacity-80 z-50 shadow-[0_0_30px_rgba(47,217,244,0.6)] flex items-center justify-center" id="stardust-collector">
+<span class="material-symbols-outlined text-white animate-pulse">auto_awesome</span>
+</div></body></html>

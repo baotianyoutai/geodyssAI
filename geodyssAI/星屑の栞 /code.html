@@ -1,0 +1,247 @@
+<!DOCTYPE html><html class="dark" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Stellar Bookmark - GeodyssAI</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700&amp;family=JetBrains+Mono:wght@400;500;700&amp;family=Inter:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<style>
+        .material-symbols-outlined {
+            font-variation-settings:
+            'FILL' 1,
+            'wght' 400,
+            'GRAD' 0,
+            'opsz' 24;
+        }
+        
+        /* Custom Animations */
+        @keyframes pulse-ring {
+            0% {
+                transform: scale(1);
+                opacity: 0.8;
+            }
+            100% {
+                transform: scale(2.5);
+                opacity: 0;
+            }
+        }
+        
+        @keyframes float-stardust {
+            0%, 100% { transform: translateY(0) translateX(0); opacity: 0.3; }
+            50% { transform: translateY(-20px) translateX(10px); opacity: 0.8; }
+        }
+
+        .pulse-core {
+            animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+
+        .pulse-ring-delayed {
+            animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite 1s;
+        }
+
+        /* Film Grain Overlay */
+        .film-grain {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 100;
+            opacity: 0.03;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-variant": "#2f3638",
+                        "on-tertiary-fixed": "#001a42",
+                        "on-tertiary-container": "#004ba5",
+                        "surface-container-highest": "#2f3638",
+                        "constellation-dl": "#2DD4BF",
+                        "surface-container": "#1a2122",
+                        "on-surface": "#dde4e5",
+                        "inverse-surface": "#dde4e5",
+                        "on-primary": "#00363e",
+                        "on-error-container": "#ffdad6",
+                        "tertiary-fixed": "#d8e2ff",
+                        "tertiary-fixed-dim": "#adc6ff",
+                        "primary-fixed-dim": "#2fd9f4",
+                        "background": "#0e1416",
+                        "surface-dim": "#0e1416",
+                        "munchkin-mint": "#BDE7DB",
+                        "on-primary-fixed": "#001f25",
+                        "secondary-fixed-dim": "#d0bcff",
+                        "on-secondary-fixed-variant": "#5516be",
+                        "on-background": "#dde4e5",
+                        "constellation-firebase": "#F59E0B",
+                        "surface-container-lowest": "#090f11",
+                        "outline": "#859397",
+                        "error-container": "#93000a",
+                        "outline-variant": "#3c494c",
+                        "surface-container-low": "#161d1e",
+                        "surface": "#0e1416",
+                        "tertiary": "#d0ddff",
+                        "primary-fixed": "#a2eeff",
+                        "secondary-container": "#571bc1",
+                        "on-primary-container": "#005763",
+                        "deep": "#0B1026",
+                        "primary": "#8aebff",
+                        "secondary-fixed": "#e9ddff",
+                        "inverse-primary": "#006877",
+                        "on-primary-fixed-variant": "#004e5a",
+                        "secondary": "#d0bcff",
+                        "error": "#ffb4ab",
+                        "primary-container": "#22d3ee",
+                        "on-secondary-container": "#c4abff",
+                        "on-secondary": "#3c0091",
+                        "constellation-claude": "#E07B54",
+                        "mist": "#93A1BE",
+                        "munchkin-cream": "#FFF3E4",
+                        "on-surface-variant": "#bbc9cd",
+                        "void": "#050B18",
+                        "tertiary-container": "#a5c1ff",
+                        "surface-container-high": "#242b2d",
+                        "on-secondary-fixed": "#23005c",
+                        "munchkin-pink": "#F2B8CC",
+                        "inverse-on-surface": "#2b3233",
+                        "on-tertiary": "#002e6a",
+                        "on-tertiary-fixed-variant": "#004395",
+                        "surface-bright": "#343a3c",
+                        "surface-tint": "#2fd9f4",
+                        "munchkin-lavender": "#C7BDF0",
+                        "starlight": "#EDF2FB",
+                        "on-error": "#690005"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "stack-sm": "0.5rem",
+                        "stack-lg": "2rem",
+                        "gutter": "1.5rem",
+                        "margin-mobile": "1rem",
+                        "margin-desktop": "2rem",
+                        "stack-md": "1rem"
+                    },
+                    "fontFamily": {
+                        "nav-label": ["JetBrains Mono"],
+                        "code-sm": ["JetBrains Mono"],
+                        "headline-md": ["Space Grotesk"],
+                        "display-lg": ["Space Grotesk"],
+                        "body-sm": ["Inter"],
+                        "display-lg-mobile": ["Space Grotesk"],
+                        "body-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "nav-label": ["12px", { "lineHeight": "1.0", "letterSpacing": "0.05em", "fontWeight": "500" }],
+                        "code-sm": ["14px", { "lineHeight": "1.5", "fontWeight": "400" }],
+                        "headline-md": ["24px", { "lineHeight": "1.4", "fontWeight": "700" }],
+                        "display-lg": ["48px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-sm": ["14px", { "lineHeight": "1.5", "fontWeight": "400" }],
+                        "display-lg-mobile": ["32px", { "lineHeight": "1.2", "fontWeight": "700" }],
+                        "body-md": ["16px", { "lineHeight": "1.6", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-void text-on-surface font-body-md min-h-screen relative overflow-hidden selection:bg-primary-container selection:text-on-primary-container">
+<!-- Cinematic Film Grain Overlay -->
+<div class="film-grain"></div>
+<!-- Background Space Environment -->
+<div class="absolute inset-0 z-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-surface-container-low via-void to-void opacity-80"></div>
+<!-- Decorative Stardust / Background Stars -->
+<div class="absolute top-[20%] left-[15%] w-1 h-1 bg-white rounded-full opacity-40 blur-[1px]"></div>
+<div class="absolute top-[60%] left-[80%] w-2 h-2 bg-primary-fixed-dim rounded-full opacity-60 blur-[2px] animate-pulse"></div>
+<div class="absolute top-[80%] left-[30%] w-1 h-1 bg-white rounded-full opacity-30 blur-[1px]"></div>
+<div class="absolute top-[10%] left-[70%] w-1.5 h-1.5 bg-constellation-claude rounded-full opacity-50 blur-[1px]"></div>
+<!-- Main 3D Canvas Area (Simulated) -->
+<main class="relative w-full h-screen flex items-center justify-center z-10">
+<!-- Center Bookmarked Star Node -->
+<div class="relative flex items-center justify-center">
+<!-- Pulsing Rings (Cyan #22D3EE) -->
+<div class="absolute w-32 h-32 rounded-full border-2 border-primary-container pulse-core z-0"></div>
+<div class="absolute w-32 h-32 rounded-full border border-primary-container opacity-50 pulse-ring-delayed z-0"></div>
+<!-- Subtle Outer Glow -->
+<div class="absolute w-48 h-48 rounded-full bg-primary-container/20 blur-3xl z-0"></div>
+<!-- The Star Itself -->
+<div class="relative w-16 h-16 rounded-full bg-gradient-to-tr from-surface to-primary-container border border-primary-container/50 shadow-[0_0_40px_rgba(34,211,238,0.4)] z-10 flex items-center justify-center overflow-hidden">
+<!-- Star Surface Texture (Simulated) -->
+<div class="absolute inset-0 opacity-30 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent blur-[2px]"></div>
+</div>
+<!-- Bookmark Icon Attached to Star -->
+<div class="absolute -top-4 -right-4 w-8 h-8 bg-surface/80 backdrop-blur-md rounded-full border border-outline-variant/50 flex items-center justify-center shadow-[0_0_15px_rgba(3,7,24,0.8)] z-20 group cursor-pointer hover:border-primary-container transition-colors duration-300">
+<span class="material-symbols-outlined text-primary-container text-[16px] group-hover:scale-110 transition-transform duration-200" data-icon="bookmark" data-weight="fill">bookmark</span>
+</div>
+<!-- Contextual Card / Tooltip (Glassmorphism) -->
+<div class="absolute top-24 w-64 p-4 bg-surface-container-low/80 backdrop-blur-xl border border-outline-variant/20 rounded-xl shadow-[0_0_30px_rgba(3,7,24,0.8)] z-30 opacity-0 animate-[fadeIn_0.5s_ease-out_1s_forwards]">
+<div class="flex items-start justify-between mb-2">
+<span class="font-nav-label text-nav-label text-primary-fixed tracking-wider uppercase">Saved Node</span>
+<div class="w-2 h-2 rounded-full bg-primary-container shadow-[0_0_10px_rgba(34,211,238,0.8)]"></div>
+</div>
+<h3 class="font-headline-md text-headline-md text-on-surface mb-2 leading-tight">Navigating the Semantic Void</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-2">A deep dive into 3D conceptual mapping and how AI models interpret vast oceans of interconnected data points.</p>
+<div class="mt-4 flex gap-2">
+<span class="px-2 py-1 rounded-full border border-constellation-dl/30 bg-constellation-dl/10 font-nav-label text-[10px] text-constellation-dl">Deep Learning</span>
+</div>
+</div>
+</div>
+</main>
+<!-- Top Navigation (Shell) -->
+<nav class="fixed top-0 w-full z-50 flex justify-between items-center px-margin-mobile md:px-margin-desktop h-16 bg-surface/60 backdrop-blur-md border-b border-outline-variant/16 shadow-[0_0_20px_rgba(3,7,24,0.6)] hidden md:flex">
+<!-- Brand -->
+<div class="font-display-lg text-primary tracking-tighter text-2xl">
+            geodyssAI
+        </div>
+<!-- Links -->
+<div class="flex space-x-8">
+<a class="text-on-surface-variant font-nav-label text-nav-label hover:text-primary-fixed-dim transition-colors" href="#">Stellar Chart</a>
+<a class="text-primary font-bold border-b-2 border-primary pb-1 font-nav-label text-nav-label hover:text-primary-fixed-dim transition-colors" href="#">Library</a>
+<a class="text-on-surface-variant font-nav-label text-nav-label hover:text-primary-fixed-dim transition-colors" href="#">Constellations</a>
+</div>
+<!-- Actions -->
+<div class="flex items-center space-x-4">
+<button class="w-10 h-10 rounded-full flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-bright/50 transition-colors">
+<span class="material-symbols-outlined" data-icon="explore">explore</span>
+</button>
+<button class="px-4 py-2 bg-gradient-to-r from-secondary-container to-primary-container text-on-primary-container rounded-lg font-nav-label text-nav-label hover:opacity-90 transition-opacity shadow-[0_0_15px_rgba(34,211,238,0.2)]">
+                Boarding
+            </button>
+</div>
+</nav>
+<!-- Bottom Navigation (Mobile Shell) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center h-16 md:hidden px-4 bg-surface-container-highest/40 backdrop-blur-lg rounded-t-xl border-t border-outline-variant/20 shadow-[0_-4px_12px_rgba(3,7,24,0.5)]">
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2 hover:bg-white/5 rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined mb-1 text-[20px]" data-icon="auto_awesome_motion">auto_awesome_motion</span>
+<span class="font-nav-label text-[10px]">Chart</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2 hover:bg-white/5 rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined mb-1 text-[20px]" data-icon="search">search</span>
+<span class="font-nav-label text-[10px]">Search</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-primary/20 text-primary rounded-full p-2 scale-90 duration-200" href="#">
+<span class="material-symbols-outlined mb-1 text-[20px]" data-icon="bookmark" data-weight="fill">bookmark</span>
+<span class="font-nav-label text-[10px] font-bold">Library</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2 hover:bg-white/5 rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined mb-1 text-[20px]" data-icon="person">person</span>
+<span class="font-nav-label text-[10px]">Profile</span>
+</a>
+</nav>
+<style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</body></html>
