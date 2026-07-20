@@ -1,0 +1,103 @@
+/*
+ * src/styles/tokens.css
+ * DESIGN.md の Frontmatter から自動生成されたデザイントークンです。
+ * 手動で編集しないでください。
+ */
+
+@theme {
+  /* --- Colors (M3 Roles & Constellations) --- */
+  --color-surface: #0e1416;
+  --color-surface-dim: #0e1416;
+  --color-surface-bright: #343a3c;
+  --color-surface-container-lowest: #090f11;
+  --color-surface-container-low: #161d1e;
+  --color-surface-container: #1a2122;
+  --color-surface-container-high: #242b2d;
+  --color-surface-container-highest: #2f3638;
+  --color-on-surface: #dde4e5;
+  --color-on-surface-variant: #bbc9cd;
+  --color-inverse-surface: #dde4e5;
+  --color-inverse-on-surface: #2b3233;
+  --color-outline: #859397;
+  --color-outline-variant: #3c494c;
+  --color-surface-tint: #2fd9f4;
+  --color-primary: #8aebff;
+  --color-on-primary: #00363e;
+  --color-primary-container: #22d3ee;
+  --color-on-primary-container: #005763;
+  --color-inverse-primary: #006877;
+  --color-secondary: #d0bcff;
+  --color-on-secondary: #3c0091;
+  --color-secondary-container: #571bc1;
+  --color-on-secondary-container: #c4abff;
+  --color-tertiary: #d0ddff;
+  --color-on-tertiary: #002e6a;
+  --color-tertiary-container: #a5c1ff;
+  --color-on-tertiary-container: #004ba5;
+  --color-error: #ffb4ab;
+  --color-on-error: #690005;
+  --color-error-container: #93000a;
+  --color-on-error-container: #ffdad6;
+  --color-primary-fixed: #a2eeff;
+  --color-primary-fixed-dim: #2fd9f4;
+  --color-on-primary-fixed: #001f25;
+  --color-on-primary-fixed-variant: #004e5a;
+  --color-secondary-fixed: #e9ddff;
+  --color-secondary-fixed-dim: #d0bcff;
+  --color-on-secondary-fixed: #23005c;
+  --color-on-secondary-fixed-variant: #5516be;
+  --color-tertiary-fixed: #d8e2ff;
+  --color-tertiary-fixed-dim: #adc6ff;
+  --color-on-tertiary-fixed: #001a42;
+  --color-on-tertiary-fixed-variant: #004395;
+  --color-background: #0e1416;
+  --color-on-background: #dde4e5;
+  --color-surface-variant: #2f3638;
+  --color-void: #050B18;
+  --color-deep: #0B1026;
+  --color-starlight: #EDF2FB;
+  --color-mist: #93A1BE;
+  --color-munchkin-pink: #F2B8CC;
+  --color-munchkin-lavender: #C7BDF0;
+  --color-munchkin-mint: #BDE7DB;
+  --color-munchkin-cream: #FFF3E4;
+  --color-constellation-firebase: #F59E0B;
+  --color-constellation-claude: #E07B54;
+  --color-constellation-dl: #2DD4BF;
+
+  /* --- Missing Constellations & Custom tokens (AGENT.md §2.4) --- */
+  --color-current: #3B82F6;
+  --color-const-genai: #3B82F6;
+  --color-const-agents: #10B981;
+  --color-const-logic: #F59E0B;
+  --color-const-design: #EC4899;
+  --color-surface-glass: rgba(14, 20, 22, 0.75);
+
+  /* --- Border Radius --- */
+  --radius-sm: 0.25rem;
+  --radius-default: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+  --radius-full: 9999px;
+
+  /* --- Spacing --- */
+  --spacing-margin-desktop: 2rem;
+  --spacing-margin-mobile: 1rem;
+  --spacing-gutter: 1.5rem;
+  --spacing-stack-sm: 0.5rem;
+  --spacing-stack-md: 1rem;
+  --spacing-stack-lg: 2rem;
+
+  /* --- Font Family --- */
+  --font-display: "Space Grotesk", "sans-serif";
+  --font-body: "Inter", "sans-serif";
+  --font-code: "JetBrains Mono", "monospace";
+}
+
+/* --- Custom Visual Utilities --- */
+:root {
+  --aurora: linear-gradient(135deg, #3B82F6 0%, #8B5CF6 50%, #EC4899 100%);
+  --glow-starlight: drop-shadow(0 0 8px rgba(237, 242, 251, 0.8));
+  --backdrop-glass: blur(12px) saturate(180%);
+}
