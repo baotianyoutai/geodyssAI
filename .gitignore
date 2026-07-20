@@ -16,3 +16,4 @@ dist/
 # ログ・一時
 logs/
 *.log
+data/*.json
