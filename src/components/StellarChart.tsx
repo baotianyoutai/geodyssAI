@@ -142,6 +142,14 @@ function StarNode({ article, starNumber, isHovered, isAnyHovered, isDimmed, isSe
   const baseScale = 1.0 + (article.readingTime * 0.1);
   const seed = useMemo(() => Math.random() * 100.0, []);
 
+  // 💡 表層（Z >= +8.5m）から深層（Z <= -8.5m）へ向かって「段々暗くなる減光グラデーション」を計算
+  // normZ: 深層 0.0 〜 表層 1.0
+  const normZ = useMemo(() => THREE.MathUtils.clamp((article.pos.z + 12) / 24.0, 0.0, 1.0), [article.pos.z]);
+  // zBrightness: 深層 0.18（減光・暗い）〜 表層 2.0（非常に眩しい）
+  const zBrightness = useMemo(() => 0.18 + 1.82 * Math.pow(normZ, 1.4), [normZ]);
+  // zScale: 深層 0.70（小さい）〜 表層 1.35（大きい）
+  const zScale = useMemo(() => 0.70 + 0.65 * normZ, [normZ]);
+
   const uniforms = useMemo(() => {
     return {
       uTime: { value: 0 },
@@ -173,13 +181,14 @@ function StarNode({ article, starNumber, isHovered, isAnyHovered, isDimmed, isSe
       materialRef.current.uniforms.uTime.value = time;
       
       if (isDimmed) {
-        materialRef.current.uniforms.uColorStellar.value.set(stellarColor).multiplyScalar(0.2);
+        materialRef.current.uniforms.uColorStellar.value.set(stellarColor).multiplyScalar(0.12);
       } else if (isSelected) {
-        materialRef.current.uniforms.uColorStellar.value.set(stellarColor).multiplyScalar(2.2);
+        materialRef.current.uniforms.uColorStellar.value.set(stellarColor).multiplyScalar(2.5);
       } else if (isHovered) {
-        materialRef.current.uniforms.uColorStellar.value.set(stellarColor).multiplyScalar(1.6);
+        materialRef.current.uniforms.uColorStellar.value.set(stellarColor).multiplyScalar(2.0);
       } else {
-        materialRef.current.uniforms.uColorStellar.value.set(stellarColor);
+        // 💡 表層〜深層の段々暗くなる減光グラデーション輝度を明確に適用！
+        materialRef.current.uniforms.uColorStellar.value.set(stellarColor).multiplyScalar(zBrightness);
       }
     }
 
@@ -198,11 +207,11 @@ function StarNode({ article, starNumber, isHovered, isAnyHovered, isDimmed, isSe
     onClick();
   };
 
-  let scaleMultiplier = isHovered ? 1.5 : (isAnyHovered ? 0.75 : 1.0);
+  let scaleMultiplier = (isHovered ? 1.5 : (isAnyHovered ? 0.75 : 1.0)) * zScale;
   if (isDimmed) {
     scaleMultiplier = 0.35;
   } else if (isSelected) {
-    scaleMultiplier = 1.8;
+    scaleMultiplier = 1.8 * zScale;
   }
   const currentScale = baseScale * scaleMultiplier;
   const numStr = `#${String(starNumber).padStart(2, '0')}`;
@@ -228,7 +237,7 @@ function StarNode({ article, starNumber, isHovered, isAnyHovered, isDimmed, isSe
           />
         </mesh>
 
-        {/* 💡 選択中の星の周囲にロックオンリングを表示 */}
+        {/* 選択中の星の周囲にロックオンリングを表示 */}
         {isSelected && (
           <mesh ref={selectedRingRef} scale={[currentScale, currentScale, 1]}>
             <ringGeometry args={[0.82, 0.9, 32]} />
@@ -262,7 +271,7 @@ function StarNode({ article, starNumber, isHovered, isAnyHovered, isDimmed, isSe
             size={0.07}
             color="#93A1BE"
             transparent
-            opacity={isDimmed ? 0.08 : 0.5}
+            opacity={isDimmed ? 0.08 : (0.4 * normZ)}
             blending={THREE.AdditiveBlending}
           />
         </points>
@@ -394,7 +403,7 @@ export function StellarChart({ articles, onHover, activeFilter, selectedStar, on
         />
       ))}
 
-      {/* 3. 各星の描画（記事番号付き） */}
+      {/* 3. 各星の描画（記事番号 ＆ Z軸深度減光グラデーション付き） */}
       {processedArticles.map((art, index) => {
         const isDimmed = activeFilter !== null && art.category !== activeFilter;
         return (
