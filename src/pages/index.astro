@@ -1,6 +1,7 @@
 ---
 // src/pages/index.astro
 import { getArticles } from '../lib/firebase-server';
+export const prerender = true;
 import { StellarCanvas } from '../components/StellarCanvas';
 import '../styles/global.css';
 
