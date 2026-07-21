@@ -1,0 +1,51 @@
+---
+// src/components/InfoBox.astro
+interface Props {
+  kind?: 'info' | 'blank' | 'icon' | 'sticky';
+  title?: string;
+}
+
+const { kind = 'info', title } = Astro.props;
+
+// ボックスタイプに応じたスタイルとアイコン定義
+const config = {
+  info: {
+    bg: 'bg-surface-container-high/40',
+    border: 'border-primary-container/40',
+    icon: '✦',
+    iconColor: 'text-primary'
+  },
+  blank: {
+    bg: 'bg-surface-container-lowest/30',
+    border: 'border-outline-variant/30',
+    icon: null,
+    iconColor: 'text-slate-400'
+  },
+  icon: {
+    bg: 'bg-surface-container/50',
+    border: 'border-tertiary-container/30',
+    icon: '✧',
+    iconColor: 'text-tertiary'
+  },
+  sticky: {
+    bg: 'bg-secondary-container/15',
+    border: 'border-secondary/40 shadow-xl',
+    icon: '📌',
+    iconColor: 'text-secondary'
+  }
+}[kind];
+---
+<div class={`my-6 p-5 border rounded-lg backdrop-blur-sm ${config.bg} ${config.border}`}>
+  {title && (
+    <div class="flex items-center gap-2 font-display font-bold text-sm text-slate-100 border-b border-outline-variant/30 pb-2 mb-3">
+      {config.icon && <span class={config.iconColor}>{config.icon}</span>}
+      <span>{title}</span>
+    </div>
+  )}
+  <div class="text-slate-300 text-sm leading-relaxed">
+    {!title && config.icon && (
+      <span class={`inline-block mr-1.5 font-bold ${config.iconColor}`}>{config.icon}</span>
+    )}
+    <slot />
+  </div>
+</div>

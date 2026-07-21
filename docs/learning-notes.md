@@ -1,6 +1,6 @@
-# learning-notes.md - Phase 1 & Sprint 1 (ETL) 開発ログ ＆ ラーニングノート
+# learning-notes.md - Phase 1, Sprint 1, ＆ Sprint 2 開発ログ ＆ ラーニングノート
 
-This document details all the commands, logs, errors, and learning points encountered during Phase 1: Foundation and Sprint 1: Data Voyage (ETL) of the **geodyssAI** project. It is structured for step-by-step reproduction and learning.
+This document details all the commands, logs, errors, and learning points encountered during Phase 1: Foundation, Sprint 1: Data Voyage (ETL), and Sprint 2: Visual Voyage (星海図3D UIの構築) of the **geodyssAI** project. It is structured for step-by-step reproduction and learning.
 
 ---
 
@@ -18,23 +18,9 @@ mv geodyssai.WordPress.2026-07-19.xml data/geodyssai.WordPress.2026-07-19.xml
 mv cat.jpg public/assets/cat.jpg
 ```
 
-### Explanations:
-- `data/`: Holds the WordPress WXR XML export data (`geodyssai.WordPress.2026-07-19.xml`).
-- `public/assets/`: Holds static image assets like `cat.jpg` (mascot image) for Astro.
-- `scripts/etl/config/`: Configuration folder for the ETL scripts.
-- `docs/`: Verification reports and architectural decisions.
-
 ---
 
-## 2. Taxonomy & Configuration (Phase 1) - タクソノミ設定の作成
-
-We created the taxonomy configuration file:
-- **File Created**: [taxonomy.yaml](file:///Users/tokitayuta/geodyssAI/scripts/etl/config/taxonomy.yaml)
-- **Purpose**: Defines the 7 categories (constellations), their colors, labels, and keywords for text embedding classification.
-
----
-
-## 3. Python Virtual Environment & dependencies (Phase 1) - 仮想環境の作成とライブラリインストール
+## 2. Python Virtual Environment & dependencies (Phase 1) - 仮想環境の作成とライブラリインストール
 
 We used `uv` to build the Python virtual environment and install packages.
 
@@ -54,7 +40,7 @@ To activate the virtual environment on macOS/Linux shell:
 
 ---
 
-## 4. Google Cloud & Vertex AI Configuration (Phase 1) - API ＆ IAM 権限の有効化
+## 3. Google Cloud & Vertex AI Configuration (Phase 1) - API ＆ IAM 権限の有効化
 
 Since we are utilizing Google Cloud Vertex AI for text embeddings and chat in the ETL, we enabled the required APIs and roles.
 
@@ -76,7 +62,7 @@ gcloud projects add-iam-policy-binding my-geodyssai-pro-1744456051163 \
 
 ---
 
-## 5. Preflight Verification Report (Phase 1) - 疎通テスト
+## 4. Preflight Verification Report (Phase 1) - 疎通テスト
 
 We ran the verification check script to ensure Vertex AI API, Firestore API connectivity, and all package imports are working:
 ```bash
@@ -87,7 +73,7 @@ We ran the verification check script to ensure Vertex AI API, Firestore API conn
 
 ---
 
-## 6. Git & GitHub Initial Setup (Phase 1) - Git ＆ GitHub の初期設定
+## 5. Git & GitHub Initial Setup (Phase 1) - Git ＆ GitHub の初期設定
 
 We initialized Git, added `.gitignore` to prevent secret leaks, and linked our local repo to a new GitHub repo.
 
@@ -108,61 +94,42 @@ git push origin main
 
 ---
 
-## 7. Sprint 1: Data Voyage (ETL Pipeline) - WXRデータ移行
+## 6. Sprint 1: Data Voyage (ETL Pipeline) - WXRデータ移行
 
 We implemented a 4-step Python ETL pipeline to parse WordPress XML, calculate Vertex AI embeddings, map 3D coordinates, and batch stage them to Cloud Firestore.
 
-### 7.1 Step 1: WXR XML Parsing and Markdown Compilation (01_parse.py)
+### 6.1 Step 1: WXR XML Parsing and Markdown Compilation (01_parse.py)
 * **Script**: [01_parse.py](file:///Users/tokitayuta/geodyssAI/scripts/etl/01_parse.py)
 * **Command**:
   ```bash
   .venv/bin/python scripts/etl/01_parse.py
   ```
-* **What it does**: 
-  - Parses `data/geodyssai.WordPress.2026-07-19.xml` using `lxml` and a stack-based parser to identify nested Gutenberg blocks.
-  - Converts WordPress blocks (`wp:paragraph`, `wp:heading`, `wp:list`, `wp:image`, `wp:quote`, `wp:separator`) to Markdown.
-  - Maps custom Cocoon blocks (`balloon-ex-box-1`, `info-box`, `blank-box-1`) to Astro components (`<MunchkinSpeech>` / `<InfoBox>`).
-  - Automatically classifies taxonomy categories using keywords matching in [taxonomy.yaml](file:///Users/tokitayuta/geodyssAI/scripts/etl/config/taxonomy.yaml).
-  - Logs unhandled elements (like embedded HTML scripts or custom tables) to [docs/review-list.md](file:///Users/tokitayuta/geodyssAI/docs/review-list.md).
 
-### 7.2 Step 2: Generating Text Embeddings via Vertex AI (02_embed.py)
+### 6.2 Step 2: Generating Text Embeddings via Vertex AI (02_embed.py)
 * **Script**: [02_embed.py](file:///Users/tokitayuta/geodyssAI/scripts/etl/02_embed.py)
 * **Command**:
   ```bash
   .venv/bin/python scripts/etl/02_embed.py
   ```
-* **What it does**:
-  - Connects to Google Cloud Vertex AI using the `google-genai` SDK.
-  - Uses the latest `text-embedding-005` model to generate 768-dimensional embeddings for each article (using combined Title + Body).
-  - Employs MD5 hashes (`contentHash`) of `contentMd` to perform delta updates (saving API costs and ensuring idempotency).
 
 #### 💡 Troubleshooting GCP Project Billing Error
 * **Error**: Calling the Vertex AI embedding API returned a `403 PERMISSION_DENIED: Billing not enabled on project iconic-episode-492109-n5`.
 * **Cause**: The `google-genai` SDK was falling back to the shell's active default project (`iconic-episode-492109-n5`) instead of loading `VERTEX_AI_PROJECT` from our local `.env`.
 * **Fix**: Force `os.environ["GOOGLE_CLOUD_PROJECT"] = os.environ["VERTEX_AI_PROJECT"]` in the Python script. Additionally, specified the absolute path `/Users/tokitayuta/geodyssAI/.env` in `load_dotenv()` to ensure environmental variables load reliably regardless of task execution directories.
 
-### 7.3 Step 3: 3D Coordinate Mapping (UMAP) & Z-Depth Offset (03_neighbors_umap.py)
+### 6.3 Step 3: 3D Coordinate Mapping (UMAP) & Z-Depth Offset (03_neighbors_umap.py)
 * **Script**: [03_neighbors_umap.py](file:///Users/tokitayuta/geodyssAI/scripts/etl/03_neighbors_umap.py)
 * **Command**:
   ```bash
   .venv/bin/python scripts/etl/03_neighbors_umap.py
   ```
-* **What it does**:
-  - Computes high-dimensional cosine similarity to identify the top 3 closest neighboring posts (for visual "constellation lines").
-  - Runs UMAP (`n_components=3, metric='cosine', random_state=42`) to reduce the 768-dimensional embeddings to 3D coordinates.
-  - Centers and normalizes coordinates to fit inside a sphere of maximum radius $R=12$.
-  - Evaluates the article difficulty (1 to 5) using Gemini 2.5 Flash (`gemini-2.5-flash`), allowing manual upper override via [difficulty_overrides.yaml](file:///Users/tokitayuta/geodyssAI/scripts/etl/config/difficulty_overrides.yaml).
-  - Shifts `pos.z` based on difficulty (`pos.z = pos.z - (difficulty - 3) * 1.5`), pushing advanced posts deeper into the "abyss."
 
-### 7.4 Step 4: Staged Upload to Cloud Firestore (04_upload.py)
+### 6.4 Step 4: Staged Upload to Cloud Firestore (04_upload.py)
 * **Script**: [04_upload.py](file:///Users/tokitayuta/geodyssAI/scripts/etl/04_upload.py)
 * **Command**:
   ```bash
   .venv/bin/python scripts/etl/04_upload.py
   ```
-* **What it does**:
-  - Initializes the Firebase Admin SDK using `serviceAccount.json`.
-  - Uses `db.batch()` to write all 28 articles to the `articles` collection atomically and idempotently.
 
 #### 💡 Troubleshooting Database Creation & APIs
 When executing the upload for the first time, we encountered two errors:
@@ -175,23 +142,77 @@ When executing the upload for the first time, we encountered two errors:
 
 ---
 
+## 7. Sprint 2: Visual Voyage (星海図3D UIの構築) - フロントエンド構築
+
+We initialized the Astro framework, automated design tokens conversion, and built the interactive 3D constellation map alongside readable article pages.
+
+### 7.1 Initialization & Package Integrations (プロジェクト初期化 ＆ パッケージ導入)
+We initialized Astro and installed packages:
+```bash
+# 1. Setup Astro
+npx create-astro@latest tmp-astro --template minimal --install --no-git --yes --skip-houston
+# (Move files to root)
+
+# 2. Add React & Tailwind CSS
+npx astro add react -y
+npx astro add tailwind -y
+
+# 3. Add WebGL & Shaders (R3F)
+npm install three @types/three @react-three/fiber @react-three/drei @react-three/postprocessing --legacy-peer-deps
+
+# 4. Add Firestore NodeJS Client & Markdown Compilers
+npm install firebase-admin marked @types/marked
+```
+
+### 7.2 Design Tokens Automation (generate_tokens.py) - デザイントークン自動変換
+* **Script**: [generate_tokens.py](file:///Users/tokitayuta/geodyssAI/scripts/generate_tokens.py)
+* **Command**:
+  ```bash
+  .venv/bin/python scripts/generate_tokens.py
+  ```
+* **What it does**: 
+  - Extracts the branding colors and sizes from [DESIGN.md](file:///Users/tokitayuta/geodyssAI/DESIGN.md) frontmatter.
+  - Automatically compiles them to `src/styles/tokens.css` inside a Tailwind CSS v4 `@theme` block.
+  - Keeps design styling tokens strictly in sync with the design guidelines SSOT.
+
+### 7.3 Interactive 3D Stellar Chart (StellarCanvas.tsx / StellarChart.tsx) - 3D星海図マップ
+* **Component Canvas**: [StellarCanvas.tsx](file:///Users/tokitayuta/geodyssAI/src/components/StellarCanvas.tsx)
+* **Component 3D nodes**: [StellarChart.tsx](file:///Users/tokitayuta/geodyssAI/src/components/StellarChart.tsx)
+* **Nebula Shader**: [NebulaShader.ts](file:///Users/tokitayuta/geodyssAI/src/components/NebulaShader.ts)
+* **Features**:
+  - Volumetric noise Nebula background rendered in GLSL.
+  - Twinkling stars sized by reading time, with color maps matching category constellations.
+  - **Constellation Lines**: Uses Prim's algorithm on the server to draw a Minimum Spanning Tree connecting all stars in the same constellation.
+  - **Threads of Light**: Draws bright lines connecting hovered stars to their 3 similar neighbor stars.
+  - **Mist Effect**: Animates rotating particles around unpublished draft posts.
+  - **Performance Fallback**: Automatically disables `@react-three/postprocessing` Bloom on mobile devices and low-resolution screen indicators.
+
+### 7.4 Dynamic Article Layout (Lighthouse Pages) - 記事詳細ページ
+* **Page Route**: [src/pages/articles/[slug].astro](file:///Users/tokitayuta/geodyssAI/src/pages/articles/%5Bslug%5D.astro)
+* **Features**:
+  - Compiles content using the `marked` library at build time.
+  - Utilizes a server-side segment splitter to identify custom tags and binds them to native Astro components: `<MunchkinSpeech>` and `<InfoBox>`.
+  - Sidebar dynamically renders linked neighbor cards using "threads of light" connections.
+
+#### 💡 Troubleshooting URL Encoded Slugs in Astro
+* **Error**: Build failed during generation with `NoMatchingStaticPathFound` for Japanese slugs.
+* **Cause**: Japanese article slugs (like `gemini-api...ハンズオン`) are urlencoded (`%e3%81%a8...`) in Firestore, but Astro matches static paths against fully decoded URLs.
+* **Fix**: Applied `decodeURIComponent(art.slug)` in `getStaticPaths()` of `[slug].astro` and all navigation links to guarantee route matching.
+
+---
+
 ## 8. Step-Up References (ステップアップのための参考資料 ＆ 公式ドキュメントリンク)
 
-* **Google Cloud SDK CLI コマンドリファレンス**:
+* **Astro & React Integration**:
+  - Astro client directive documentation: https://docs.astro.build/en/reference/directives-reference/#client-directives
+* **Tailwind CSS v4 Configuration**:
+  - Styling theme extensions in Tailwind v4: https://tailwindcss.com/docs/theme
+* **React Three Fiber & Drei**:
+  - Getting started with 3D canvas on React: https://r3f.docs.pmnd.rs/getting-started/introduction
+  - Post-processing effects (Bloom): https://r3f.docs.pmnd.rs/advanced/post-processing
+* **WebGL GLSL Shaders**:
+  - Volumetric Fractal Brownian Motion: https://thebookofshaders.com/13/
+* **Google Cloud SDK CLI**:
   - API の有効化 (`gcloud services`): https://cloud.google.com/sdk/gcloud/reference/services/enable
   - IAM 権限の操作 (`gcloud projects add-iam-policy-binding`): https://cloud.google.com/sdk/gcloud/reference/projects/add-iam-policy-binding
   - Firestore データベースの作成 (`gcloud firestore databases create`): https://cloud.google.com/sdk/gcloud/reference/firestore/databases/create
-* **Vertex AI (Google GenAI) Python SDK**:
-  - Python での Vertex AI クライアント初期化ガイド: https://cloud.google.com/vertex-ai/docs/generative-ai/start/quickstart-multimodal
-  - 利用可能な Vertex AI モデルのロケーション一覧: https://cloud.google.com/vertex-ai/generative-ai/docs/learn/locations
-* **Firebase Admin SDK**:
-  - Python Firebase Admin SDK 導入ガイド: https://firebase.google.com/docs/admin/setup?hl=ja
-  - Firestore バッチ書き込み: https://firebase.google.com/docs/firestore/manage-data/transactions#batched-writes
-* **Python uv ツール公式ガイド**:
-  - 仮想環境の作成と管理: https://docs.astral.sh/uv/concepts/environments/
-* **Git 除外設定 (.gitignore) 公式ドキュメント**:
-  - ファイルや機密情報の除外パターン記述方法: https://git-scm.com/docs/gitignore
-* **UMAP次元削減アルゴリズム**:
-  - UMAP パラメータ調整ガイド: https://umap-learn.readthedocs.io/en/latest/parameters.html
-* **Gutenberg ブロックエディタの仕組み**:
-  - WordPress ブロックデータ構造ガイド: https://developer.wordpress.org/block-editor/explanations/architecture/key-concepts/
