@@ -125,7 +125,7 @@ const StarShader = {
   `
 };
 
-// 💡 2. Draft（未公開）記事専用の、幻想的でリアルなプロシージャル雲シェーダー (fBm Cloud Turbulence)
+// 💡 2. Draft（未公開）記事専用の、軽量かつ幻想的な中心部限定・星雲シェーダー (Ultra-Lightweight Center Core Cloud Shader)
 const DraftCloudShader = {
   uniforms: {
     uTime: { value: 0 },
@@ -161,16 +161,10 @@ const DraftCloudShader = {
         return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
     }
 
+    // 💡 低負荷な2オクターブ軽量fbmで完璧な雲のうねりを表現
     float fbm(vec2 p) {
-        float v = 0.0;
-        float a = 0.5;
-        vec2 shift = vec2(100.0);
-        mat2 rot = mat2(cos(0.5), sin(0.5), -sin(0.5), cos(0.5));
-        for (int i = 0; i < 4; ++i) {
-            v += a * noise(p);
-            p = rot * p * 2.0 + shift;
-            a *= 0.5;
-        }
+        float v = 0.6 * noise(p);
+        v += 0.4 * noise(p * 2.0 + 1.7 + 0.1 * uTime);
         return v;
     }
 
@@ -179,25 +173,16 @@ const DraftCloudShader = {
         float r = length(uv);
         if (r > 1.0) discard;
 
-        // うねる幻想的な雲の流れ (Cloud motion)
-        vec2 q = vec2(0.0);
-        q.x = fbm(uv + 0.12 * uTime);
-        q.y = fbm(uv + vec2(1.0) + 0.08 * uTime);
+        // 中心付近に凝縮された幻想的な雲の流れ
+        float f = fbm(uv * 1.8 + 0.15 * uTime);
 
-        vec2 r_pos = vec2(0.0);
-        r_pos.x = fbm(uv + 1.0 * q + vec2(1.7, 9.2) + 0.15 * uTime);
-        r_pos.y = fbm(uv + 1.0 * q + vec2(8.3, 2.8) + 0.126 * uTime);
+        // 星の中心部に寄り添う自然な減衰
+        float cloudEdge = smoothstep(1.0, 0.0, r);
+        float density = smoothstep(0.2, 0.7, f) * cloudEdge;
 
-        float f = fbm(uv + r_pos);
+        vec3 cloudColor = mix(uColorInner, uColorOuter, clamp(f * 2.0, 0.0, 1.0));
 
-        // 雲の端の自然な輪郭減衰
-        float cloudEdge = smoothstep(1.0, 0.1, r);
-        float density = smoothstep(0.18, 0.75, f) * cloudEdge;
-
-        vec3 cloudColor = mix(uColorInner, uColorOuter, clamp(f * f * 3.5, 0.0, 1.0));
-        cloudColor = mix(cloudColor, vec3(0.9, 0.95, 1.0), clamp(length(q), 0.0, 1.0));
-
-        gl_FragColor = vec4(cloudColor, density * 0.85);
+        gl_FragColor = vec4(cloudColor, density * 0.7);
     }
   `
 };
@@ -275,7 +260,6 @@ function StarNode({ article, starNumber, isHovered, isAnyHovered, isDimmed, isSe
       materialRef.current.uniforms.uOpacity.value = opacity;
     }
 
-    // 💡 Draft専用雲シェーダーの時間進行
     if (draftCloudRef.current) {
       draftCloudRef.current.uniforms.uTime.value = time;
     }
@@ -298,10 +282,10 @@ function StarNode({ article, starNumber, isHovered, isAnyHovered, isDimmed, isSe
     <group position={[article.pos.x, article.pos.y, article.pos.z]}>
       <Billboard follow={true}>
         
-        {/* 💡 Draft（未公開）の星だけに覆いかぶさるリアルで幻想的な3Dプロシージャル雲 */}
+        {/* 💡 Draft（未公開）の星の「中心付近のみ」に漂う超軽量・幻想的なコア星雲オーラ */}
         {isDraft && (
-          <mesh scale={[currentScale * 2.3, currentScale * 2.3, 1]}>
-            <planeGeometry args={[1.5, 1.5]} />
+          <mesh scale={[currentScale * 1.35, currentScale * 1.35, 1]}>
+            <planeGeometry args={[1.3, 1.3]} />
             <shaderMaterial
               ref={draftCloudRef}
               vertexShader={DraftCloudShader.vertexShader}
@@ -484,7 +468,7 @@ export function StellarChart({ articles, onHover, activeFilter, selectedStar, on
         />
       ))}
 
-      {/* 3. 各星の描画（Draft専用 リアル・幻想的プロシージャル雲付き） */}
+      {/* 3. 各星の描画 */}
       {processedArticles.map((art, index) => {
         const isDimmed = activeFilter !== null && art.category !== activeFilter;
         return (
