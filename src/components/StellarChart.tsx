@@ -52,7 +52,7 @@ function computeMST(nodes: ArticleData[]): [THREE.Vector3, THREE.Vector3][] {
   return connections;
 }
 
-// 1. 標準の星用GLSLシェーダー
+// 💡 減光グラデーション用の uIntensity ＆ uOpacity ユニフォームを備えたカスタムGLSLシェーダー
 const StarShader = {
   uniforms: {
     uTime: { value: 0 },
@@ -115,74 +115,14 @@ const StarShader = {
         vec3 color = uColorStellar * (core + glow * pulse);
         color += uColorNebula * aura * pulse;
         
+        // 💡 uIntensity を使って全体の輝度・発光強度を直接制御！
         color *= uIntensity;
         
+        // 💡 uOpacity を使ってアルファ透明度を直接制御（遠い星ほどフェードアウト）！
         float alpha = (glow + core + aura) * pulse * uOpacity;
         alpha = clamp(alpha, 0.0, 1.0);
         
         gl_FragColor = vec4(color, alpha);
-    }
-  `
-};
-
-// 💡 2. Draft（未公開）記事専用の、軽量かつ幻想的な中心部限定・星雲シェーダー (Ultra-Lightweight Center Core Cloud Shader)
-const DraftCloudShader = {
-  uniforms: {
-    uTime: { value: 0 },
-    uColorInner: { value: new THREE.Color('#38BDF8') },
-    uColorOuter: { value: new THREE.Color('#C084FC') }
-  },
-  vertexShader: `
-    varying vec2 vUv;
-    void main() {
-      vUv = uv;
-      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-    }
-  `,
-  fragmentShader: `
-    precision highp float;
-    varying vec2 vUv;
-    uniform float uTime;
-    uniform vec3 uColorInner;
-    uniform vec3 uColorOuter;
-
-    float hash(vec2 p) {
-        return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
-    }
-
-    float noise(vec2 p) {
-        vec2 i = floor(p);
-        vec2 f = fract(p);
-        f = f * f * (3.0 - 2.0 * f);
-        float a = hash(i);
-        float b = hash(i + vec2(1.0, 0.0));
-        float c = hash(i + vec2(0.0, 1.0));
-        float d = hash(i + vec2(1.0, 1.0));
-        return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
-    }
-
-    // 💡 低負荷な2オクターブ軽量fbmで完璧な雲のうねりを表現
-    float fbm(vec2 p) {
-        float v = 0.6 * noise(p);
-        v += 0.4 * noise(p * 2.0 + 1.7 + 0.1 * uTime);
-        return v;
-    }
-
-    void main() {
-        vec2 uv = (vUv - 0.5) * 2.0;
-        float r = length(uv);
-        if (r > 1.0) discard;
-
-        // 中心付近に凝縮された幻想的な雲の流れ
-        float f = fbm(uv * 1.8 + 0.15 * uTime);
-
-        // 星の中心部に寄り添う自然な減衰
-        float cloudEdge = smoothstep(1.0, 0.0, r);
-        float density = smoothstep(0.2, 0.7, f) * cloudEdge;
-
-        vec3 cloudColor = mix(uColorInner, uColorOuter, clamp(f * 2.0, 0.0, 1.0));
-
-        gl_FragColor = vec4(cloudColor, density * 0.7);
     }
   `
 };
@@ -201,9 +141,9 @@ interface StarNodeProps {
 
 function StarNode({ article, starNumber, isHovered, isAnyHovered, isDimmed, isSelected, onPointerOver, onPointerOut, onClick }: StarNodeProps) {
   const materialRef = useRef<THREE.ShaderMaterial>(null);
-  const draftCloudRef = useRef<THREE.ShaderMaterial>(null);
   const selectedRingRef = useRef<THREE.Mesh>(null);
-  
+  const mistRef = useRef<THREE.Points>(null);
+
   const stellarColor = CATEGORY_COLORS[article.category] || CATEGORY_COLORS.default;
   const nebulaColor = NEBULA_AURA_COLORS[article.category] || NEBULA_AURA_COLORS.default;
   const isDraft = article.status !== 'publish';
@@ -211,11 +151,16 @@ function StarNode({ article, starNumber, isHovered, isAnyHovered, isDimmed, isSe
   const baseScale = 1.0 + (article.readingTime * 0.1);
   const seed = useMemo(() => Math.random() * 100.0, []);
 
-  // Z軸階層位置に応じた減光グラデーション
+  // 💡 Z軸階層位置に応じた劇的で絶対的な減光グラデーション値を計算
+  // normZ: 深層 (Z=-10) -> 0.0, 表層 (Z=+10) -> 1.0
   const normZ = useMemo(() => THREE.MathUtils.clamp((article.pos.z + 10.0) / 20.0, 0.0, 1.0), [article.pos.z]);
-  const layerIntensity = useMemo(() => 0.01 + 3.49 * Math.pow(normZ, 3.0), [normZ]);
-  const layerOpacity = useMemo(() => 0.05 + 0.95 * Math.pow(normZ, 2.0), [normZ]);
-  const layerScale = useMemo(() => 0.30 + 1.10 * normZ, [normZ]);
+
+  // 輝度: 表層 2.50 (強烈にネオン発光 & Bloom) 〜 深層 0.05 (発光せず静かな微光)
+  const layerIntensity = useMemo(() => 0.05 + 2.45 * Math.pow(normZ, 2.0), [normZ]);
+  // 透明度: 表層 1.00 〜 深層 0.15 (霞んでフェードアウト)
+  const layerOpacity = useMemo(() => 0.15 + 0.85 * normZ, [normZ]);
+  // サイズ: 表層 1.50 〜 深層 0.50 (小さな点)
+  const layerScale = useMemo(() => 0.50 + 1.00 * normZ, [normZ]);
 
   const uniforms = useMemo(() => {
     return {
@@ -228,28 +173,35 @@ function StarNode({ article, starNumber, isHovered, isAnyHovered, isDimmed, isSe
     };
   }, [stellarColor, nebulaColor, seed, layerIntensity, layerOpacity]);
 
-  const draftCloudUniforms = useMemo(() => {
-    return {
-      uTime: { value: 0 },
-      uColorInner: { value: new THREE.Color('#38BDF8') },
-      uColorOuter: { value: new THREE.Color('#C084FC') }
-    };
-  }, []);
+  const mistParticles = useMemo(() => {
+    if (!isDraft) return null;
+    const count = 35;
+    const positions = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos((Math.random() * 2) - 1);
+      const dist = 0.8 + Math.random() * 0.6;
+      positions[i * 3] = dist * Math.sin(phi) * Math.cos(theta);
+      positions[i * 3 + 1] = dist * Math.sin(phi) * Math.sin(theta);
+      positions[i * 3 + 2] = dist * Math.cos(phi);
+    }
+    return positions;
+  }, [isDraft]);
 
   useFrame((state) => {
     const time = state.clock.getElapsedTime();
 
     if (materialRef.current) {
       materialRef.current.uniforms.uTime.value = time;
-      
+
       let intensity = layerIntensity;
       let opacity = layerOpacity;
 
       if (isDimmed) {
-        intensity = 0.02;
-        opacity = 0.05;
+        intensity = 0.04;
+        opacity = 0.10;
       } else if (isSelected) {
-        intensity = 3.5;
+        intensity = 3.2;
         opacity = 1.0;
       } else if (isHovered) {
         intensity = 2.5;
@@ -260,12 +212,13 @@ function StarNode({ article, starNumber, isHovered, isAnyHovered, isDimmed, isSe
       materialRef.current.uniforms.uOpacity.value = opacity;
     }
 
-    if (draftCloudRef.current) {
-      draftCloudRef.current.uniforms.uTime.value = time;
-    }
-
     if (selectedRingRef.current) {
       selectedRingRef.current.rotation.z = time * 0.4;
+    }
+
+    if (mistRef.current) {
+      mistRef.current.rotation.y = time * 0.15;
+      mistRef.current.rotation.x = time * 0.08;
     }
   });
 
@@ -281,24 +234,6 @@ function StarNode({ article, starNumber, isHovered, isAnyHovered, isDimmed, isSe
   return (
     <group position={[article.pos.x, article.pos.y, article.pos.z]}>
       <Billboard follow={true}>
-        
-        {/* 💡 Draft（未公開）の星の「中心付近のみ」に漂う超軽量・幻想的なコア星雲オーラ */}
-        {isDraft && (
-          <mesh scale={[currentScale * 1.35, currentScale * 1.35, 1]}>
-            <planeGeometry args={[1.3, 1.3]} />
-            <shaderMaterial
-              ref={draftCloudRef}
-              vertexShader={DraftCloudShader.vertexShader}
-              fragmentShader={DraftCloudShader.fragmentShader}
-              uniforms={draftCloudUniforms}
-              transparent={true}
-              depthWrite={false}
-              blending={THREE.AdditiveBlending}
-            />
-          </mesh>
-        )}
-
-        {/* 主体となる星のメッシュ */}
         <mesh
           onClick={isDimmed ? undefined : handleClick}
           onPointerOver={isDimmed ? undefined : onPointerOver}
@@ -341,6 +276,21 @@ function StarNode({ article, starNumber, isHovered, isAnyHovered, isDimmed, isSe
           </div>
         </Html>
       )}
+
+      {isDraft && mistParticles && (
+        <points ref={mistRef}>
+          <bufferGeometry>
+            <bufferAttribute attach="attributes-position" args={[mistParticles, 3]} />
+          </bufferGeometry>
+          <pointsMaterial
+            size={0.07}
+            color="#93A1BE"
+            transparent
+            opacity={isDimmed ? 0.08 : (0.4 * normZ)}
+            blending={THREE.AdditiveBlending}
+          />
+        </points>
+      )}
     </group>
   );
 }
@@ -358,7 +308,7 @@ export function StellarChart({ articles, onHover, activeFilter, selectedStar, on
 
   const processedArticles = useMemo(() => {
     const list = JSON.parse(JSON.stringify(articles)) as ArticleData[];
-    
+
     list.forEach(art => {
       const diff = art.difficulty;
       if (diff <= 2) {
@@ -375,7 +325,7 @@ export function StellarChart({ articles, onHover, activeFilter, selectedStar, on
           const dx = list[i].pos.x - list[j].pos.x;
           const dy = list[i].pos.y - list[j].pos.y;
           const dz = list[i].pos.z - list[j].pos.z;
-          const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+          const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
           if (dist < minDistance) {
             const overlap = minDistance - dist;
             const forceX = (dx / (dist || 1)) * (overlap * 0.5);
@@ -423,7 +373,7 @@ export function StellarChart({ articles, onHover, activeFilter, selectedStar, on
 
   const neighborLines = useMemo(() => {
     if (!hoveredArticle || !hoveredArticle.neighbors) return [];
-    
+
     const lines: [number, number, number][][] = [];
     const startPoint = hoveredArticle.pos;
 
@@ -468,7 +418,7 @@ export function StellarChart({ articles, onHover, activeFilter, selectedStar, on
         />
       ))}
 
-      {/* 3. 各星の描画 */}
+      {/* 3. 各星の描画（劇的減光グラデーション 50倍明暗差＋Bloom切り分け付き） */}
       {processedArticles.map((art, index) => {
         const isDimmed = activeFilter !== null && art.category !== activeFilter;
         return (
