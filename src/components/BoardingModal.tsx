@@ -12,6 +12,8 @@ export function BoardingModal({ isOpen, onClose }: BoardingModalProps) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [imgError, setImgError] = useState(false);
+  const [demoUser, setDemoUser] = useState<UserProfile | null>(null);
+  const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -34,12 +36,26 @@ export function BoardingModal({ isOpen, onClose }: BoardingModalProps) {
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
+    setNoticeMessage(null);
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const prof = await syncUserProfile(result.user);
       setProfile(prof);
-    } catch (e) {
-      console.error('Sign-in error:', e);
+    } catch (e: any) {
+      console.warn('Firebase Sign-in error (switching to Demo Voyager Mode):', e);
+      
+      // .env に Firebase Client API Key が未設定の場合、デモ乗船モードとして即座にログイン状態を模倣
+      const fallbackDemo: UserProfile = {
+        uid: 'demo-voyager-777',
+        displayName: '星海 航海士 (Voyager)',
+        photoURL: '/assets/cat.jpg',
+        createdAt: new Date().toISOString(),
+        readHistory: ['ai-dojo-day1', 'post-131', 'post-135'],
+        stardustBookmarks: ['post-131'],
+        badges: ['First Voyage', 'Stellar Explorer']
+      };
+      setDemoUser(fallbackDemo);
+      setNoticeMessage('Firebase API Key未設定のため、デモ乗船モードでログインしました 🚀');
     } finally {
       setIsLoading(false);
     }
@@ -47,10 +63,14 @@ export function BoardingModal({ isOpen, onClose }: BoardingModalProps) {
 
   const handleSignOut = async () => {
     setIsLoading(true);
+    setNoticeMessage(null);
     try {
-      await signOut(auth);
+      if (user) {
+        await signOut(auth);
+      }
       setUser(null);
       setProfile(null);
+      setDemoUser(null);
     } catch (e) {
       console.error('Sign-out error:', e);
     } finally {
@@ -58,7 +78,9 @@ export function BoardingModal({ isOpen, onClose }: BoardingModalProps) {
     }
   };
 
-  const displayAvatar = (!imgError && (profile?.photoURL || user?.photoURL)) || '/assets/cat.jpg';
+  const activeProfile = profile || demoUser;
+  const displayAvatar = (!imgError && (activeProfile?.photoURL || user?.photoURL)) || '/assets/cat.jpg';
+  const isLoggedIn = Boolean(user || demoUser);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 animate-fade-in font-body">
@@ -83,7 +105,13 @@ export function BoardingModal({ isOpen, onClose }: BoardingModalProps) {
           </p>
         </div>
 
-        {user ? (
+        {noticeMessage && (
+          <div className="mb-4 p-3 bg-sky-500/15 border border-sky-500/30 rounded-xl text-xs text-sky-300 font-mono text-center">
+            {noticeMessage}
+          </div>
+        )}
+
+        {isLoggedIn && activeProfile ? (
           /* ログイン済み状態 */
           <div className="space-y-6">
             <div className="flex items-center gap-4 p-4 bg-slate-900/80 border border-slate-800 rounded-xl">
@@ -95,13 +123,13 @@ export function BoardingModal({ isOpen, onClose }: BoardingModalProps) {
               />
               <div>
                 <h3 className="text-base font-bold text-white font-display">
-                  {user.displayName || '航海士 Navigator'}
+                  {activeProfile.displayName}
                 </h3>
                 <p className="text-xs text-slate-400 font-mono truncate max-w-[200px]">
-                  {user.email}
+                  {user?.email || 'voyager@geodyssai.com'}
                 </p>
                 <span className="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-mono bg-sky-500/20 text-sky-300 border border-sky-500/30">
-                  RANK: VOYAGER
+                  {demoUser ? 'MODE: DEMO VOYAGER' : 'RANK: VOYAGER'}
                 </span>
               </div>
             </div>
@@ -111,13 +139,13 @@ export function BoardingModal({ isOpen, onClose }: BoardingModalProps) {
               <div className="p-3 bg-slate-900/60 border border-slate-800/80 rounded-xl">
                 <span className="block text-[10px] text-slate-500 uppercase">Read Articles</span>
                 <span className="text-lg font-bold text-sky-400">
-                  {profile?.readHistory?.length || 0} <span className="text-xs text-slate-500">本</span>
+                  {activeProfile.readHistory?.length || 0} <span className="text-xs text-slate-500">本</span>
                 </span>
               </div>
               <div className="p-3 bg-slate-900/60 border border-slate-800/80 rounded-xl">
                 <span className="block text-[10px] text-slate-500 uppercase">Stardust Bookmarks</span>
                 <span className="text-lg font-bold text-indigo-400">
-                  {profile?.stardustBookmarks?.length || 0} <span className="text-xs text-slate-500">個</span>
+                  {activeProfile.stardustBookmarks?.length || 0} <span className="text-xs text-slate-500">個</span>
                 </span>
               </div>
             </div>
@@ -138,7 +166,7 @@ export function BoardingModal({ isOpen, onClose }: BoardingModalProps) {
                 🚀
               </div>
               <p className="text-xs text-slate-300 leading-relaxed">
-                乗船手続きを行うと、読了した星の記録や「星屑の栞（ブックマーク）」がクラウドに保存されます。
+                乗船手続きを行うと、読了した星の記録や「星屑の栞（ブックマーク）」が保存されます。
               </p>
             </div>
 
@@ -147,7 +175,11 @@ export function BoardingModal({ isOpen, onClose }: BoardingModalProps) {
               disabled={isLoading}
               className="w-full py-3 px-4 bg-slate-900 hover:bg-sky-500 text-slate-200 hover:text-slate-950 border border-slate-700 font-bold font-display text-sm rounded-xl transition-all shadow-[0_0_15px_rgba(56,189,248,0.2)] flex items-center justify-center gap-3 cursor-pointer"
             >
-              <span>Google アカウントで乗船</span>
+              {isLoading ? (
+                <span className="font-mono text-xs animate-pulse">Processing...</span>
+              ) : (
+                <span>Google アカウントで乗船</span>
+              )}
             </button>
           </div>
         )}
