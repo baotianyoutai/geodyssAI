@@ -3,6 +3,7 @@
 import { getArticles } from '../../lib/firebase-server';
 export const prerender = true;
 import MunchkinSpeech from '../../components/MunchkinSpeech.astro';
+import { ArticleNavigator } from '../../components/ArticleNavigator';
 import InfoBox from '../../components/InfoBox.astro';
 import { marked } from 'marked';
 import '../../styles/global.css';
@@ -82,6 +83,17 @@ if (lastIndex < contentMd.length) {
     props: {}
   });
 }
+
+// marked.parse を非同期でフロントマター内でコンパイル完了させる（Promise 評価漏れを防止）
+const parsedSegments = await Promise.all(
+  segments.map(async (seg) => {
+    if (seg.type === 'markdown') {
+      const html = await marked.parse(seg.content);
+      return { ...seg, html };
+    }
+    return seg;
+  })
+);
 ---
 
 <html lang="ja">
@@ -144,10 +156,9 @@ if (lastIndex < contentMd.length) {
 
         {/* 記事詳細 Markdown レンダリング部分 */}
         <div class="prose prose-invert max-w-none text-slate-300 leading-relaxed space-y-6 text-[15px] sm:text-base">
-          {segments.map((seg) => {
+          {parsedSegments.map((seg) => {
             if (seg.type === 'markdown') {
-              // marked を使用して Markdown を HTML にコンパイル
-              return <div class="markdown-body" set:html={marked.parse(seg.content)} />;
+              return <div class="markdown-body" set:html={seg.html} />;
             } else if (seg.type === 'speech') {
               return (
                 <MunchkinSpeech name={seg.props.name} icon={seg.props.icon}>
@@ -163,6 +174,9 @@ if (lastIndex < contentMd.length) {
             }
           })}
         </div>
+
+        {/* マンチカン航海士のステップアップ指導カード */}
+        <ArticleNavigator client:load article={article} />
 
       </article>
 
