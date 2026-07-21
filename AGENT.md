@@ -374,13 +374,12 @@ Phase 4: Cutover       本番切替 — QA → DNS 切替 → ConoHa 退役
 
 **DoD**: 潜航がホイール/タッチ両対応 ／ 深度 1↔5 の環境変化が視認できる ／ Perf 予算維持。
 
-### SPRINT 6: Social Voyage（議論場・公開航路・通信室）
+### SPRINT 6: Stellar Tavern & Security (星海酒場 ＆ セキュリティ)
 
-- **Stellar Tavern（S6）**: 星座別スレッド + 投稿（§4 の threads/posts + ルール）。`onSnapshot` でリアルタイム反映。**モデレーション方針は付録B の決定後に着手**。
-- **Public Log（S12）**: `ShareVoyageButton` でオプトイン → `publicLogs` へ匿名コピー。星海図に他船長の**ゴースト・ライン**（淡い軌跡、個人特定情報なし）を重畳描画。
-- **Comms Relay（S7）**: `/comms`。FAQ（静的）+ 問い合わせフォーム（`inquiries` create-only、App Check 前提、送信後は管制塔風の受理演出）。
+- **Stellar Tavern（S6）**: 星座別スレッド + 投稿（threads/posts）。`onSnapshot` でリアルタイム反映。
+- **App Check セキュリティ**: Firebase App Check (reCAPTCHA Enterprise) によるセキュリティ保護。
 
-**DoD**: 未ログインは Tavern 読み取りのみ ／ publicLogs 以外から他人の履歴が読めないことをルールテストで証明 ／ inquiries が Console で閲覧可。
+**DoD**: 未ログインは Tavern 読み取りのみ ／ App Check 保護対応。
 
 ---
 
