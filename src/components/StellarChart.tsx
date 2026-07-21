@@ -134,6 +134,7 @@ function StarNode({ article, starNumber, isHovered, isAnyHovered, isDimmed, isSe
   const materialRef = useRef<THREE.ShaderMaterial>(null);
   const selectedRingRef = useRef<THREE.Mesh>(null);
   const mistRef = useRef<THREE.Points>(null);
+  const starPosRef = useRef<THREE.Vector3>(new THREE.Vector3(article.pos.x, article.pos.y, article.pos.z));
   
   const stellarColor = CATEGORY_COLORS[article.category] || CATEGORY_COLORS.default;
   const nebulaColor = NEBULA_AURA_COLORS[article.category] || NEBULA_AURA_COLORS.default;
@@ -141,14 +142,6 @@ function StarNode({ article, starNumber, isHovered, isAnyHovered, isDimmed, isSe
 
   const baseScale = 1.0 + (article.readingTime * 0.1);
   const seed = useMemo(() => Math.random() * 100.0, []);
-
-  // 💡 表層（Z >= +8.5m）から深層（Z <= -8.5m）へ向かって「段々暗くなる減光グラデーション」を計算
-  // normZ: 深層 0.0 〜 表層 1.0
-  const normZ = useMemo(() => THREE.MathUtils.clamp((article.pos.z + 12) / 24.0, 0.0, 1.0), [article.pos.z]);
-  // zBrightness: 深層 0.18（減光・暗い）〜 表層 2.0（非常に眩しい）
-  const zBrightness = useMemo(() => 0.18 + 1.82 * Math.pow(normZ, 1.4), [normZ]);
-  // zScale: 深層 0.70（小さい）〜 表層 1.35（大きい）
-  const zScale = useMemo(() => 0.70 + 0.65 * normZ, [normZ]);
 
   const uniforms = useMemo(() => {
     return {
@@ -174,9 +167,15 @@ function StarNode({ article, starNumber, isHovered, isAnyHovered, isDimmed, isSe
     return positions;
   }, [isDraft]);
 
+  // 💡 useFrame 内で毎フレーム「カメラ座標とこの星の距離」を動的にリアルタイム計算！
+  // カメラでズームイン・アウトするたびに、近寄った星は輝き、離れた星はリアルタイムに段々暗くなる減光グラデーション！
   useFrame((state) => {
     const time = state.clock.getElapsedTime();
+    const distToCam = state.camera.position.distanceTo(starPosRef.current);
     
+    // カメラ距離(distToCam)に応じたリアルタイム減光倍率 (6m=2.2x 眩しい, 18m=1.3x 明るい, 35m=0.15x 暗い微光)
+    const distanceDimming = THREE.MathUtils.clamp(1.8 - (distToCam - 15.0) / 10.0, 0.15, 2.2);
+
     if (materialRef.current) {
       materialRef.current.uniforms.uTime.value = time;
       
@@ -187,8 +186,8 @@ function StarNode({ article, starNumber, isHovered, isAnyHovered, isDimmed, isSe
       } else if (isHovered) {
         materialRef.current.uniforms.uColorStellar.value.set(stellarColor).multiplyScalar(2.0);
       } else {
-        // 💡 表層〜深層の段々暗くなる減光グラデーション輝度を明確に適用！
-        materialRef.current.uniforms.uColorStellar.value.set(stellarColor).multiplyScalar(zBrightness);
+        // 💡 リアルタイムにカメラズーム連動で減光グラデーション輝度を適用！
+        materialRef.current.uniforms.uColorStellar.value.set(stellarColor).multiplyScalar(distanceDimming);
       }
     }
 
@@ -207,13 +206,8 @@ function StarNode({ article, starNumber, isHovered, isAnyHovered, isDimmed, isSe
     onClick();
   };
 
-  let scaleMultiplier = (isHovered ? 1.5 : (isAnyHovered ? 0.75 : 1.0)) * zScale;
-  if (isDimmed) {
-    scaleMultiplier = 0.35;
-  } else if (isSelected) {
-    scaleMultiplier = 1.8 * zScale;
-  }
-  const currentScale = baseScale * scaleMultiplier;
+  const scaleMultiplier = isHovered ? 1.5 : (isAnyHovered ? 0.75 : 1.0);
+  const currentScale = baseScale * (isSelected ? 1.8 : scaleMultiplier);
   const numStr = `#${String(starNumber).padStart(2, '0')}`;
 
   return (
@@ -271,7 +265,7 @@ function StarNode({ article, starNumber, isHovered, isAnyHovered, isDimmed, isSe
             size={0.07}
             color="#93A1BE"
             transparent
-            opacity={isDimmed ? 0.08 : (0.4 * normZ)}
+            opacity={isDimmed ? 0.08 : 0.4}
             blending={THREE.AdditiveBlending}
           />
         </points>
@@ -403,7 +397,7 @@ export function StellarChart({ articles, onHover, activeFilter, selectedStar, on
         />
       ))}
 
-      {/* 3. 各星の描画（記事番号 ＆ Z軸深度減光グラデーション付き） */}
+      {/* 3. 各星の描画（リアルタイム・カメラズーム連動減光グラデーション付き） */}
       {processedArticles.map((art, index) => {
         const isDimmed = activeFilter !== null && art.category !== activeFilter;
         return (
