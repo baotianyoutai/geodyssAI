@@ -123,14 +123,17 @@ interface StarNodeProps {
   isHovered: boolean;
   isAnyHovered: boolean;
   isDimmed: boolean;
+  isSelected: boolean;
   onPointerOver: () => void;
   onPointerOut: () => void;
+  onClick: () => void;
 }
 
-function StarNode({ article, isHovered, isAnyHovered, isDimmed, onPointerOver, onPointerOut }: StarNodeProps) {
+function StarNode({ article, isHovered, isAnyHovered, isDimmed, isSelected, onPointerOver, onPointerOut, onClick }: StarNodeProps) {
   const materialRef = useRef<THREE.ShaderMaterial>(null);
+  const selectedRingRef = useRef<THREE.Mesh>(null);
   const mistRef = useRef<THREE.Points>(null);
-
+  
   const stellarColor = CATEGORY_COLORS[article.category] || CATEGORY_COLORS.default;
   const nebulaColor = NEBULA_AURA_COLORS[article.category] || NEBULA_AURA_COLORS.default;
   const isDraft = article.status !== 'publish';
@@ -164,16 +167,23 @@ function StarNode({ article, isHovered, isAnyHovered, isDimmed, onPointerOver, o
 
   useFrame((state) => {
     const time = state.clock.getElapsedTime();
-
+    
     if (materialRef.current) {
       materialRef.current.uniforms.uTime.value = time;
-
-      // 💡 フィルターによって除外されている星は輝度を大幅に下げる
+      
       if (isDimmed) {
         materialRef.current.uniforms.uColorStellar.value.set(stellarColor).multiplyScalar(0.2);
+      } else if (isSelected) {
+        materialRef.current.uniforms.uColorStellar.value.set(stellarColor).multiplyScalar(2.2);
+      } else if (isHovered) {
+        materialRef.current.uniforms.uColorStellar.value.set(stellarColor).multiplyScalar(1.6);
       } else {
         materialRef.current.uniforms.uColorStellar.value.set(stellarColor);
       }
+    }
+
+    if (selectedRingRef.current) {
+      selectedRingRef.current.rotation.z = time * 0.4;
     }
 
     if (mistRef.current) {
@@ -182,14 +192,16 @@ function StarNode({ article, isHovered, isAnyHovered, isDimmed, onPointerOver, o
     }
   });
 
-  const handleClick = () => {
-    window.location.href = `/articles/${decodeURIComponent(article.slug)}`;
+  const handleClick = (e: any) => {
+    e.stopPropagation();
+    onClick();
   };
 
-  // 💡 フィルターによって除外されている星は極小スケールにする
   let scaleMultiplier = isHovered ? 1.5 : (isAnyHovered ? 0.75 : 1.0);
   if (isDimmed) {
     scaleMultiplier = 0.35;
+  } else if (isSelected) {
+    scaleMultiplier = 1.8;
   }
   const currentScale = baseScale * scaleMultiplier;
 
@@ -197,7 +209,6 @@ function StarNode({ article, isHovered, isAnyHovered, isDimmed, onPointerOver, o
     <group position={[article.pos.x, article.pos.y, article.pos.z]}>
       <Billboard follow={true}>
         <mesh
-          // 💡 除外されている星はクリック・ホバーイベントを無効化
           onClick={isDimmed ? undefined : handleClick}
           onPointerOver={isDimmed ? undefined : onPointerOver}
           onPointerOut={isDimmed ? undefined : onPointerOut}
@@ -214,6 +225,20 @@ function StarNode({ article, isHovered, isAnyHovered, isDimmed, onPointerOver, o
             blending={THREE.AdditiveBlending}
           />
         </mesh>
+
+        {/* 💡 選択中の星の周囲にロックオンリングを表示 */}
+        {isSelected && (
+          <mesh ref={selectedRingRef} scale={[currentScale, currentScale, 1]}>
+            <ringGeometry args={[0.82, 0.9, 32]} />
+            <meshBasicMaterial
+              color={stellarColor}
+              transparent={true}
+              opacity={0.85}
+              blending={THREE.AdditiveBlending}
+              depthWrite={false}
+            />
+          </mesh>
+        )}
       </Billboard>
 
       {/* 除外されていない星のみホバーテキストを表示 */}
@@ -247,14 +272,16 @@ interface StellarChartProps {
   articles: ArticleData[];
   onHover: (article: ArticleData | null) => void;
   activeFilter: string | null;
+  selectedStar: ArticleData | null;
+  onStarClick: (article: ArticleData) => void;
 }
 
-export function StellarChart({ articles, onHover, activeFilter }: StellarChartProps) {
+export function StellarChart({ articles, onHover, activeFilter, selectedStar, onStarClick }: StellarChartProps) {
   const [hoveredSlug, setHoveredSlug] = useState<string | null>(null);
 
   const processedArticles = useMemo(() => {
     const list = JSON.parse(JSON.stringify(articles)) as ArticleData[];
-
+    
     list.forEach(art => {
       const diff = art.difficulty;
       if (diff <= 2) {
@@ -271,7 +298,7 @@ export function StellarChart({ articles, onHover, activeFilter }: StellarChartPr
           const dx = list[i].pos.x - list[j].pos.x;
           const dy = list[i].pos.y - list[j].pos.y;
           const dz = list[i].pos.z - list[j].pos.z;
-          const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+          const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
           if (dist < minDistance) {
             const overlap = minDistance - dist;
             const forceX = (dx / (dist || 1)) * (overlap * 0.5);
@@ -319,7 +346,7 @@ export function StellarChart({ articles, onHover, activeFilter }: StellarChartPr
 
   const neighborLines = useMemo(() => {
     if (!hoveredArticle || !hoveredArticle.neighbors) return [];
-
+    
     const lines: [number, number, number][][] = [];
     const startPoint = hoveredArticle.pos;
 
@@ -337,7 +364,7 @@ export function StellarChart({ articles, onHover, activeFilter }: StellarChartPr
 
   return (
     <group>
-      {/* 1. 星座線 (アクティブなフィルターと異なるカテゴリーは極薄にする) */}
+      {/* 1. 星座線 */}
       {constellationLines.map((group, gIdx) => {
         const isLineDimmed = activeFilter !== null && group.category !== activeFilter;
         return group.segments.map((seg, sIdx) => (
@@ -374,6 +401,7 @@ export function StellarChart({ articles, onHover, activeFilter }: StellarChartPr
             isHovered={hoveredSlug === art.slug}
             isAnyHovered={hoveredSlug !== null}
             isDimmed={isDimmed}
+            isSelected={selectedStar?.slug === art.slug}
             onPointerOver={() => {
               setHoveredSlug(art.slug);
               onHover(art);
@@ -381,6 +409,9 @@ export function StellarChart({ articles, onHover, activeFilter }: StellarChartPr
             onPointerOut={() => {
               setHoveredSlug(null);
               onHover(null);
+            }}
+            onClick={() => {
+              onStarClick(art);
             }}
           />
         );
