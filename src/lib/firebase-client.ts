@@ -1,6 +1,7 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, type User } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'firebase/app-check';
 
 // Astro (PUBLIC_) および Next.js (NEXT_PUBLIC_) の両方の環境変数命名規則に対応
 const apiKey = import.meta.env.PUBLIC_FIREBASE_API_KEY || 
@@ -27,6 +28,10 @@ const appId = import.meta.env.PUBLIC_FIREBASE_APP_ID ||
               import.meta.env.NEXT_PUBLIC_FIREBASE_APP_ID || 
               "1:1234567890:web:abcdef123456";
 
+const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY || 
+                         import.meta.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || 
+                         "6LdDummyRecaptchaSiteKeyForDev12345678";
+
 const firebaseConfig = {
   apiKey,
   authDomain,
@@ -40,6 +45,22 @@ const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const googleProvider = new GoogleAuthProvider();
+
+// Firebase App Check (reCAPTCHA Enterprise) の初期化
+if (typeof window !== 'undefined') {
+  try {
+    if (import.meta.env.DEV) {
+      (self as any).FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+    }
+    initializeAppCheck(app, {
+      provider: new ReCaptchaEnterpriseProvider(recaptchaSiteKey),
+      isTokenAutoRefreshEnabled: true
+    });
+    console.log('Firebase App Check successfully initialized.');
+  } catch (e) {
+    console.warn('Firebase App Check initialization skipped (development/unconfigured):', e);
+  }
+}
 
 export interface UserProfile {
   uid: string;
