@@ -147,6 +147,7 @@ interface StellarCanvasProps {
 
 export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
   const [hoveredArticle, setHoveredArticle] = useState<ArticleData | null>(null);
+  const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [isLowPower, setIsLowPower] = useState(false);
   const [currentDepth, setCurrentDepth] = useState(0);
   const [descending, setDescending] = useState(false);
@@ -161,7 +162,7 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
   const getLayerName = (depth: number) => {
     if (depth < 800) return 'Azure (Surface) - 表層';
     if (depth < 1600) return 'Twilight (Mid) - 薄暮層';
-    return 'Midnight (Deep) - 深淵アビス';
+    return 'Midnight (Deep) - 深層';
   };
 
   return (
@@ -193,6 +194,7 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
         <StellarChart
           articles={initialArticles}
           onHover={setHoveredArticle}
+          activeFilter={activeFilter}
         />
 
         <OrbitControls
@@ -223,15 +225,14 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
           <p className="text-xs text-slate-400 font-mono mt-1">
             Navigating the knowledge cosmos
           </p>
-          
+
           {hoveredArticle ? (
             <div className="mt-6 space-y-4 animate-fade-in">
               <div className="flex items-center gap-2">
-                <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold font-mono tracking-wider text-slate-950 ${
-                  hoveredArticle.category === 'firebase' ? 'bg-[#F59E0B]' :
+                <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold font-mono tracking-wider text-slate-950 ${hoveredArticle.category === 'firebase' ? 'bg-[#F59E0B]' :
                   hoveredArticle.category === 'claude' ? 'bg-[#E07B54]' :
-                  hoveredArticle.category === 'dl' ? 'bg-[#2DD4BF]' : 'bg-[#3B82F6]'
-                }`}>
+                    hoveredArticle.category === 'dl' ? 'bg-[#2DD4BF]' : 'bg-[#3B82F6]'
+                  }`}>
                   {hoveredArticle.category.toUpperCase()}
                 </span>
                 {hoveredArticle.status !== 'publish' && (
@@ -248,7 +249,7 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
                   {hoveredArticle.excerpt}
                 </p>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-2 text-xs font-mono border-t border-slate-800/60 pt-3">
                 <div>
                   <span className="text-slate-500">Stratum Z:</span>{' '}
@@ -259,7 +260,7 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
                   <span className="text-sky-300">{'✦'.repeat(hoveredArticle.difficulty)}</span>
                 </div>
               </div>
-              
+
               <div className="text-[10px] text-slate-400/80 font-mono bg-slate-900/40 px-3 py-2 rounded border border-slate-800/40">
                 Click star to travel to this Lighthouse page
               </div>
@@ -272,34 +273,60 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
           )}
         </div>
       </div>
-      
-      {/* 右上: 凡例（星座カテゴリ） */}
-      <div className="absolute top-6 right-6 p-4 bg-slate-950/70 border border-slate-800/80 rounded-xl backdrop-blur-md z-10 text-xs font-mono text-slate-300 space-y-2 pointer-events-none">
-        <div className="text-slate-500 font-bold border-b border-slate-800/60 pb-1.5 mb-2">CONSTELLATIONS</div>
-        <div className="flex items-center gap-2">
+
+      {/* 右上: 凡例（星座カテゴリ）- クリック可能なフィルターに変更 */}
+      <div className="absolute top-6 right-6 p-4 bg-slate-950/70 border border-slate-800/80 rounded-xl backdrop-blur-md z-10 text-xs font-mono text-slate-300 space-y-2 pointer-events-auto select-none">
+        <div className="text-slate-500 font-bold border-b border-slate-800/60 pb-1.5 mb-2 flex justify-between items-center">
+          <span>CONSTELLATIONS</span>
+          {activeFilter && (
+            <button
+              onClick={() => setActiveFilter(null)}
+              className="text-[9px] text-sky-400 hover:text-sky-300 border border-sky-400/30 px-1 rounded bg-sky-950/50 cursor-pointer pointer-events-auto"
+            >
+              CLEAR
+            </button>
+          )}
+        </div>
+        
+        <button
+          onClick={() => setActiveFilter(activeFilter === 'firebase' ? null : 'firebase')}
+          className={`flex items-center gap-2 w-full text-left px-2 py-1 rounded transition-all cursor-pointer pointer-events-auto ${activeFilter === 'firebase' ? 'bg-[#F59E0B]/20 text-[#F59E0B] font-bold border border-[#F59E0B]/30' : 'hover:bg-slate-900/60 text-slate-300'}`}
+        >
           <span className="w-2.5 h-2.5 rounded-full bg-[#F59E0B]" />
           <span>Firebase</span>
-        </div>
-        <div className="flex items-center gap-2">
+        </button>
+
+        <button
+          onClick={() => setActiveFilter(activeFilter === 'claude' ? null : 'claude')}
+          className={`flex items-center gap-2 w-full text-left px-2 py-1 rounded transition-all cursor-pointer pointer-events-auto ${activeFilter === 'claude' ? 'bg-[#E07B54]/20 text-[#E07B54] font-bold border border-[#E07B54]/30' : 'hover:bg-slate-900/60 text-slate-300'}`}
+        >
           <span className="w-2.5 h-2.5 rounded-full bg-[#E07B54]" />
           <span>Claude / LLM</span>
-        </div>
-        <div className="flex items-center gap-2">
+        </button>
+
+        <button
+          onClick={() => setActiveFilter(activeFilter === 'dl' ? null : 'dl')}
+          className={`flex items-center gap-2 w-full text-left px-2 py-1 rounded transition-all cursor-pointer pointer-events-auto ${activeFilter === 'dl' ? 'bg-[#2DD4BF]/20 text-[#2DD4BF] font-bold border border-[#2DD4BF]/30' : 'hover:bg-slate-900/60 text-slate-300'}`}
+        >
           <span className="w-2.5 h-2.5 rounded-full bg-[#2DD4BF]" />
           <span>Deep Learning</span>
-        </div>
-        <div className="flex items-center gap-2">
+        </button>
+
+        <button
+          onClick={() => setActiveFilter(activeFilter === 'default' ? null : 'default')}
+          className={`flex items-center gap-2 w-full text-left px-2 py-1 rounded transition-all cursor-pointer pointer-events-auto ${activeFilter === 'default' ? 'bg-[#3B82F6]/20 text-[#3B82F6] font-bold border border-[#3B82F6]/30' : 'hover:bg-slate-900/60 text-slate-300'}`}
+        >
           <span className="w-2.5 h-2.5 rounded-full bg-[#3B82F6]" />
           <span>Default Star</span>
-        </div>
+        </button>
       </div>
 
-      {/* 5. 底部 HUD エリア (Stitchの深淵潜航デザインの完全再現) */}
+      {/* 5. 底部 HUD エリア */}
       <div className="absolute bottom-8 left-8 right-8 flex justify-between items-end z-10 pointer-events-none">
         
         {/* 左下: Stratification (階層凡例) */}
         <div className="bg-slate-950/70 backdrop-blur-md border border-slate-800/80 rounded-xl p-4 shadow-2xl flex flex-col gap-2 pointer-events-auto">
-          <h3 class="font-mono text-[10px] text-slate-500 uppercase tracking-widest mb-1">Stratification</h3>
+          <h3 className="font-mono text-[10px] text-slate-500 uppercase tracking-widest mb-1">Stratification</h3>
           <div className="flex items-center gap-3">
             <div className="w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_rgba(138,235,255,0.8)]"></div>
             <span className="font-mono text-xs text-slate-200">Azure (Surface) - 表層</span>
@@ -327,7 +354,7 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
           </span>
         </div>
 
-        {/* 右下: Depth Indicator (リアルタイム深度計) */}
+        {/* 右下: Depth Indicator */}
         <div className="flex items-center gap-4 bg-slate-950/70 backdrop-blur-md rounded-xl p-4 border border-slate-800/80 shadow-2xl pointer-events-auto">
           <div className="flex flex-col items-end">
             <span className="font-mono text-[10px] text-slate-500 uppercase tracking-wider">Depth</span>
@@ -335,7 +362,6 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
             <span className="font-mono text-[10px] text-slate-400 mt-0.5">{getLayerName(currentDepth)}</span>
           </div>
           <div className="h-16 w-0.5 depth-line rounded-full relative">
-            {/* 深度計の中を動くインジケータードット */}
             <div 
               className="absolute left-1/2 -translate-x-1/2 w-2 h-2 bg-primary rounded-full shadow-[0_0_10px_rgba(138,235,255,0.8)] transition-all duration-200"
               style={{ top: `${(currentDepth / 2400) * 80}%` }}

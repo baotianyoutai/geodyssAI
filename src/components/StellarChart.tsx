@@ -1,26 +1,23 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Line, Html, Billboard } from '@react-three/drei';
 import type { ArticleData } from './StellarCanvas';
 import * as THREE from 'three';
 
-// カテゴリ別のカラーマッピング (Stellar Color)
 const CATEGORY_COLORS: Record<string, string> = {
-  firebase: '#F59E0B',    // constellation-firebase
-  claude: '#E07B54',      // constellation-claude
-  dl: '#2DD4BF',          // constellation-dl
-  default: '#3B82F6'      // default blue
+  firebase: '#F59E0B',
+  claude: '#E07B54',
+  dl: '#2DD4BF',
+  default: '#3B82F6'
 };
 
-// 星雲（オーラ）の補色マッピング
 const NEBULA_AURA_COLORS: Record<string, string> = {
-  firebase: '#8B5CF6',    // Firebaseの黄色には紫のオーラ
-  claude: '#EC4899',      // Claudeのオレンジにはピンクのオーラ
-  dl: '#3B82F6',          // DLのティールにはブルーのオーラ
+  firebase: '#8B5CF6',
+  claude: '#EC4899',
+  dl: '#3B82F6',
   default: '#8B5CF6'
 };
 
-// プリム法による最小全域木 (MST) 計算
 function computeMST(nodes: ArticleData[]): [THREE.Vector3, THREE.Vector3][] {
   if (nodes.length <= 1) return [];
   const connections: [THREE.Vector3, THREE.Vector3][] = [];
@@ -55,7 +52,6 @@ function computeMST(nodes: ArticleData[]): [THREE.Vector3, THREE.Vector3][] {
   return connections;
 }
 
-// 4. Stitchのデザインに基づく、個別ノイズ・明滅オーラシェーダーの定義
 const StarShader = {
   uniforms: {
     uTime: { value: 0 },
@@ -97,30 +93,23 @@ const StarShader = {
         vec2 uv = vUv - 0.5;
         float dist = length(uv);
         
-        // 四角い輪郭を丸くクリップするガード
         if (dist > 0.5) {
             discard;
         }
 
-        // 半径のレンジを調整
         float d = dist * 2.0;
         
-        // 基本の星のコア部 (Core)
         float core = 1.0 - smoothstep(0.0, 0.06, d);
         float glow = exp(-d * 7.5) * 0.9;
         
-        // 揺らめく星雲オーラノイズ (Aura)
         float n = noise(uv * 12.0 + uTime * 0.6);
         float aura = exp(-d * 3.5) * n * 0.55;
         
-        // 明滅（パルス）
         float pulse = 0.85 + 0.15 * sin(uTime * 2.5 + hash(uv + uSeed) * 6.28);
         
-        // 色ブレンド
         vec3 color = uColorStellar * (core + glow * pulse);
         color += uColorNebula * aura * pulse;
         
-        // 透明度計算
         float alpha = (glow + core + aura) * pulse;
         alpha = clamp(alpha, 0.0, 1.0);
         
@@ -129,16 +118,16 @@ const StarShader = {
   `
 };
 
-// 個別の星コンポーネント (Billboard + Custom Shader)
 interface StarNodeProps {
   article: ArticleData;
   isHovered: boolean;
   isAnyHovered: boolean;
+  isDimmed: boolean;
   onPointerOver: () => void;
   onPointerOut: () => void;
 }
 
-function StarNode({ article, isHovered, isAnyHovered, onPointerOver, onPointerOut }: StarNodeProps) {
+function StarNode({ article, isHovered, isAnyHovered, isDimmed, onPointerOver, onPointerOut }: StarNodeProps) {
   const materialRef = useRef<THREE.ShaderMaterial>(null);
   const mistRef = useRef<THREE.Points>(null);
   
@@ -146,11 +135,9 @@ function StarNode({ article, isHovered, isAnyHovered, onPointerOver, onPointerOu
   const nebulaColor = NEBULA_AURA_COLORS[article.category] || NEBULA_AURA_COLORS.default;
   const isDraft = article.status !== 'publish';
 
-  // 難易度と閲覧時間に基づくスケール
   const baseScale = 1.0 + (article.readingTime * 0.1);
   const seed = useMemo(() => Math.random() * 100.0, []);
 
-  // シェーダーマテリアルの初期パラメータ設定
   const uniforms = useMemo(() => {
     return {
       uTime: { value: 0 },
@@ -160,7 +147,6 @@ function StarNode({ article, isHovered, isAnyHovered, onPointerOver, onPointerOu
     };
   }, [stellarColor, nebulaColor, seed]);
 
-  // Draft 用の「霧 (Mist)」データ
   const mistParticles = useMemo(() => {
     if (!isDraft) return null;
     const count = 35;
@@ -179,9 +165,15 @@ function StarNode({ article, isHovered, isAnyHovered, onPointerOver, onPointerOu
   useFrame((state) => {
     const time = state.clock.getElapsedTime();
     
-    // 時間経過の uniform を更新して星のオーラと明滅を揺らす
     if (materialRef.current) {
       materialRef.current.uniforms.uTime.value = time;
+      
+      // 💡 フィルターによって除外されている星は輝度を大幅に下げる
+      if (isDimmed) {
+        materialRef.current.uniforms.uColorStellar.value.set(stellarColor).multiplyScalar(0.2);
+      } else {
+        materialRef.current.uniforms.uColorStellar.value.set(stellarColor);
+      }
     }
 
     if (mistRef.current) {
@@ -194,21 +186,21 @@ function StarNode({ article, isHovered, isAnyHovered, onPointerOver, onPointerOu
     window.location.href = `/articles/${decodeURIComponent(article.slug)}`;
   };
 
-  const currentScale = baseScale * (isHovered ? 1.5 : (isAnyHovered ? 0.75 : 1.0));
+  // 💡 フィルターによって除外されている星は極小スケールにする
+  let scaleMultiplier = isHovered ? 1.5 : (isAnyHovered ? 0.75 : 1.0);
+  if (isDimmed) {
+    scaleMultiplier = 0.35;
+  }
+  const currentScale = baseScale * scaleMultiplier;
 
   return (
     <group position={[article.pos.x, article.pos.y, article.pos.z]}>
-      {/* 2D Billboard としてカメラに常に正対させ、幻想的に発光するシェーダーを適用 */}
-      <Billboard
-        follow={true}
-        lockX={false}
-        lockY={false}
-        lockZ={false}
-      >
+      <Billboard follow={true}>
         <mesh
-          onClick={handleClick}
-          onPointerOver={onPointerOver}
-          onPointerOut={onPointerOut}
+          // 💡 除外されている星はクリック・ホバーイベントを無効化
+          onClick={isDimmed ? undefined : handleClick}
+          onPointerOver={isDimmed ? undefined : onPointerOver}
+          onPointerOut={isDimmed ? undefined : onPointerOut}
           scale={[currentScale, currentScale, 1]}
         >
           <planeGeometry args={[1.5, 1.5]} />
@@ -224,8 +216,8 @@ function StarNode({ article, isHovered, isAnyHovered, onPointerOver, onPointerOu
         </mesh>
       </Billboard>
 
-      {/* ホバー時のテキストタイトル */}
-      {isHovered && (
+      {/* 除外されていない星のみホバーテキストを表示 */}
+      {isHovered && !isDimmed && (
         <Html distanceFactor={8} zIndexRange={[10, 20]} center>
           <div className="px-3 py-1.5 bg-slate-950/90 border border-slate-700/80 rounded-md text-[11px] font-display font-bold text-white whitespace-nowrap shadow-xl backdrop-blur-sm pointer-events-none select-none">
             {article.title}
@@ -233,7 +225,6 @@ function StarNode({ article, isHovered, isAnyHovered, onPointerOver, onPointerOu
         </Html>
       )}
 
-      {/* Draft用霧エフェクト */}
       {isDraft && mistParticles && (
         <points ref={mistRef}>
           <bufferGeometry>
@@ -243,7 +234,7 @@ function StarNode({ article, isHovered, isAnyHovered, onPointerOver, onPointerOu
             size={0.07}
             color="#93A1BE"
             transparent
-            opacity={0.5}
+            opacity={isDimmed ? 0.08 : 0.5}
             blending={THREE.AdditiveBlending}
           />
         </points>
@@ -252,18 +243,18 @@ function StarNode({ article, isHovered, isAnyHovered, onPointerOver, onPointerOu
   );
 }
 
-export function StellarChart({ articles, onHover }: StellarChartProps) {
+interface StellarChartProps {
+  articles: ArticleData[];
+  onHover: (article: ArticleData | null) => void;
+  activeFilter: string | null;
+}
+
+export function StellarChart({ articles, onHover, activeFilter }: StellarChartProps) {
   const [hoveredSlug, setHoveredSlug] = useState<string | null>(null);
 
-  // 1. Z軸の階層化 (Stratification) & 衝突斥力計算 (Repulsion) による重複防止
   const processedArticles = useMemo(() => {
-    // ディープコピー
     const list = JSON.parse(JSON.stringify(articles)) as ArticleData[];
     
-    // Z軸座標を難易度に基づいて強制スケーリング (層の分離)
-    // Azure (Surface: diff 1-2) -> Zを手前側 (6〜14)
-    // Twilight (Mid: diff 3)     -> Zを中央付近 (-3〜3)
-    // Midnight (Deep: diff 4-5)  -> Zを深淵奥側 (-14〜-6)
     list.forEach(art => {
       const diff = art.difficulty;
       if (diff <= 2) {
@@ -273,9 +264,8 @@ export function StellarChart({ articles, onHover }: StellarChartProps) {
       }
     });
 
-    // 衝突回避 (斥力) パス - 互いの星が重ならないように緩和させます
-    const minDistance = 2.4; // 最低確保距離
-    for (let iter = 0; iter < 12; iter++) { // 12回の反復緩和
+    const minDistance = 2.4;
+    for (let iter = 0; iter < 12; iter++) {
       for (let i = 0; i < list.length; i++) {
         for (let j = i + 1; j < list.length; j++) {
           const dx = list[i].pos.x - list[j].pos.x;
@@ -284,7 +274,6 @@ export function StellarChart({ articles, onHover }: StellarChartProps) {
           const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
           if (dist < minDistance) {
             const overlap = minDistance - dist;
-            // 反応ベクトルを計算して双方を半分ずつ押し出す
             const forceX = (dx / (dist || 1)) * (overlap * 0.5);
             const forceY = (dy / (dist || 1)) * (overlap * 0.5);
             const forceZ = (dz / (dist || 1)) * (overlap * 0.5);
@@ -301,7 +290,6 @@ export function StellarChart({ articles, onHover }: StellarChartProps) {
     return list;
   }, [articles]);
 
-  // カテゴリ別の星のグループ化
   const groupedArticles = useMemo(() => {
     const groups: Record<string, ArticleData[]> = {};
     processedArticles.forEach(art => {
@@ -315,23 +303,20 @@ export function StellarChart({ articles, onHover }: StellarChartProps) {
     return groups;
   }, [processedArticles]);
 
-  // 各星座線の計算 (同一星座の接続)
   const constellationLines = useMemo(() => {
-    const lines: { color: string; segments: [THREE.Vector3, THREE.Vector3][] }[] = [];
+    const lines: { category: string; color: string; segments: [THREE.Vector3, THREE.Vector3][] }[] = [];
     Object.entries(groupedArticles).forEach(([cat, nodes]) => {
       const color = CATEGORY_COLORS[cat] || CATEGORY_COLORS.default;
       const segments = computeMST(nodes);
-      lines.push({ color, segments });
+      lines.push({ category: cat, color, segments });
     });
     return lines;
   }, [groupedArticles]);
 
-  // ホバーされた星のデータを特定
   const hoveredArticle = useMemo(() => {
     return processedArticles.find(art => art.slug === hoveredSlug) || null;
   }, [hoveredSlug, processedArticles]);
 
-  // 「光の糸 (neighbors)」接続線の作成
   const neighborLines = useMemo(() => {
     if (!hoveredArticle || !hoveredArticle.neighbors) return [];
     
@@ -352,21 +337,22 @@ export function StellarChart({ articles, onHover }: StellarChartProps) {
 
   return (
     <group>
-      {/* 1. 常時薄く表示される星座線 */}
-      {constellationLines.map((group, gIdx) => 
-        group.segments.map((seg, sIdx) => (
+      {/* 1. 星座線 (アクティブなフィルターと異なるカテゴリーは極薄にする) */}
+      {constellationLines.map((group, gIdx) => {
+        const isLineDimmed = activeFilter !== null && group.category !== activeFilter;
+        return group.segments.map((seg, sIdx) => (
           <Line
             key={`const-line-${gIdx}-${sIdx}`}
             points={[seg[0], seg[1]]}
             color={group.color}
             lineWidth={0.6}
             transparent
-            opacity={0.18}
+            opacity={isLineDimmed ? 0.02 : 0.18}
           />
-        ))
-      )}
+        ));
+      })}
 
-      {/* 2. ホバー時の光の糸 */}
+      {/* 2. 光の糸 */}
       {neighborLines.map((points, idx) => (
         <Line
           key={`neighbor-line-${idx}`}
@@ -378,23 +364,27 @@ export function StellarChart({ articles, onHover }: StellarChartProps) {
         />
       ))}
 
-      {/* 3. 各星（シェーダーノード）の描画 */}
-      {processedArticles.map(art => (
-        <StarNode
-          key={art.slug}
-          article={art}
-          isHovered={hoveredSlug === art.slug}
-          isAnyHovered={hoveredSlug !== null}
-          onPointerOver={() => {
-            setHoveredSlug(art.slug);
-            onHover(art);
-          }}
-          onPointerOut={() => {
-            setHoveredSlug(null);
-            onHover(null);
-          }}
-        />
-      ))}
+      {/* 3. 各星の描画 */}
+      {processedArticles.map(art => {
+        const isDimmed = activeFilter !== null && art.category !== activeFilter;
+        return (
+          <StarNode
+            key={art.slug}
+            article={art}
+            isHovered={hoveredSlug === art.slug}
+            isAnyHovered={hoveredSlug !== null}
+            isDimmed={isDimmed}
+            onPointerOver={() => {
+              setHoveredSlug(art.slug);
+              onHover(art);
+            }}
+            onPointerOut={() => {
+              setHoveredSlug(null);
+              onHover(null);
+            }}
+          />
+        );
+      })}
     </group>
   );
 }
