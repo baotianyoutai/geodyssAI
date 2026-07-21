@@ -1,0 +1,55 @@
+---
+// src/pages/observatory.astro
+import { getArticles } from '../lib/firebase-server';
+export const prerender = true;
+import { ObservatoryView } from '../components/ObservatoryView';
+import '../styles/global.css';
+
+const articles = await getArticles();
+---
+
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width" />
+    <title>知の星海 展望台 — Observatory | geodyssAI</title>
+    <meta name="description" content="全7星座の観測データ、星々の点灯率（読了進捗）、未巡破の星リストを監視する展望台。" />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  </head>
+  <body class="bg-[#050B18] text-slate-100 font-body antialiased min-h-screen relative flex flex-col justify-between">
+    
+    {/* ヘッダーナビゲーション */}
+    <header className="p-4 md:p-6 flex items-center justify-between border-b border-slate-800/60 bg-slate-950/60 backdrop-blur-md sticky top-0 z-40">
+      <a href="/" className="flex items-center gap-2 group">
+        <span className="text-xl">🌌</span>
+        <span className="font-display font-bold text-sm tracking-wider text-slate-200 group-hover:text-sky-300 transition-colors">
+          geodyssAI
+        </span>
+      </a>
+
+      <nav className="flex items-center gap-4 text-xs font-mono text-slate-400">
+        <a href="/" className="hover:text-white transition-colors">
+          ← 星海図 (Chart)
+        </a>
+        <a href="/captain" className="px-3 py-1 bg-slate-900 hover:bg-sky-500 hover:text-slate-950 border border-slate-800 rounded-lg text-slate-200 transition-all">
+          👨‍✈️ Captain
+        </a>
+      </nav>
+    </header>
+
+    {/* メイン コンテンツ */}
+    <main className="py-8 px-4 flex-1">
+      <ObservatoryView client:load articles={articles} />
+    </main>
+
+    {/* フッター */}
+    <footer className="border-t border-slate-800/40 py-6 text-center text-xs font-mono text-slate-500 bg-slate-950/40">
+      © 2026 geodyssAI. Station Observatory.
+    </footer>
+  </body>
+</html>
