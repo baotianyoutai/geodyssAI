@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { EffectComposer, Bloom } from '@react-three/postprocessing';
@@ -17,7 +17,7 @@ function Starfield() {
     for (let i = 0; i < 1500 * 3; i++) arr[i] = (Math.random() - 0.5) * 150;
     return arr;
   });
-
+  
   const [positions2] = useState(() => {
     const arr = new Float32Array(1500 * 3);
     for (let i = 0; i < 1500 * 3; i++) arr[i] = (Math.random() - 0.5) * 180;
@@ -83,7 +83,7 @@ function NebulaBackground() {
   );
 }
 
-// 3. 3Dシーン制御 (カメラ位置の監視、フォグ、星選択時の確実なズームアニメーション)
+// 3. 3Dシーン制御
 interface SceneSetupProps {
   onDepthChange: (depth: number) => void;
   selectedStar: ArticleData | null;
@@ -98,7 +98,8 @@ function SceneSetup({ onDepthChange, selectedStar, transitioning, onTransitionCo
   const transitionStartTime = useRef<number>(0);
 
   useEffect(() => {
-    scene.fog = new THREE.FogExp2('#050B18', 0.012);
+    // 深海ブルーブラックの背景指数フォグ
+    scene.fog = new THREE.FogExp2('#050B18', 0.015);
     camera.position.set(0, 5, 26);
     camera.lookAt(0, 0, 0);
   }, [scene]);
@@ -112,38 +113,33 @@ function SceneSetup({ onDepthChange, selectedStar, transitioning, onTransitionCo
   useFrame((state) => {
     const controls = controlsRef.current;
 
-    // 💡 矢印ボタン or 星クリック時にカメラをその星の方向へスムーズにLerpズームイン＆センタリング
     if (selectedStar && controls && transitioning) {
       const targetPos = new THREE.Vector3(selectedStar.pos.x, selectedStar.pos.y, selectedStar.pos.z);
-
-      // 1. 注視点を星の座標に吸い寄せる
+      
       controls.target.lerp(targetPos, 0.12);
-
-      // 2. カメラ距離を目標の 6.2m 付近まで滑らかに接近させる
+      
       const camToTarget = new THREE.Vector3().subVectors(camera.position, controls.target);
       const dist = camToTarget.length();
       const desiredDist = 6.2;
-
+      
       if (dist > 0.05) {
         const newDist = THREE.MathUtils.lerp(dist, desiredDist, 0.12);
         camToTarget.setLength(newDist);
         camera.position.copy(controls.target).add(camToTarget);
       }
-
+      
       controls.update();
 
-      // 💡 到着判定: 最低180msアニメーション後にOrbitControlsを解放（手動ドラッグ移動を可能に）
       const elapsed = performance.now() - transitionStartTime.current;
       if (elapsed > 180 && controls.target.distanceTo(targetPos) < 0.15 && Math.abs(dist - desiredDist) < 0.15) {
         onTransitionComplete();
       }
     }
 
-    // 3. 深度値の計算
     const dist = camera.position.length();
     const rawDepth = Math.max(0, Math.min(2400, Math.round((26 - dist) * 120)));
     const roundedDepth = Math.round(rawDepth / 50) * 50;
-
+    
     if (roundedDepth !== lastDepth.current) {
       lastDepth.current = roundedDepth;
       onDepthChange(roundedDepth);
@@ -189,14 +185,12 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
     setIsLowPower(isMobile || hasLowDPR);
   }, []);
 
-  // 深度に応じたレイヤー名定義
   const getLayerName = (depth: number) => {
     if (depth < 800) return 'Azure (Surface) - 表層';
     if (depth < 1600) return 'Twilight (Mid) - 薄暮層';
     return 'Midnight (Deep) - 深層';
   };
 
-  // 💡 星をクリックした時: 選択インデックスを更新して吸い寄せズーム（2回クリックしても遷移しない）
   const handleStarClick = (article: ArticleData) => {
     const idx = initialArticles.findIndex(a => a.slug === article.slug);
     if (idx !== -1) {
@@ -206,7 +200,6 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
     setTransitioning(true);
   };
 
-  // 💡 「move next star」矢印ボタンをクリックした時: 前後の星へ移動 ＆ カメラが自走ズーム！
   const handleMoveStar = (step: number) => {
     if (initialArticles.length === 0) return;
     const newIdx = (currentIndex + step + initialArticles.length) % initialArticles.length;
@@ -215,9 +208,19 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
     setTransitioning(true);
   };
 
+  const handleResetFocus = () => {
+    setSelectedStar(null);
+    setTransitioning(false);
+    if (controlsRef.current) {
+      controlsRef.current.target.set(0, 0, 0);
+      controlsRef.current.object.position.set(0, 5, 26);
+      controlsRef.current.update();
+    }
+  };
+
   return (
     <div className="relative w-full h-screen bg-[#050B18] overflow-hidden select-none">
-
+      
       {/* Cinematic Film Grain Overlay */}
       <div className="film-grain"></div>
 
@@ -227,19 +230,19 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
         dpr={isLowPower ? 1 : [1, 2]}
       >
         <color attach="background" args={['#050B18']} />
-
-        <SceneSetup
-          onDepthChange={setCurrentDepth}
+        
+        <SceneSetup 
+          onDepthChange={setCurrentDepth} 
           selectedStar={selectedStar}
           transitioning={transitioning}
           onTransitionComplete={() => setTransitioning(false)}
           controlsRef={controlsRef}
         />
-
+        
         <ambientLight intensity={0.6} />
         <directionalLight position={[10, 10, 10]} intensity={1.2} />
         <pointLight position={[-10, -10, -10]} intensity={0.5} />
-
+        
         <NebulaBackground />
         <Starfield />
 
@@ -259,29 +262,29 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
           minDistance={5.5}
         />
 
+        {/* 💡 luminanceThreshold を 0.45 に調整し、明るい表層星(intensity > 0.45)のみをネオンBloom発光させ、暗い深層星(intensity < 0.45)は発光させずに静かな減光微光にする */}
         {!isLowPower && (
           <EffectComposer>
             <Bloom
-              luminanceThreshold={0.1}
-              luminanceSmoothing={0.95}
+              luminanceThreshold={0.45}
+              luminanceSmoothing={0.8}
               height={300}
-              intensity={1.5}
+              intensity={1.6}
             />
           </EffectComposer>
         )}
       </Canvas>
 
-      {/* 4. 左上: フローティンググラスモルフィックHUD (ホバー・選択詳細 ＆ ナビゲーション) */}
-      <div className="absolute top-6 left-6 pointer-events-none z-10 max-w-sm transition-all duration-300">
-        <div className="p-6 bg-slate-950/70 border border-slate-800/80 rounded-xl backdrop-blur-md shadow-2xl text-slate-100 font-body space-y-4">
-
-          {/* ヘッダー ＆ move next star 矢印ナビゲーション */}
-          <div className="border-b border-slate-800/60 pb-3">
+      {/* 4. 左上: フローティンググラスモルフィックHUD (固定サイズ w-[380px] & h-[450px]) */}
+      <div className="absolute top-6 left-6 pointer-events-none z-10">
+        <div className="w-[380px] h-[450px] p-6 bg-slate-950/75 border border-slate-800/80 rounded-xl backdrop-blur-md shadow-2xl text-slate-100 font-body flex flex-col justify-between">
+          
+          {/* ヘッダー ＆ Move Next Star 矢印ナビゲーション */}
+          <div className="border-b border-slate-800/60 pb-3 flex-shrink-0">
             <h1 className="text-xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-indigo-400">
               星海図 — Stellar Chart
             </h1>
-
-            {/* 💡 move next star 矢印コントローラー (Left/Right) */}
+            
             <div className="mt-3 flex items-center justify-between bg-slate-900/80 border border-slate-800/90 rounded-lg px-3 py-1.5 pointer-events-auto">
               <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">
                 Move Next Star
@@ -308,11 +311,12 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
             </div>
           </div>
 
+          {/* メタデータ領域 */}
           {(() => {
             const active = hoveredArticle || selectedStar || initialArticles[currentIndex];
             if (!active) {
               return (
-                <div className="text-sm text-slate-500 italic leading-relaxed">
+                <div className="flex-1 flex items-center justify-center text-sm text-slate-500 italic leading-relaxed text-center">
                   Hover over a star or click arrows to navigate.
                 </div>
               );
@@ -321,34 +325,36 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
             const displayNum = activeIdx !== -1 ? `#${String(activeIdx + 1).padStart(2, '0')}` : `#${String(currentIndex + 1).padStart(2, '0')}`;
 
             return (
-              <div className="space-y-4 animate-fade-in pointer-events-auto">
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold font-mono bg-sky-500/20 text-sky-300 border border-sky-500/40">
-                    {displayNum}
-                  </span>
-                  <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold font-mono tracking-wider text-slate-950 ${active.category === 'firebase' ? 'bg-[#F59E0B]' :
-                    active.category === 'claude' ? 'bg-[#E07B54]' :
-                      active.category === 'dl' ? 'bg-[#2DD4BF]' : 'bg-[#3B82F6]'
-                    }`}>
-                    {active.category.toUpperCase()}
-                  </span>
-                  {active.status !== 'publish' && (
-                    <span className="px-2.5 py-0.5 rounded text-[10px] font-bold font-mono bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                      DRAFT
+              <div className="flex-1 my-3 flex flex-col justify-between animate-fade-in pointer-events-auto overflow-hidden">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold font-mono bg-sky-500/20 text-sky-300 border border-sky-500/40">
+                      {displayNum}
                     </span>
-                  )}
+                    <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold font-mono tracking-wider text-slate-950 ${active.category === 'firebase' ? 'bg-[#F59E0B]' :
+                      active.category === 'claude' ? 'bg-[#E07B54]' :
+                        active.category === 'dl' ? 'bg-[#2DD4BF]' : 'bg-[#3B82F6]'
+                      }`}>
+                      {active.category.toUpperCase()}
+                    </span>
+                    {active.status !== 'publish' && (
+                      <span className="px-2.5 py-0.5 rounded text-[10px] font-bold font-mono bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                        DRAFT
+                      </span>
+                    )}
+                  </div>
+                  
+                  <div>
+                    <h2 className="text-base font-bold leading-snug text-white font-display line-clamp-2 h-[48px]">
+                      {active.title}
+                    </h2>
+                    <p className="text-xs text-slate-400 line-clamp-2 mt-1 leading-relaxed h-[36px]">
+                      {active.excerpt}
+                    </p>
+                  </div>
                 </div>
 
-                <div>
-                  <h2 className="text-lg font-bold leading-snug text-white font-display">
-                    {active.title}
-                  </h2>
-                  <p className="text-xs text-slate-400 line-clamp-3 mt-2 leading-relaxed">
-                    {active.excerpt}
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 text-xs font-mono border-t border-slate-800/60 pt-3">
+                <div className="grid grid-cols-2 gap-2 text-xs font-mono border-t border-slate-800/60 pt-2.5">
                   <div>
                     <span className="text-slate-500">Stratum Z:</span>{' '}
                     <span className="text-indigo-300">{active.pos.z.toFixed(2)}m</span>
@@ -358,23 +364,38 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
                     <span className="text-sky-300">{'✦'.repeat(active.difficulty)}</span>
                   </div>
                 </div>
-
-                {/* 💡 go to star for reading ボタン (クリックしてのみ記事へ遷移) */}
-                <div className="pt-1">
-                  <a
-                    href={`/articles/${decodeURIComponent(active.slug)}`}
-                    className="block w-full py-2.5 px-4 bg-primary hover:bg-sky-300 text-slate-950 font-bold font-display text-center rounded-lg transition-colors shadow-[0_0_15px_rgba(138,235,255,0.4)] pointer-events-auto"
-                  >
-                    go to star for reading →
-                  </a>
-                </div>
               </div>
             );
           })()}
+
+          {/* ボタンエリア */}
+          <div className="flex flex-col gap-2 pt-2 border-t border-slate-800/60 flex-shrink-0 pointer-events-auto">
+            {(() => {
+              const active = hoveredArticle || selectedStar || initialArticles[currentIndex];
+              return (
+                <>
+                  <a
+                    href={active ? `/articles/${decodeURIComponent(active.slug)}` : '#'}
+                    className="block w-full py-2 px-4 bg-primary hover:bg-sky-300 text-slate-950 font-bold font-display text-center rounded-lg transition-colors shadow-[0_0_15px_rgba(138,235,255,0.4)] pointer-events-auto text-xs"
+                  >
+                    go to star for reading →
+                  </a>
+
+                  <button
+                    onClick={handleResetFocus}
+                    className="w-full py-1.5 px-3 bg-slate-900/80 hover:bg-slate-800 text-slate-400 hover:text-slate-200 text-[11px] font-mono text-center rounded border border-slate-800/80 transition-colors pointer-events-auto cursor-pointer"
+                  >
+                    Reset Focus (フォーカス解除)
+                  </button>
+                </>
+              );
+            })()}
+          </div>
+
         </div>
       </div>
 
-      {/* 右上: 凡例（星座カテゴリ）- クリック可能なフィルターに変更 */}
+      {/* 右上: 凡例（星座カテゴリ） */}
       <div className="absolute top-6 right-6 p-4 bg-slate-950/70 border border-slate-800/80 rounded-xl backdrop-blur-md z-10 text-xs font-mono text-slate-300 space-y-2 pointer-events-auto select-none">
         <div className="text-slate-500 font-bold border-b border-slate-800/60 pb-2 flex flex-col gap-0.5">
           <span>CONSTELLATIONS</span>
@@ -382,7 +403,7 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
             Click constellation to filter this
           </span>
         </div>
-
+        
         <button
           onClick={() => setActiveFilter(null)}
           className={`flex items-center gap-2 w-full text-left px-2 py-1.5 rounded transition-all cursor-pointer pointer-events-auto ${activeFilter === null ? 'bg-sky-500/20 text-[#38BDF8] font-bold border border-sky-500/30' : 'hover:bg-slate-900/60 text-slate-300'}`}
@@ -390,7 +411,7 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
           <span className="w-2.5 h-2.5 rounded-full bg-[#38BDF8] shadow-[0_0_8px_rgba(56,189,248,0.6)] animate-pulse" />
           <span>All (全表示)</span>
         </button>
-
+        
         <button
           onClick={() => setActiveFilter(activeFilter === 'firebase' ? null : 'firebase')}
           className={`flex items-center gap-2 w-full text-left px-2 py-1 rounded transition-all cursor-pointer pointer-events-auto ${activeFilter === 'firebase' ? 'bg-[#F59E0B]/20 text-[#F59E0B] font-bold border border-[#F59E0B]/30' : 'hover:bg-slate-900/60 text-slate-300'}`}
@@ -426,21 +447,21 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
 
       {/* 5. 底部 HUD エリア */}
       <div className="absolute bottom-8 left-8 right-8 flex justify-between items-end z-10 pointer-events-none">
-
+        
         {/* 左下: Stratification (階層凡例) */}
         <div className="bg-slate-950/70 backdrop-blur-md border border-slate-800/80 rounded-xl p-4 shadow-2xl flex flex-col gap-2 pointer-events-auto">
           <h3 className="font-mono text-[10px] text-slate-500 uppercase tracking-widest mb-1">Stratification</h3>
           <div className="flex items-center gap-3">
             <div className="w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_rgba(138,235,255,0.8)]"></div>
-            <span className="font-mono text-xs text-slate-200">Azure (Surface) - 表層</span>
+            <span className="font-mono text-xs text-slate-200">Azure (Surface) - 表層 [眩光]</span>
           </div>
           <div className="flex items-center gap-3">
             <div className="w-2 h-2 rounded-full bg-tertiary shadow-[0_0_8px_rgba(208,188,255,0.5)]"></div>
-            <span className="font-mono text-xs text-slate-400">Twilight (Mid) - 薄暮層</span>
+            <span className="font-mono text-xs text-slate-400">Twilight (Mid) - 薄暮層 [中光]</span>
           </div>
           <div className="flex items-center gap-3">
-            <div className="w-2 h-2 rounded-full bg-secondary shadow-[0_0_8px_rgba(208,188,255,0.3)]"></div>
-            <span className="font-mono text-xs text-slate-500">Midnight (Deep) - 深層</span>
+            <div className="w-2 h-2 rounded-full bg-secondary opacity-40"></div>
+            <span className="font-mono text-xs text-slate-500">Midnight (Deep) - 深層 [微光・減光]</span>
           </div>
         </div>
 
@@ -452,7 +473,7 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
             <span className="font-mono text-[10px] text-slate-400 mt-0.5">{getLayerName(currentDepth)}</span>
           </div>
           <div className="h-16 w-0.5 depth-line rounded-full relative">
-            <div
+            <div 
               className="absolute left-1/2 -translate-x-1/2 w-2 h-2 bg-primary rounded-full shadow-[0_0_10px_rgba(138,235,255,0.8)] transition-all duration-200"
               style={{ top: `${(currentDepth / 2400) * 80}%` }}
             ></div>
