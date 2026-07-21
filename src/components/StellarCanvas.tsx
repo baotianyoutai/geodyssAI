@@ -276,17 +276,20 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
 
       {/* 右上: 凡例（星座カテゴリ）- クリック可能なフィルターに変更 */}
       <div className="absolute top-6 right-6 p-4 bg-slate-950/70 border border-slate-800/80 rounded-xl backdrop-blur-md z-10 text-xs font-mono text-slate-300 space-y-2 pointer-events-auto select-none">
-        <div className="text-slate-500 font-bold border-b border-slate-800/60 pb-1.5 mb-2 flex justify-between items-center">
+        <div className="text-slate-500 font-bold border-b border-slate-800/60 pb-2 flex flex-col gap-0.5">
           <span>CONSTELLATIONS</span>
-          {activeFilter && (
-            <button
-              onClick={() => setActiveFilter(null)}
-              className="text-[9px] text-sky-400 hover:text-sky-300 border border-sky-400/30 px-1 rounded bg-sky-950/50 cursor-pointer pointer-events-auto"
-            >
-              CLEAR
-            </button>
-          )}
+          <span className="text-[9px] text-slate-500/80 font-normal normal-case italic">
+            Click constellation to filter this
+          </span>
         </div>
+        
+        <button
+          onClick={() => setActiveFilter(null)}
+          className={`flex items-center gap-2 w-full text-left px-2 py-1.5 rounded transition-all cursor-pointer pointer-events-auto ${activeFilter === null ? 'bg-sky-500/20 text-[#38BDF8] font-bold border border-sky-500/30' : 'hover:bg-slate-900/60 text-slate-300'}`}
+        >
+          <span className="w-2.5 h-2.5 rounded-full bg-[#38BDF8] shadow-[0_0_8px_rgba(56,189,248,0.6)] animate-pulse" />
+          <span>All (全表示)</span>
+        </button>
         
         <button
           onClick={() => setActiveFilter(activeFilter === 'firebase' ? null : 'firebase')}
