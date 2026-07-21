@@ -130,7 +130,7 @@ interface StarNodeProps {
 function StarNode({ article, isHovered, isAnyHovered, isDimmed, onPointerOver, onPointerOut }: StarNodeProps) {
   const materialRef = useRef<THREE.ShaderMaterial>(null);
   const mistRef = useRef<THREE.Points>(null);
-  
+
   const stellarColor = CATEGORY_COLORS[article.category] || CATEGORY_COLORS.default;
   const nebulaColor = NEBULA_AURA_COLORS[article.category] || NEBULA_AURA_COLORS.default;
   const isDraft = article.status !== 'publish';
@@ -164,10 +164,10 @@ function StarNode({ article, isHovered, isAnyHovered, isDimmed, onPointerOver, o
 
   useFrame((state) => {
     const time = state.clock.getElapsedTime();
-    
+
     if (materialRef.current) {
       materialRef.current.uniforms.uTime.value = time;
-      
+
       // 💡 フィルターによって除外されている星は輝度を大幅に下げる
       if (isDimmed) {
         materialRef.current.uniforms.uColorStellar.value.set(stellarColor).multiplyScalar(0.2);
@@ -254,7 +254,7 @@ export function StellarChart({ articles, onHover, activeFilter }: StellarChartPr
 
   const processedArticles = useMemo(() => {
     const list = JSON.parse(JSON.stringify(articles)) as ArticleData[];
-    
+
     list.forEach(art => {
       const diff = art.difficulty;
       if (diff <= 2) {
@@ -271,7 +271,7 @@ export function StellarChart({ articles, onHover, activeFilter }: StellarChartPr
           const dx = list[i].pos.x - list[j].pos.x;
           const dy = list[i].pos.y - list[j].pos.y;
           const dz = list[i].pos.z - list[j].pos.z;
-          const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+          const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
           if (dist < minDistance) {
             const overlap = minDistance - dist;
             const forceX = (dx / (dist || 1)) * (overlap * 0.5);
@@ -319,7 +319,7 @@ export function StellarChart({ articles, onHover, activeFilter }: StellarChartPr
 
   const neighborLines = useMemo(() => {
     if (!hoveredArticle || !hoveredArticle.neighbors) return [];
-    
+
     const lines: [number, number, number][][] = [];
     const startPoint = hoveredArticle.pos;
 

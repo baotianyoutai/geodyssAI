@@ -83,14 +83,16 @@ function NebulaBackground() {
   );
 }
 
-// 3. 3Dシーン制御 (カメラ位置の監視とフォグ、自動潜航アニメーション)
+// 3. 3Dシーン制御 (カメラ位置の監視、フォグ、星選択時の滑らかな自動ズーム)
 interface SceneSetupProps {
   onDepthChange: (depth: number) => void;
-  descending: boolean;
-  onDescendComplete: () => void;
+  selectedStar: ArticleData | null;
+  transitioning: boolean;
+  onTransitionComplete: () => void;
+  controlsRef: React.RefObject<any>;
 }
 
-function SceneSetup({ onDepthChange, descending, onDescendComplete }: SceneSetupProps) {
+function SceneSetup({ onDepthChange, selectedStar, transitioning, onTransitionComplete, controlsRef }: SceneSetupProps) {
   const { scene, camera } = useThree();
   const lastDepth = useRef<number>(-1);
   
@@ -98,27 +100,45 @@ function SceneSetup({ onDepthChange, descending, onDescendComplete }: SceneSetup
     scene.fog = new THREE.FogExp2('#050B18', 0.012);
     camera.position.set(0, 5, 26);
     camera.lookAt(0, 0, 0);
-  }, [scene, camera]);
+  }, [scene]);
 
   useFrame((state) => {
-    // 1. カメラ距離（深度）の計測とコールバック
+    const controls = controlsRef.current;
+
+    // 💡 星クリック時にカメラをその星の方向へスムーズにズームイン (Lerp移動)
+    if (selectedStar && controls && transitioning) {
+      const targetPos = new THREE.Vector3(selectedStar.pos.x, selectedStar.pos.y, selectedStar.pos.z);
+      
+      // 1. 注視点を星の座標に吸い寄せる
+      controls.target.lerp(targetPos, 0.1);
+      
+      // 2. カメラ距離を目標の 6.5m 付近まで滑らかに接近させる
+      const camToTarget = new THREE.Vector3().subVectors(camera.position, controls.target);
+      const dist = camToTarget.length();
+      const desiredDist = 6.5;
+      
+      if (dist > 0.05) {
+        const newDist = THREE.MathUtils.lerp(dist, desiredDist, 0.1);
+        camToTarget.setLength(newDist);
+        camera.position.copy(controls.target).add(camToTarget);
+      }
+      
+      controls.update();
+
+      // 💡 到着判定: 十分近くなったら transitioning を false にし、手動操作（カーソルでの自由移動）を完全に解放！
+      if (controls.target.distanceTo(targetPos) < 0.25 && Math.abs(dist - desiredDist) < 0.25) {
+        onTransitionComplete();
+      }
+    }
+
+    // 3. 深度値の計算
     const dist = camera.position.length();
-    // ズームインするほど深海へ潜る設定 (距離26m -> 0m、距離6m -> 2400m)
     const rawDepth = Math.max(0, Math.min(2400, Math.round((26 - dist) * 120)));
-    const roundedDepth = Math.round(rawDepth / 50) * 50; // 50m単位に丸めて再描画を抑制
+    const roundedDepth = Math.round(rawDepth / 50) * 50;
     
     if (roundedDepth !== lastDepth.current) {
       lastDepth.current = roundedDepth;
       onDepthChange(roundedDepth);
-    }
-
-    // 2. 潜航（Descend）ボタン押下時のカメラアニメーション (Lerp)
-    if (descending) {
-      camera.position.lerp(new THREE.Vector3(0, 1.5, 6.5), 0.04);
-      camera.lookAt(0, 0, 0);
-      if (camera.position.distanceTo(new THREE.Vector3(0, 1.5, 6.5)) < 0.2) {
-        onDescendComplete();
-      }
     }
   });
 
@@ -147,10 +167,12 @@ interface StellarCanvasProps {
 
 export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
   const [hoveredArticle, setHoveredArticle] = useState<ArticleData | null>(null);
+  const [selectedStar, setSelectedStar] = useState<ArticleData | null>(null);
+  const [transitioning, setTransitioning] = useState(false);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [isLowPower, setIsLowPower] = useState(false);
   const [currentDepth, setCurrentDepth] = useState(0);
-  const [descending, setDescending] = useState(false);
+  const controlsRef = useRef<any>(null);
 
   useEffect(() => {
     const isMobile = /Mobi|Android/i.test(navigator.userAgent);
@@ -163,6 +185,12 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
     if (depth < 800) return 'Azure (Surface) - 表層';
     if (depth < 1600) return 'Twilight (Mid) - 薄暮層';
     return 'Midnight (Deep) - 深層';
+  };
+
+  // 星をクリックした時: その星にズームイン
+  const handleStarClick = (article: ArticleData) => {
+    setSelectedStar(article);
+    setTransitioning(true); // カメラズームのトリガー
   };
 
   return (
@@ -180,8 +208,10 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
         
         <SceneSetup 
           onDepthChange={setCurrentDepth} 
-          descending={descending} 
-          onDescendComplete={() => setDescending(false)} 
+          selectedStar={selectedStar}
+          transitioning={transitioning}
+          onTransitionComplete={() => setTransitioning(false)}
+          controlsRef={controlsRef}
         />
         
         <ambientLight intensity={0.6} />
@@ -195,9 +225,12 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
           articles={initialArticles}
           onHover={setHoveredArticle}
           activeFilter={activeFilter}
+          selectedStar={selectedStar}
+          onStarClick={handleStarClick}
         />
 
         <OrbitControls
+          ref={controlsRef}
           enableDamping
           dampingFactor={0.05}
           maxDistance={40}
@@ -218,7 +251,7 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
 
       {/* 4. 左上: フローティンググラスモルフィックHUD (ホバー詳細) */}
       <div className="absolute top-6 left-6 pointer-events-none z-10 max-w-sm transition-all duration-300">
-        <div className="p-6 bg-slate-950/70 border border-slate-800/80 rounded-xl backdrop-blur-md shadow-2xl text-slate-100">
+        <div className="p-6 bg-slate-950/70 border border-slate-800/80 rounded-xl backdrop-blur-md shadow-2xl text-slate-100 font-body">
           <h1 className="text-xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-indigo-400">
             星海図 — Stellar Chart
           </h1>
@@ -226,51 +259,64 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
             Navigating the knowledge cosmos
           </p>
 
-          {hoveredArticle ? (
-            <div className="mt-6 space-y-4 animate-fade-in">
-              <div className="flex items-center gap-2">
-                <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold font-mono tracking-wider text-slate-950 ${hoveredArticle.category === 'firebase' ? 'bg-[#F59E0B]' :
-                  hoveredArticle.category === 'claude' ? 'bg-[#E07B54]' :
-                    hoveredArticle.category === 'dl' ? 'bg-[#2DD4BF]' : 'bg-[#3B82F6]'
-                  }`}>
-                  {hoveredArticle.category.toUpperCase()}
-                </span>
-                {hoveredArticle.status !== 'publish' && (
-                  <span className="px-2.5 py-0.5 rounded text-[10px] font-bold font-mono bg-sky-500/20 text-sky-300 border border-sky-500/40">
-                    DRAFT (MIST)
+          {(() => {
+            // 💡 ホバー中または選択中の星を優先取得
+            const active = hoveredArticle || selectedStar;
+            if (!active) {
+              return (
+                <div className="mt-6 text-sm text-slate-500 italic leading-relaxed">
+                  Hover over a star to inspect its metadata.<br />
+                  Click any star to zoom to it.
+                </div>
+              );
+            }
+            return (
+              <div className="mt-6 space-y-4 animate-fade-in pointer-events-auto">
+                <div className="flex items-center gap-2">
+                  <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold font-mono tracking-wider text-slate-950 ${active.category === 'firebase' ? 'bg-[#F59E0B]' :
+                    active.category === 'claude' ? 'bg-[#E07B54]' :
+                      active.category === 'dl' ? 'bg-[#2DD4BF]' : 'bg-[#3B82F6]'
+                    }`}>
+                    {active.category.toUpperCase()}
                   </span>
-                )}
-              </div>
-              <div>
-                <h2 className="text-lg font-bold leading-snug text-white font-display">
-                  {hoveredArticle.title}
-                </h2>
-                <p className="text-xs text-slate-400 line-clamp-3 mt-2 leading-relaxed">
-                  {hoveredArticle.excerpt}
-                </p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 text-xs font-mono border-t border-slate-800/60 pt-3">
-                <div>
-                  <span className="text-slate-500">Stratum Z:</span>{' '}
-                  <span className="text-indigo-300">{hoveredArticle.pos.z.toFixed(2)}m</span>
+                  {active.status !== 'publish' && (
+                    <span className="px-2.5 py-0.5 rounded text-[10px] font-bold font-mono bg-sky-500/20 text-sky-300 border border-sky-500/40">
+                      DRAFT (MIST)
+                    </span>
+                  )}
                 </div>
                 <div>
-                  <span className="text-slate-500">Difficulty:</span>{' '}
-                  <span className="text-sky-300">{'✦'.repeat(hoveredArticle.difficulty)}</span>
+                  <h2 className="text-lg font-bold leading-snug text-white font-display">
+                    {active.title}
+                  </h2>
+                  <p className="text-xs text-slate-400 line-clamp-3 mt-2 leading-relaxed">
+                    {active.excerpt}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-xs font-mono border-t border-slate-800/60 pt-3">
+                  <div>
+                    <span className="text-slate-500">Stratum Z:</span>{' '}
+                    <span className="text-indigo-300">{active.pos.z.toFixed(2)}m</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Difficulty:</span>{' '}
+                    <span className="text-sky-300">{'✦'.repeat(active.difficulty)}</span>
+                  </div>
+                </div>
+
+                {/* 💡 表示されているすべての記事に対して「go to star for reading →」ボタンを常時表示！ */}
+                <div className="pt-2">
+                  <a
+                    href={`/articles/${decodeURIComponent(active.slug)}`}
+                    className="block w-full py-2.5 px-4 bg-primary hover:bg-sky-300 text-slate-950 font-bold font-display text-center rounded-lg transition-colors shadow-[0_0_15px_rgba(138,235,255,0.4)] pointer-events-auto"
+                  >
+                    go to star for reading →
+                  </a>
                 </div>
               </div>
-
-              <div className="text-[10px] text-slate-400/80 font-mono bg-slate-900/40 px-3 py-2 rounded border border-slate-800/40">
-                Click star to travel to this Lighthouse page
-              </div>
-            </div>
-          ) : (
-            <div className="mt-6 text-sm text-slate-500 italic leading-relaxed">
-              Hover over a star to inspect its metadata.<br />
-              Drag to rotate the constellation sphere.
-            </div>
-          )}
+            );
+          })()}
         </div>
       </div>
 
@@ -344,20 +390,7 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
           </div>
         </div>
 
-        {/* 中央下: Descend (自動潜航アクションボタン) */}
-        <div 
-          onClick={() => setDescending(true)}
-          className="flex flex-col items-center gap-2 cursor-pointer group pointer-events-auto select-none"
-        >
-          <span className="font-mono text-xs text-primary tracking-[0.25em] uppercase group-hover:text-[#a2eeff] transition-colors duration-200">
-            Descend (潜航)
-          </span>
-          <span className="font-bold text-lg text-primary animate-descend group-hover:text-[#a2eeff] transition-colors duration-200">
-            ↓↓
-          </span>
-        </div>
-
-        {/* 右下: Depth Indicator */}
+        {/* 右下: Depth Indicator (リアルタイム深度計) */}
         <div className="flex items-center gap-4 bg-slate-950/70 backdrop-blur-md rounded-xl p-4 border border-slate-800/80 shadow-2xl pointer-events-auto">
           <div className="flex flex-col items-end">
             <span className="font-mono text-[10px] text-slate-500 uppercase tracking-wider">Depth</span>
