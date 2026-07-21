@@ -187,10 +187,17 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
     return 'Midnight (Deep) - 深層';
   };
 
-  // 星をクリックした時: その星にズームイン
+  // 星をクリックした時:
   const handleStarClick = (article: ArticleData) => {
+    // 💡 2回目（すでに選択・フォーカス中）のクリックの場合は、記事詳細へ直接ジャンプ！
+    if (selectedStar && selectedStar.slug === article.slug) {
+      window.location.href = `/articles/${decodeURIComponent(article.slug)}`;
+      return;
+    }
+
+    // 1回目のクリック: その星に吸い寄せズームイン ＆ HUDフォーカス
     setSelectedStar(article);
-    setTransitioning(true); // カメラズームのトリガー
+    setTransitioning(true);
   };
 
   return (
@@ -260,13 +267,12 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
           </p>
 
           {(() => {
-            // 💡 ホバー中または選択中の星を優先取得
             const active = hoveredArticle || selectedStar;
             if (!active) {
               return (
                 <div className="mt-6 text-sm text-slate-500 italic leading-relaxed">
                   Hover over a star to inspect its metadata.<br />
-                  Click any star to zoom to it.
+                  Click any star to focus (Click twice to travel).
                 </div>
               );
             }
@@ -305,7 +311,7 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
                   </div>
                 </div>
 
-                {/* 💡 表示されているすべての記事に対して「go to star for reading →」ボタンを常時表示！ */}
+                {/* 💡 go to star for reading ボタン (クリックで直ちに変遷) */}
                 <div className="pt-2">
                   <a
                     href={`/articles/${decodeURIComponent(active.slug)}`}
