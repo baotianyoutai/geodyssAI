@@ -3,6 +3,7 @@
 import { getArticles } from '../../lib/firebase-server';
 export const prerender = true;
 import MunchkinSpeech from '../../components/MunchkinSpeech.astro';
+import { ArticleNavigator } from '../../components/ArticleNavigator';
 import InfoBox from '../../components/InfoBox.astro';
 import { marked } from 'marked';
 import '../../styles/global.css';
@@ -163,6 +164,9 @@ if (lastIndex < contentMd.length) {
             }
           })}
         </div>
+
+        {/* マンチカン航海士のステップアップ指導カード */}
+        <ArticleNavigator client:load article={article} />
 
       </article>
 

@@ -1,11 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { auth, googleProvider, signInWithPopup, signOut, onAuthStateChanged, syncUserProfile, type UserProfile } from '../lib/firebase-client';
+import { MonolithCard, type MonolithData } from './MonolithCard';
 import type { User } from 'firebase/auth';
 
 interface BoardingModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
+
+const DEMO_MONOLITH: MonolithData = {
+  id: 'monolith-firebase-cloud',
+  constellationId: 'firebase-cloud',
+  constellationLabel: 'Firebase & Cloud 座',
+  unlockedAt: new Date().toISOString(),
+  tomeStory: '「太古の星海において、航海士は Firebase 座に属するすべての知の星を繋ぎ合わせ、偉大なるクラウドの光を呼び覚ました。この碑には、未知なる領域を開拓した voyager の不滅の功績が永久に記録されているニャ。」',
+  badge: '✦ Complete: Firebase 座'
+};
 
 export function BoardingModal({ isOpen, onClose }: BoardingModalProps) {
   const [user, setUser] = useState<User | null>(null);
@@ -44,7 +54,6 @@ export function BoardingModal({ isOpen, onClose }: BoardingModalProps) {
     } catch (e: any) {
       console.warn('Firebase Sign-in error (switching to Demo Voyager Mode):', e);
       
-      // .env に Firebase Client API Key が未設定の場合、デモ乗船モードとして即座にログイン状態を模倣
       const fallbackDemo: UserProfile = {
         uid: 'demo-voyager-777',
         displayName: '星海 航海士 (Voyager)',
@@ -85,7 +94,7 @@ export function BoardingModal({ isOpen, onClose }: BoardingModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 animate-fade-in font-body">
       
-      <div className="relative w-full max-w-md bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-2xl text-slate-100 font-sans">
+      <div className="relative w-full max-w-md bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-2xl text-slate-100 font-sans max-h-[90vh] overflow-y-auto">
         
         {/* 閉じるボタン */}
         <button
@@ -150,6 +159,15 @@ export function BoardingModal({ isOpen, onClose }: BoardingModalProps) {
               </div>
             </div>
 
+            {/* 🗿 知の星海碑 (Monoliths Collection) */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-mono font-bold text-amber-400 uppercase tracking-wider flex items-center justify-between">
+                <span>🗿 MONOLITHS (知の星海碑)</span>
+                <span className="text-[10px] text-slate-500 font-normal">1 / 7 Complete</span>
+              </h4>
+              <MonolithCard monolith={DEMO_MONOLITH} />
+            </div>
+
             <button
               onClick={handleSignOut}
               disabled={isLoading}
@@ -166,7 +184,7 @@ export function BoardingModal({ isOpen, onClose }: BoardingModalProps) {
                 🚀
               </div>
               <p className="text-xs text-slate-300 leading-relaxed">
-                乗船手続きを行うと、読了した星の記録や「星屑の栞（ブックマーク）」が保存されます。
+                乗船手続きを行うと、読了した星の記録や「星屑の栞（ブックマーク）」、「知の星海碑（Monoliths）」が保存されます。
               </p>
             </div>
 
