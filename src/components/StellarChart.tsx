@@ -120,6 +120,7 @@ const StarShader = {
 
 interface StarNodeProps {
   article: ArticleData;
+  starNumber: number;
   isHovered: boolean;
   isAnyHovered: boolean;
   isDimmed: boolean;
@@ -129,7 +130,7 @@ interface StarNodeProps {
   onClick: () => void;
 }
 
-function StarNode({ article, isHovered, isAnyHovered, isDimmed, isSelected, onPointerOver, onPointerOut, onClick }: StarNodeProps) {
+function StarNode({ article, starNumber, isHovered, isAnyHovered, isDimmed, isSelected, onPointerOver, onPointerOut, onClick }: StarNodeProps) {
   const materialRef = useRef<THREE.ShaderMaterial>(null);
   const selectedRingRef = useRef<THREE.Mesh>(null);
   const mistRef = useRef<THREE.Points>(null);
@@ -204,6 +205,7 @@ function StarNode({ article, isHovered, isAnyHovered, isDimmed, isSelected, onPo
     scaleMultiplier = 1.8;
   }
   const currentScale = baseScale * scaleMultiplier;
+  const numStr = `#${String(starNumber).padStart(2, '0')}`;
 
   return (
     <group position={[article.pos.x, article.pos.y, article.pos.z]}>
@@ -241,11 +243,12 @@ function StarNode({ article, isHovered, isAnyHovered, isDimmed, isSelected, onPo
         )}
       </Billboard>
 
-      {/* 除外されていない星のみホバーテキストを表示 */}
+      {/* 除外されていない星のみホバーテキストを表示（番号付き） */}
       {isHovered && !isDimmed && (
         <Html distanceFactor={8} zIndexRange={[10, 20]} center>
-          <div className="px-3 py-1.5 bg-slate-950/90 border border-slate-700/80 rounded-md text-[11px] font-display font-bold text-white whitespace-nowrap shadow-xl backdrop-blur-sm pointer-events-none select-none">
-            {article.title}
+          <div className="px-3 py-1.5 bg-slate-950/90 border border-slate-700/80 rounded-md text-[11px] font-display font-bold text-white whitespace-nowrap shadow-xl backdrop-blur-sm pointer-events-none select-none flex items-center gap-2">
+            <span className="text-primary font-mono">{numStr}</span>
+            <span>{article.title}</span>
           </div>
         </Html>
       )}
@@ -391,13 +394,14 @@ export function StellarChart({ articles, onHover, activeFilter, selectedStar, on
         />
       ))}
 
-      {/* 3. 各星の描画 */}
-      {processedArticles.map(art => {
+      {/* 3. 各星の描画（記事番号付き） */}
+      {processedArticles.map((art, index) => {
         const isDimmed = activeFilter !== null && art.category !== activeFilter;
         return (
           <StarNode
             key={art.slug}
             article={art}
+            starNumber={index + 1}
             isHovered={hoveredSlug === art.slug}
             isAnyHovered={hoveredSlug !== null}
             isDimmed={isDimmed}

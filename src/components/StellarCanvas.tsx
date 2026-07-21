@@ -83,7 +83,7 @@ function NebulaBackground() {
   );
 }
 
-// 3. 3Dシーン制御 (カメラ位置の監視、フォグ、星選択時の滑らかな自動ズーム)
+// 3. 3Dシーン制御 (カメラ位置の監視、フォグ、星選択時の確実なズームアニメーション)
 interface SceneSetupProps {
   onDepthChange: (depth: number) => void;
   selectedStar: ArticleData | null;
@@ -95,38 +95,46 @@ interface SceneSetupProps {
 function SceneSetup({ onDepthChange, selectedStar, transitioning, onTransitionComplete, controlsRef }: SceneSetupProps) {
   const { scene, camera } = useThree();
   const lastDepth = useRef<number>(-1);
-  
+  const transitionStartTime = useRef<number>(0);
+
   useEffect(() => {
     scene.fog = new THREE.FogExp2('#050B18', 0.012);
     camera.position.set(0, 5, 26);
     camera.lookAt(0, 0, 0);
   }, [scene]);
 
+  useEffect(() => {
+    if (transitioning) {
+      transitionStartTime.current = performance.now();
+    }
+  }, [transitioning]);
+
   useFrame((state) => {
     const controls = controlsRef.current;
 
-    // 💡 星クリック時にカメラをその星の方向へスムーズにズームイン (Lerp移動)
+    // 💡 矢印ボタン or 星クリック時にカメラをその星の方向へスムーズにLerpズームイン＆センタリング
     if (selectedStar && controls && transitioning) {
       const targetPos = new THREE.Vector3(selectedStar.pos.x, selectedStar.pos.y, selectedStar.pos.z);
       
       // 1. 注視点を星の座標に吸い寄せる
-      controls.target.lerp(targetPos, 0.1);
+      controls.target.lerp(targetPos, 0.12);
       
-      // 2. カメラ距離を目標の 6.5m 付近まで滑らかに接近させる
+      // 2. カメラ距離を目標の 6.2m 付近まで滑らかに接近させる
       const camToTarget = new THREE.Vector3().subVectors(camera.position, controls.target);
       const dist = camToTarget.length();
-      const desiredDist = 6.5;
+      const desiredDist = 6.2;
       
       if (dist > 0.05) {
-        const newDist = THREE.MathUtils.lerp(dist, desiredDist, 0.1);
+        const newDist = THREE.MathUtils.lerp(dist, desiredDist, 0.12);
         camToTarget.setLength(newDist);
         camera.position.copy(controls.target).add(camToTarget);
       }
       
       controls.update();
 
-      // 💡 到着判定: 十分近くなったら transitioning を false にし、手動操作（カーソルでの自由移動）を完全に解放！
-      if (controls.target.distanceTo(targetPos) < 0.25 && Math.abs(dist - desiredDist) < 0.25) {
+      // 💡 到着判定: 最低180msアニメーション後にOrbitControlsを解放（手動ドラッグ移動を可能に）
+      const elapsed = performance.now() - transitionStartTime.current;
+      if (elapsed > 180 && controls.target.distanceTo(targetPos) < 0.15 && Math.abs(dist - desiredDist) < 0.15) {
         onTransitionComplete();
       }
     }
@@ -167,11 +175,12 @@ interface StellarCanvasProps {
 
 export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
   const [hoveredArticle, setHoveredArticle] = useState<ArticleData | null>(null);
-  const [selectedStar, setSelectedStar] = useState<ArticleData | null>(null);
-  const [transitioning, setTransitioning] = useState(false);
+  const [currentIndex, setCurrentIndex] = useState<number>(0);
+  const [selectedStar, setSelectedStar] = useState<ArticleData | null>(initialArticles[0] || null);
+  const [transitioning, setTransitioning] = useState<boolean>(false);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
-  const [isLowPower, setIsLowPower] = useState(false);
-  const [currentDepth, setCurrentDepth] = useState(0);
+  const [isLowPower, setIsLowPower] = useState<boolean>(false);
+  const [currentDepth, setCurrentDepth] = useState<number>(0);
   const controlsRef = useRef<any>(null);
 
   useEffect(() => {
@@ -187,16 +196,22 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
     return 'Midnight (Deep) - 深層';
   };
 
-  // 星をクリックした時:
+  // 💡 星をクリックした時: 選択インデックスを更新して吸い寄せズーム（2回クリックしても遷移しない）
   const handleStarClick = (article: ArticleData) => {
-    // 💡 2回目（すでに選択・フォーカス中）のクリックの場合は、記事詳細へ直接ジャンプ！
-    if (selectedStar && selectedStar.slug === article.slug) {
-      window.location.href = `/articles/${decodeURIComponent(article.slug)}`;
-      return;
+    const idx = initialArticles.findIndex(a => a.slug === article.slug);
+    if (idx !== -1) {
+      setCurrentIndex(idx);
     }
-
-    // 1回目のクリック: その星に吸い寄せズームイン ＆ HUDフォーカス
     setSelectedStar(article);
+    setTransitioning(true);
+  };
+
+  // 💡 「move next star」矢印ボタンをクリックした時: 前後の星へ移動 ＆ カメラが自走ズーム！
+  const handleMoveStar = (step: number) => {
+    if (initialArticles.length === 0) return;
+    const newIdx = (currentIndex + step + initialArticles.length) % initialArticles.length;
+    setCurrentIndex(newIdx);
+    setSelectedStar(initialArticles[newIdx]);
     setTransitioning(true);
   };
 
@@ -256,29 +271,61 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
         )}
       </Canvas>
 
-      {/* 4. 左上: フローティンググラスモルフィックHUD (ホバー詳細) */}
+      {/* 4. 左上: フローティンググラスモルフィックHUD (ホバー・選択詳細 ＆ ナビゲーション) */}
       <div className="absolute top-6 left-6 pointer-events-none z-10 max-w-sm transition-all duration-300">
-        <div className="p-6 bg-slate-950/70 border border-slate-800/80 rounded-xl backdrop-blur-md shadow-2xl text-slate-100 font-body">
-          <h1 className="text-xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-indigo-400">
-            星海図 — Stellar Chart
-          </h1>
-          <p className="text-xs text-slate-400 font-mono mt-1">
-            Navigating the knowledge cosmos
-          </p>
+        <div className="p-6 bg-slate-950/70 border border-slate-800/80 rounded-xl backdrop-blur-md shadow-2xl text-slate-100 font-body space-y-4">
+          
+          {/* ヘッダー ＆ move next star 矢印ナビゲーション */}
+          <div className="border-b border-slate-800/60 pb-3">
+            <h1 className="text-xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-indigo-400">
+              星海図 — Stellar Chart
+            </h1>
+            
+            {/* 💡 move next star 矢印コントローラー (Left/Right) */}
+            <div className="mt-3 flex items-center justify-between bg-slate-900/80 border border-slate-800/90 rounded-lg px-3 py-1.5 pointer-events-auto">
+              <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">
+                Move Next Star
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleMoveStar(-1)}
+                  className="w-6 h-6 flex items-center justify-center bg-slate-800 hover:bg-sky-500 hover:text-slate-950 text-sky-400 font-bold rounded text-xs transition-colors cursor-pointer"
+                  title="Previous Star (前の星へ)"
+                >
+                  ←
+                </button>
+                <span className="font-mono text-xs text-slate-200 font-bold px-1">
+                  #{String(currentIndex + 1).padStart(2, '0')} <span className="text-slate-500 font-normal">/ {initialArticles.length}</span>
+                </span>
+                <button
+                  onClick={() => handleMoveStar(1)}
+                  className="w-6 h-6 flex items-center justify-center bg-slate-800 hover:bg-sky-500 hover:text-slate-950 text-sky-400 font-bold rounded text-xs transition-colors cursor-pointer"
+                  title="Next Star (次の星へ)"
+                >
+                  →
+                </button>
+              </div>
+            </div>
+          </div>
 
           {(() => {
-            const active = hoveredArticle || selectedStar;
+            const active = hoveredArticle || selectedStar || initialArticles[currentIndex];
             if (!active) {
               return (
-                <div className="mt-6 text-sm text-slate-500 italic leading-relaxed">
-                  Hover over a star to inspect its metadata.<br />
-                  Click any star to focus (Click twice to travel).
+                <div className="text-sm text-slate-500 italic leading-relaxed">
+                  Hover over a star or click arrows to navigate.
                 </div>
               );
             }
+            const activeIdx = initialArticles.findIndex(a => a.slug === active.slug);
+            const displayNum = activeIdx !== -1 ? `#${String(activeIdx + 1).padStart(2, '0')}` : `#${String(currentIndex + 1).padStart(2, '0')}`;
+
             return (
-              <div className="mt-6 space-y-4 animate-fade-in pointer-events-auto">
+              <div className="space-y-4 animate-fade-in pointer-events-auto">
                 <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold font-mono bg-sky-500/20 text-sky-300 border border-sky-500/40">
+                    {displayNum}
+                  </span>
                   <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold font-mono tracking-wider text-slate-950 ${active.category === 'firebase' ? 'bg-[#F59E0B]' :
                     active.category === 'claude' ? 'bg-[#E07B54]' :
                       active.category === 'dl' ? 'bg-[#2DD4BF]' : 'bg-[#3B82F6]'
@@ -286,11 +333,12 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
                     {active.category.toUpperCase()}
                   </span>
                   {active.status !== 'publish' && (
-                    <span className="px-2.5 py-0.5 rounded text-[10px] font-bold font-mono bg-sky-500/20 text-sky-300 border border-sky-500/40">
-                      DRAFT (MIST)
+                    <span className="px-2.5 py-0.5 rounded text-[10px] font-bold font-mono bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                      DRAFT
                     </span>
                   )}
                 </div>
+                
                 <div>
                   <h2 className="text-lg font-bold leading-snug text-white font-display">
                     {active.title}
@@ -311,8 +359,8 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
                   </div>
                 </div>
 
-                {/* 💡 go to star for reading ボタン (クリックで直ちに変遷) */}
-                <div className="pt-2">
+                {/* 💡 go to star for reading ボタン (クリックしてのみ記事へ遷移) */}
+                <div className="pt-1">
                   <a
                     href={`/articles/${decodeURIComponent(active.slug)}`}
                     className="block w-full py-2.5 px-4 bg-primary hover:bg-sky-300 text-slate-950 font-bold font-display text-center rounded-lg transition-colors shadow-[0_0_15px_rgba(138,235,255,0.4)] pointer-events-auto"
