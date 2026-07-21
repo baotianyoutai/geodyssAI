@@ -49,7 +49,9 @@ export function MunchkinNavigator() {
     try {
       const history = [...messages, userMsg].map(m => ({
         role: m.sender === 'user' ? 'user' : 'assistant',
-        content: m.text
+        sender: m.sender,
+        content: m.text,
+        text: m.text
       }));
 
       const res = await fetch('/api/chat', {

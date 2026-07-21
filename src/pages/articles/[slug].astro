@@ -1,6 +1,7 @@
 ---
 // src/pages/articles/[slug].astro
 import { getArticles } from '../../lib/firebase-server';
+export const prerender = true;
 import MunchkinSpeech from '../../components/MunchkinSpeech.astro';
 import InfoBox from '../../components/InfoBox.astro';
 import { marked } from 'marked';
