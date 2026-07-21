@@ -17,7 +17,7 @@ function Starfield() {
     for (let i = 0; i < 1500 * 3; i++) arr[i] = (Math.random() - 0.5) * 150;
     return arr;
   });
-  
+
   const [positions2] = useState(() => {
     const arr = new Float32Array(1500 * 3);
     for (let i = 0; i < 1500 * 3; i++) arr[i] = (Math.random() - 0.5) * 180;
@@ -115,19 +115,19 @@ function SceneSetup({ onDepthChange, selectedStar, transitioning, onTransitionCo
 
     if (selectedStar && controls && transitioning) {
       const targetPos = new THREE.Vector3(selectedStar.pos.x, selectedStar.pos.y, selectedStar.pos.z);
-      
+
       controls.target.lerp(targetPos, 0.12);
-      
+
       const camToTarget = new THREE.Vector3().subVectors(camera.position, controls.target);
       const dist = camToTarget.length();
       const desiredDist = 6.2;
-      
+
       if (dist > 0.05) {
         const newDist = THREE.MathUtils.lerp(dist, desiredDist, 0.12);
         camToTarget.setLength(newDist);
         camera.position.copy(controls.target).add(camToTarget);
       }
-      
+
       controls.update();
 
       const elapsed = performance.now() - transitionStartTime.current;
@@ -139,7 +139,7 @@ function SceneSetup({ onDepthChange, selectedStar, transitioning, onTransitionCo
     const dist = camera.position.length();
     const rawDepth = Math.max(0, Math.min(2400, Math.round((26 - dist) * 120)));
     const roundedDepth = Math.round(rawDepth / 50) * 50;
-    
+
     if (roundedDepth !== lastDepth.current) {
       lastDepth.current = roundedDepth;
       onDepthChange(roundedDepth);
@@ -220,7 +220,7 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
 
   return (
     <div className="relative w-full h-screen bg-[#050B18] overflow-hidden select-none">
-      
+
       {/* Cinematic Film Grain Overlay */}
       <div className="film-grain"></div>
 
@@ -230,19 +230,19 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
         dpr={isLowPower ? 1 : [1, 2]}
       >
         <color attach="background" args={['#050B18']} />
-        
-        <SceneSetup 
-          onDepthChange={setCurrentDepth} 
+
+        <SceneSetup
+          onDepthChange={setCurrentDepth}
           selectedStar={selectedStar}
           transitioning={transitioning}
           onTransitionComplete={() => setTransitioning(false)}
           controlsRef={controlsRef}
         />
-        
+
         <ambientLight intensity={0.6} />
         <directionalLight position={[10, 10, 10]} intensity={1.2} />
         <pointLight position={[-10, -10, -10]} intensity={0.5} />
-        
+
         <NebulaBackground />
         <Starfield />
 
@@ -278,13 +278,13 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
       {/* 4. 左上: フローティンググラスモルフィックHUD (固定サイズ w-[380px] & h-[450px]) */}
       <div className="absolute top-6 left-6 pointer-events-none z-10">
         <div className="w-[380px] h-[450px] p-6 bg-slate-950/75 border border-slate-800/80 rounded-xl backdrop-blur-md shadow-2xl text-slate-100 font-body flex flex-col justify-between">
-          
+
           {/* ヘッダー ＆ Move Next Star 矢印ナビゲーション */}
           <div className="border-b border-slate-800/60 pb-3 flex-shrink-0">
             <h1 className="text-xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-indigo-400">
               星海図 — Stellar Chart
             </h1>
-            
+
             <div className="mt-3 flex items-center justify-between bg-slate-900/80 border border-slate-800/90 rounded-lg px-3 py-1.5 pointer-events-auto">
               <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">
                 Move Next Star
@@ -343,7 +343,7 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
                       </span>
                     )}
                   </div>
-                  
+
                   <div>
                     <h2 className="text-base font-bold leading-snug text-white font-display line-clamp-2 h-[48px]">
                       {active.title}
@@ -403,7 +403,7 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
             Click constellation to filter this
           </span>
         </div>
-        
+
         <button
           onClick={() => setActiveFilter(null)}
           className={`flex items-center gap-2 w-full text-left px-2 py-1.5 rounded transition-all cursor-pointer pointer-events-auto ${activeFilter === null ? 'bg-sky-500/20 text-[#38BDF8] font-bold border border-sky-500/30' : 'hover:bg-slate-900/60 text-slate-300'}`}
@@ -411,7 +411,7 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
           <span className="w-2.5 h-2.5 rounded-full bg-[#38BDF8] shadow-[0_0_8px_rgba(56,189,248,0.6)] animate-pulse" />
           <span>All (全表示)</span>
         </button>
-        
+
         <button
           onClick={() => setActiveFilter(activeFilter === 'firebase' ? null : 'firebase')}
           className={`flex items-center gap-2 w-full text-left px-2 py-1 rounded transition-all cursor-pointer pointer-events-auto ${activeFilter === 'firebase' ? 'bg-[#F59E0B]/20 text-[#F59E0B] font-bold border border-[#F59E0B]/30' : 'hover:bg-slate-900/60 text-slate-300'}`}
@@ -447,7 +447,7 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
 
       {/* 5. 底部 HUD エリア */}
       <div className="absolute bottom-8 left-8 right-8 flex justify-between items-end z-10 pointer-events-none">
-        
+
         {/* 左下: Stratification (階層凡例) */}
         <div className="bg-slate-950/70 backdrop-blur-md border border-slate-800/80 rounded-xl p-4 shadow-2xl flex flex-col gap-2 pointer-events-auto">
           <h3 className="font-mono text-[10px] text-slate-500 uppercase tracking-widest mb-1">Stratification</h3>
@@ -473,7 +473,7 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
             <span className="font-mono text-[10px] text-slate-400 mt-0.5">{getLayerName(currentDepth)}</span>
           </div>
           <div className="h-16 w-0.5 depth-line rounded-full relative">
-            <div 
+            <div
               className="absolute left-1/2 -translate-x-1/2 w-2 h-2 bg-primary rounded-full shadow-[0_0_10px_rgba(138,235,255,0.8)] transition-all duration-200"
               style={{ top: `${(currentDepth / 2400) * 80}%` }}
             ></div>
