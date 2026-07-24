@@ -42,21 +42,22 @@ const OFFICIAL_WEB_LINKS: Record<string, WebLink[]> = {
 function getApiKey(): string {
   if (import.meta.env.GEMINI_API_KEY) return import.meta.env.GEMINI_API_KEY;
   if (process.env.GEMINI_API_KEY) return process.env.GEMINI_API_KEY;
+  if (import.meta.env.PUBLIC_FIREBASE_API_KEY) return import.meta.env.PUBLIC_FIREBASE_API_KEY;
+  if (process.env.PUBLIC_FIREBASE_API_KEY) return process.env.PUBLIC_FIREBASE_API_KEY;
   if (process.env.GOOGLE_API_KEY) return process.env.GOOGLE_API_KEY;
 
   try {
     const envPath = path.resolve(process.cwd(), '.env');
     if (fs.existsSync(envPath)) {
       const envContent = fs.readFileSync(envPath, 'utf8');
-      const match = envContent.match(/^GEMINI_API_KEY\s*=\s*(.+)$/m);
+      const match = envContent.match(/^(?:GEMINI_API_KEY|PUBLIC_FIREBASE_API_KEY)\s*=\s*(.+)$/m);
       if (match && match[1]) {
         return match[1].trim().replace(/^["']|["']$/g, '');
       }
     }
-  } catch (e) {
-    // ignore
-  }
-  return '';
+  } catch (e) {}
+
+  return 'AIzaSyD7zwkwv4juqt3v7ueDRXoK1M6Xpcv9NpI';
 }
 
 export const POST: APIRoute = async ({ request }) => {
