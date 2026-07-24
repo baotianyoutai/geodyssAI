@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { auth, googleProvider, signInWithPopup, signOut, onAuthStateChanged, syncUserProfile, type UserProfile } from '../lib/firebase-client';
+import { auth, googleProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged, syncUserProfile, type UserProfile } from '../lib/firebase-client';
 import { MonolithCard, type MonolithData } from './MonolithCard';
 import type { User } from 'firebase/auth';
 
@@ -27,6 +27,17 @@ export function BoardingModal({ isOpen, onClose }: BoardingModalProps) {
   const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
 
   useEffect(() => {
+    // リダイレクト認証結果の検出
+    getRedirectResult(auth).then(async (result) => {
+      if (result?.user) {
+        const prof = await syncUserProfile(result.user);
+        setProfile(prof);
+        setDemoUser(null);
+      }
+    }).catch((e) => {
+      console.warn('Redirect auth result check:', e);
+    });
+
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
@@ -58,16 +69,29 @@ export function BoardingModal({ isOpen, onClose }: BoardingModalProps) {
       setDemoUser(null);
     } catch (e: any) {
       console.warn('Firebase Google Auth error:', e);
-      if (e.code === 'auth/popup-closed-by-user') {
+      if (e.code === 'auth/popup-blocked') {
+        // ポップアップがブラウザにブロックされた場合は、自動的にページリダイレクト方式へ切り替えてログインを継続
+        setNoticeMessage('ブラウザのポップアップがブロックされたため、安全な直接ログイン画面へ移動します...');
+        setTimeout(() => {
+          signInWithRedirect(auth, googleProvider);
+        }, 1000);
+      } else if (e.code === 'auth/popup-closed-by-user') {
         setErrorMessage('Google サインインダイアログが閉じられました。');
       } else if (e.code === 'auth/api-key-not-valid' || e.message?.includes('api-key')) {
         setErrorMessage('Firebase API キーが未設定または無効です。環境変数 PUBLIC_FIREBASE_API_KEY をご確認ください。');
       } else {
-        setErrorMessage(`Google サインインエラー: ${e.message || '認証に失敗しました'}`);
+        // ポップアップエラーのフォールバックとしてリダイレクトを提案
+        setErrorMessage('ポップアップ認証に失敗しました。下の直接ログインボタンをお試しください。');
       }
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleGoogleRedirectSignIn = () => {
+    setIsLoading(true);
+    setErrorMessage(null);
+    signInWithRedirect(auth, googleProvider);
   };
 
   const handleDemoSignIn = () => {
@@ -132,8 +156,14 @@ export function BoardingModal({ isOpen, onClose }: BoardingModalProps) {
 
         {/* エラーメッセージ */}
         {errorMessage && (
-          <div className="mb-4 p-3 bg-rose-500/15 border border-rose-500/30 rounded-xl text-xs text-rose-300 font-mono leading-relaxed">
-            {errorMessage}
+          <div className="mb-4 p-3 bg-rose-500/15 border border-rose-500/30 rounded-xl text-xs text-rose-300 font-mono leading-relaxed space-y-2">
+            <div>{errorMessage}</div>
+            <button
+              onClick={handleGoogleRedirectSignIn}
+              className="w-full py-2 bg-rose-500/20 hover:bg-rose-500/30 text-white font-bold text-xs rounded-lg transition-colors cursor-pointer border border-rose-500/40"
+            >
+              直接ページ遷移で Google ログイン
+            </button>
           </div>
         )}
 
