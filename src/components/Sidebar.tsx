@@ -51,7 +51,7 @@ export function Sidebar({ currentPath = '/', onOpenBoarding, isDark = true }: Si
   return (
     <div className="fixed top-0 left-0 z-40 flex items-start pointer-events-none font-sans">
       
-      {/* 1. ハンバーガー [menu] トリガーボタン (Streamlit style) */}
+      {/* 1. ハンバーガー [menu] トリガーボタン */}
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={`m-3 p-2.5 rounded-full backdrop-blur-md transition-all shadow-lg cursor-pointer pointer-events-auto flex items-center justify-center border active:scale-95 ${
@@ -66,7 +66,7 @@ export function Sidebar({ currentPath = '/', onOpenBoarding, isDark = true }: Si
         </svg>
       </button>
 
-      {/* 2. Streamlit / Google Skills スタイルのサイドバーパネル */}
+      {/* 2. geodyssAI ブランドサイドバーパネル */}
       <aside
         className={`h-screen transition-all duration-300 pointer-events-auto flex flex-col justify-between p-4 ${
           isOpen ? 'w-64 opacity-100 shadow-2xl' : 'w-0 opacity-0 overflow-hidden -translate-x-full pointer-events-none'
@@ -77,16 +77,17 @@ export function Sidebar({ currentPath = '/', onOpenBoarding, isDark = true }: Si
         }`}
       >
         <div className="space-y-6 pt-2">
-          {/* ヘッダーロゴ */}
+          {/* ヘッダーロゴ (geodyssAI) */}
           <div className="flex items-center justify-between px-2">
-            <a href="/" className="flex items-center font-display font-bold text-lg tracking-tight">
-              <span className="text-[#4285F4]">G</span>
-              <span className="text-[#EA4335]">o</span>
-              <span className="text-[#FBBC05]">o</span>
+            <a href="/" className="flex items-center font-display font-bold text-xl tracking-tight">
               <span className="text-[#4285F4]">g</span>
-              <span className="text-[#34A853]">l</span>
               <span className="text-[#EA4335]">e</span>
-              <span className={`font-medium ml-1.5 text-base ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>Skills</span>
+              <span className="text-[#FBBC05]">o</span>
+              <span className="text-[#4285F4]">d</span>
+              <span className="text-[#34A853]">y</span>
+              <span className="text-[#EA4335]">s</span>
+              <span className="text-[#4285F4]">s</span>
+              <span className="font-extrabold text-sky-400 ml-0.5">AI</span>
             </a>
             <button
               onClick={() => setIsOpen(false)}
@@ -142,8 +143,7 @@ export function Sidebar({ currentPath = '/', onOpenBoarding, isDark = true }: Si
 
         {/* フッター情報 */}
         <div className="px-3 py-3 border-t border-slate-800/50 text-[10px] text-slate-500 font-mono flex items-center justify-between">
-          <span>Google Skills Protocol</span>
-          <span className="text-sky-400">v2.4</span>
+          <span>© 2026 geodyssAI</span>
         </div>
       </aside>
     </div>
