@@ -11,51 +11,29 @@ export const GET: APIRoute = async () => {
 };
 
 const MOCK_ARTICLES = [
-  {
-    title: "Gemini API (Python SDK) と ChromaDB を使用して RAG System を開発するハンズオン",
-    excerpt: "Gemini API の Embedding Endpoint と ChromaDB を組み合わせてベクトル検索を行う RAG システムの構築ガイド。",
-    slug: "gemini-api-python-sdkとchromadbを使用してrag-systemを開発する【ハンズオン",
-    category: "dl",
-    difficulty: 4,
-    tags: ["RAG", "Embedding", "ChromaDB", "Gemini", "ベクトル"]
-  },
-  {
-    title: "AI Agent Hackathon 2026 参加レポート",
-    excerpt: "Antigravity や ADK、MCP を駆使してAIエージェントを開発したハッカソンの全記録。",
-    slug: "devops-x-ai-agent-hackathon-2026-に参加します。",
-    category: "claude",
-    difficulty: 3,
-    tags: ["Claude", "Agent", "Antigravity", "ADK", "MCP"]
-  },
-  {
-    title: "Firebase Firestore と Astro で作る 3D 星海図ブログ",
-    excerpt: "WordPress 記事をベクトル化して 3D 空間座標にマッピングする地誌学風ブログシステムの設計思想。",
-    slug: "ai-dojo-day1",
-    category: "firebase",
-    difficulty: 2,
-    tags: ["Firebase", "Firestore", "Astro", "Three.js", "React"]
-  }
+  { title: "AI-Dojo", slug: "ai-dojo-day1", category: "genai-foundations", excerpt: "AIの基礎原則と知識体系のガイド" },
+  { title: "DevOPS x AI Agent Hackathon 2026 に参加します。", slug: "devops-x-ai-agent-hackathon-2026-に参加します。", category: "genai-foundations", excerpt: "DevOpsとAIエージェントの融合プロジェクト" },
+  { title: "Gemini API Python SDKとChromaDBを使用してRAG-Systemを開発する", slug: "gemini-api-python-sdkとchromadbを使用してrag-systemを開発する【ハンズオン", category: "dl", excerpt: "ChromaDBとGeminiによる本格RAGハンズオン" },
+  { title: "Gemini APIs Embedding Endpointを利用して、類似度を探索する", slug: "gemini-apis-embedding-endpointを利用して、類似度を探索する【ハンズ", category: "dl", excerpt: "テキスト埋め込みベクトルとコサイン類似度探索" }
 ];
 
 function getApiKey(): string {
   if (import.meta.env.GEMINI_API_KEY) return import.meta.env.GEMINI_API_KEY;
   if (process.env.GEMINI_API_KEY) return process.env.GEMINI_API_KEY;
-  if (import.meta.env.PUBLIC_FIREBASE_API_KEY) return import.meta.env.PUBLIC_FIREBASE_API_KEY;
-  if (process.env.PUBLIC_FIREBASE_API_KEY) return process.env.PUBLIC_FIREBASE_API_KEY;
   if (process.env.GOOGLE_API_KEY) return process.env.GOOGLE_API_KEY;
 
   try {
     const envPath = path.resolve(process.cwd(), '.env');
     if (fs.existsSync(envPath)) {
       const envContent = fs.readFileSync(envPath, 'utf8');
-      const match = envContent.match(/^(?:GEMINI_API_KEY|PUBLIC_FIREBASE_API_KEY)\s*=\s*(.+)$/m);
+      const match = envContent.match(/^GEMINI_API_KEY\s*=\s*(.+)$/m);
       if (match && match[1]) {
         return match[1].trim().replace(/^["']|["']$/g, '');
       }
     }
   } catch (e) {}
 
-  return 'AIzaSyD7zwkwv4juqt3v7ueDRXoK1M6Xpcv9NpI';
+  return '';
 }
 
 export const POST: APIRoute = async ({ request }) => {
@@ -77,17 +55,18 @@ export const POST: APIRoute = async ({ request }) => {
           }
         }
       }
-
-      if (!lastUserMessage && typeof body?.prompt === 'string') {
-        lastUserMessage = body.prompt;
-      }
     }
   } catch (e) {
-    console.warn('Failed to parse request JSON:', e);
+    console.error('Failed to parse request body in /api/chat:', e);
   }
 
   if (!lastUserMessage) {
-    lastUserMessage = 'おすすめの記事';
+    return new Response(JSON.stringify({
+      response: 'ニャー！質問メッセージが受け取れなかったにゃ。もう一度入力してみてにゃ 🐾'
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 
   // 1. 全記事データを安全に取得（RAG 知識ベース）
@@ -118,7 +97,7 @@ export const POST: APIRoute = async ({ request }) => {
       // エイリアスマッチング
       const isFirebaseQuery = queryLower.includes('firebase') || queryLower.includes('firestore');
       const isClaudeQuery = queryLower.includes('claude') || queryLower.includes('agent') || queryLower.includes('llm');
-      const isDlQuery = queryLower.includes('dl') || queryLower.includes('deep') || queryLower.includes('rag') || queryLower.includes('learning');
+      const isDlQuery = queryLower.includes('dl') || queryLower.includes('deep') || queryLower.includes('rag') || queryLower.includes('learning') || queryLower.includes('flutter');
 
       if (isFirebaseQuery && (category === 'firebase' || title.includes('firebase') || excerpt.includes('firebase'))) return true;
       if (isClaudeQuery && (category === 'claude' || title.includes('claude') || title.includes('agent') || excerpt.includes('claude'))) return true;
@@ -170,22 +149,19 @@ ${lastUserMessage}`;
       if (geminiRes.ok) {
         const data = await geminiRes.json();
         botResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-      } else {
-        const errText = await geminiRes.text();
-        console.warn('Gemini API returned status:', geminiRes.status, errText);
       }
     } catch (e) {
       console.error('Gemini API call failed:', e);
     }
   }
 
-  // 4. 動的 RAG フォールバック（Gemini APIキー未設定時）
+  // 4. 動的 RAG フォールバック（Gemini APIキー未設定・エラー時でも100%確実にリンク付き回答を返答）
   if (!botResponse) {
     if (matchedArticles.length > 0) {
       const topArt = matchedArticles[0];
       const otherArts = matchedArticles.slice(1);
       
-      let text = `ニャー！ご質問「${lastUserMessage}」に関連する星を発見したにゃ 🐾\n\n👉 [${topArt.title}](/articles/${encodeURIComponent(topArt.slug)})\n*${topArt.excerpt}*`;
+      let text = `ニャー！ご質問「${lastUserMessage}」に関連する星を発見したにゃ 🐾\n\n👉 [${topArt.title}](/articles/${encodeURIComponent(topArt.slug)})\n*${topArt.excerpt || '詳細はこちらの星を参照してにゃ！'}*`;
       if (otherArts.length > 0) {
         text += `\n\nこちらの関連記事もおすすめだにゃ：\n` + otherArts.map(a => `・ [${a.title}](/articles/${encodeURIComponent(a.slug)})`).join("\n");
       }
@@ -194,7 +170,7 @@ ${lastUserMessage}`;
       const hash = lastUserMessage.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
       const pickArt = allArticles[hash % allArticles.length];
       
-      botResponse = `ニャー！ご質問「${lastUserMessage}」について知の星海を探索したにゃ 🐾\n\nおすすめの星はこちらだにゃ：\n👉 [${pickArt.title}](/articles/${encodeURIComponent(pickArt.slug)})\n*${pickArt.excerpt}*`;
+      botResponse = `ニャー！ご質問「${lastUserMessage}」について知の星海を探索したにゃ 🐾\n\nおすすめの星はこちらだにゃ：\n👉 [${pickArt.title}](/articles/${encodeURIComponent(pickArt.slug)})\n*${pickArt.excerpt || '星の海を深く探検してみてにゃ！'}*`;
     }
   }
 

@@ -42,22 +42,20 @@ const OFFICIAL_WEB_LINKS: Record<string, WebLink[]> = {
 function getApiKey(): string {
   if (import.meta.env.GEMINI_API_KEY) return import.meta.env.GEMINI_API_KEY;
   if (process.env.GEMINI_API_KEY) return process.env.GEMINI_API_KEY;
-  if (import.meta.env.PUBLIC_FIREBASE_API_KEY) return import.meta.env.PUBLIC_FIREBASE_API_KEY;
-  if (process.env.PUBLIC_FIREBASE_API_KEY) return process.env.PUBLIC_FIREBASE_API_KEY;
   if (process.env.GOOGLE_API_KEY) return process.env.GOOGLE_API_KEY;
 
   try {
     const envPath = path.resolve(process.cwd(), '.env');
     if (fs.existsSync(envPath)) {
       const envContent = fs.readFileSync(envPath, 'utf8');
-      const match = envContent.match(/^(?:GEMINI_API_KEY|PUBLIC_FIREBASE_API_KEY)\s*=\s*(.+)$/m);
+      const match = envContent.match(/^GEMINI_API_KEY\s*=\s*(.+)$/m);
       if (match && match[1]) {
         return match[1].trim().replace(/^["']|["']$/g, '');
       }
     }
   } catch (e) {}
 
-  return 'AIzaSyD7zwkwv4juqt3v7ueDRXoK1M6Xpcv9NpI';
+  return '';
 }
 
 export const POST: APIRoute = async ({ request }) => {
@@ -78,7 +76,6 @@ export const POST: APIRoute = async ({ request }) => {
 
     const catKey = (category || 'dl').toLowerCase();
     const webLinks = OFFICIAL_WEB_LINKS[catKey] || OFFICIAL_WEB_LINKS['dl'];
-
     const apiKey = getApiKey();
 
     // 1. ユーザーがこの記事に関して直接質問した場合
@@ -104,6 +101,8 @@ export const POST: APIRoute = async ({ request }) => {
           if (geminiRes.ok) {
             const data = await geminiRes.json();
             qAnswer = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+          } else {
+            console.warn('Gemini Q&A API response error status:', geminiRes.status);
           }
         } catch (e) {
           console.error('Gemini API question error:', e);
@@ -111,7 +110,7 @@ export const POST: APIRoute = async ({ request }) => {
       }
 
       if (!qAnswer) {
-        qAnswer = `ニャー！ご質問「${question}」ありがとうございますにゃ 🐾\nこの記事「${title}」の解説を踏まえて、コードの挙動や設定方法について深く探求してみてにゃ！下記ステップアップリンクも参考にしてほしいにゃ！`;
+        qAnswer = `ニャー！「${question}」に関するご質問ありがとうございますにゃ 🐾\n記事「${title}」の知見に基づいて探求を深めてほしいにゃ。コードの挙動や実装方法について質問がある場合は、いつでも航海士にお知らせくださいにゃ！`;
       }
 
       return new Response(JSON.stringify({ answer: qAnswer, webLinks }), {
@@ -162,36 +161,32 @@ export const POST: APIRoute = async ({ request }) => {
       }
     }
 
-    // フォールバック
+    // 確定ルールベースフォールバック（APIキー未設定またはエラー時でも100%高品質表示）
     if (!summary) {
-      summary = `ニャー！「${title}」の読了おめでとうだにゃ 🐾 ${excerpt || '知の星海がまた一つ明るく照らされたにゃ！'}`;
+      summary = `ニャー！「${title}」の読了おめでとうだにゃ 🐾 ${excerpt ? excerpt.slice(0, 100) + '...' : '知の星海がまた一つ明るく照らされたにゃ！'}`;
     }
 
     if (!nextSteps || nextSteps.length === 0) {
       nextSteps = [
-        `ステップ1: 記事内のコード例を自分のローカル環境で動かしてみるにゃ！`,
-        `ステップ2: 下記の公式 Web ドキュメントを参照して周辺仕様を確認するにゃ！`,
-        `ステップ3: 星海図の近傍の星（関連記事）へジャンプして知見を深めるにゃ！`
+        "ステップ1 (ハンズオン): 記事内のサンプルコードや概念を手元の環境で再現・検証してみるにゃ",
+        "ステップ2 (ドキュメント): 下記の公式開発リファレンスを参照し、仕様やパラメータの理解を深めるにゃ",
+        "ステップ3 (発展応用): 自分の自作プロダクトや課題に応用・組み込んで実践してみるにゃ"
       ];
     }
 
-    return new Response(JSON.stringify({
-      summary,
-      nextSteps,
-      webLinks
-    }), {
+    return new Response(JSON.stringify({ summary, nextSteps, webLinks }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
 
   } catch (error) {
-    console.error('Article Guide API error:', error);
+    console.error('Article guide API error:', error);
     return new Response(JSON.stringify({
-      summary: "ニャー！この記事のステップアップガイドだにゃ 🐾",
+      summary: "ニャー！知の星海の導きを受信したにゃ 🐾 本文の解説を踏まえて学習を深めてほしいにゃ！",
       nextSteps: [
-        "ステップ1: コードを手元で実行して動かすにゃ！",
-        "ステップ2: 公式ドキュメントで最新仕様を確認するにゃ！",
-        "ステップ3: 関連する星を探検するにゃ！"
+        "ステップ1 (ハンズオン): コードや設定を手元で実行・テストするにゃ",
+        "ステップ2 (公式ドキュメント): 開発リファレンスを参照するにゃ",
+        "ステップ3 (応用発展): 自身のプロジェクトに応用してみるにゃ"
       ],
       webLinks: OFFICIAL_WEB_LINKS['dl']
     }), {
