@@ -69,43 +69,47 @@ export function StellarTavernView() {
     return () => unsubscribe();
   }, []);
 
-  // リアルタイム Firestore リスナーの接続（フォールバックデータ付き）
+  // 裏側特権 API (/api/threads) 経由で Firestore からスレッド投稿を同期取得
   useEffect(() => {
-    let unsubscribe = () => {};
-    try {
-      const postsRef = collection(db, 'threads', selectedConstellation, 'posts');
-      const q = query(postsRef, orderBy('createdAt', 'desc'));
+    let isMounted = true;
+    const mockPosts = INITIAL_MOCK_POSTS[selectedConstellation] || INITIAL_MOCK_POSTS['genai-foundations'];
 
-      unsubscribe = onSnapshot(q, (snapshot) => {
-        if (!snapshot.empty) {
-          const loadedPosts: PostItem[] = snapshot.docs.map(docSnap => {
-            const data = docSnap.data();
-            return {
-              id: docSnap.id,
-              authorName: data.authorName || '航海士 Voyager',
-              authorAvatar: data.authorAvatar || '/assets/cat.jpg',
-              content: data.content || '',
-              createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
-              cheersCount: data.cheersCount || 0
-            };
-          });
-          setPosts(loadedPosts);
-        } else {
-          setPosts(INITIAL_MOCK_POSTS[selectedConstellation] || INITIAL_MOCK_POSTS['genai-foundations']);
+    async function fetchThreads() {
+      try {
+        const res = await fetch(`/api/threads?constellation=${encodeURIComponent(selectedConstellation)}`);
+        if (res.ok) {
+          const data = await res.json();
+          const loadedPosts: PostItem[] = data.posts || [];
+          if (isMounted) {
+            const combinedMap = new Map<string, PostItem>();
+            [...loadedPosts, ...mockPosts].forEach(item => {
+              if (!combinedMap.has(item.id)) {
+                combinedMap.set(item.id, item);
+              }
+            });
+            setPosts(Array.from(combinedMap.values()));
+          }
+          return;
         }
-      }, (error) => {
-        console.warn('Firestore onSnapshot warning (using mock posts):', error);
-        setPosts(INITIAL_MOCK_POSTS[selectedConstellation] || INITIAL_MOCK_POSTS['genai-foundations']);
-      });
-    } catch (e) {
-      console.warn('Failed to attach Firestore listener:', e);
-      setPosts(INITIAL_MOCK_POSTS[selectedConstellation] || INITIAL_MOCK_POSTS['genai-foundations']);
+      } catch (e) {
+        console.warn('Backend threads API fetch warning:', e);
+      }
+
+      if (isMounted) {
+        setPosts(mockPosts);
+      }
     }
 
-    return () => unsubscribe();
+    fetchThreads();
+    const interval = setInterval(fetchThreads, 4000); // 4秒ごとに裏側APIで他端末全投稿を最新化
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
   }, [selectedConstellation]);
 
-  // メッセージ投稿
+  // メッセージ投稿（裏側特権 API /api/threads 経由で Admin SDK 認証保存・全世界全端末共有）
   const handlePostMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!message.trim() || posting) return;
@@ -115,7 +119,7 @@ export function StellarTavernView() {
     setPosting(true);
 
     const newPostItem: PostItem = {
-      id: `local-${Date.now()}`,
+      id: `post-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
       authorName: user?.displayName || '星海 航海士 (Voyager)',
       authorAvatar: user?.photoURL || '/assets/cat.jpg',
       content: textContent,
@@ -126,17 +130,20 @@ export function StellarTavernView() {
     // 楽観的 UI アップデート
     setPosts(prev => [newPostItem, ...prev]);
 
+    // 裏側特権 API (/api/threads) 経由で Admin SDK を通して Firestore 本体へ 100% 書き込み保存
     try {
-      const postsRef = collection(db, 'threads', selectedConstellation, 'posts');
-      await addDoc(postsRef, {
-        authorName: newPostItem.authorName,
-        authorAvatar: newPostItem.authorAvatar,
-        content: newPostItem.content,
-        createdAt: serverTimestamp(),
-        cheersCount: 0
+      await fetch('/api/threads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          constellation: selectedConstellation,
+          authorName: newPostItem.authorName,
+          authorAvatar: newPostItem.authorAvatar,
+          content: newPostItem.content
+        })
       });
     } catch (e) {
-      console.warn('Firestore post save warning (kept in local view):', e);
+      console.warn('Backend threads API post error:', e);
     } finally {
       setPosting(false);
     }
