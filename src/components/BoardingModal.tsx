@@ -31,22 +31,23 @@ export function BoardingModal({ isOpen, onClose }: BoardingModalProps) {
     getRedirectResult(auth).then(async (result) => {
       if (result?.user) {
         setUser(result.user);
+        const fallbackProf: UserProfile = {
+          uid: result.user.uid,
+          displayName: result.user.displayName || 'Google Voyager',
+          photoURL: result.user.photoURL || '/assets/cat.jpg',
+          createdAt: new Date().toISOString(),
+          readHistory: [],
+          stardustBookmarks: [],
+          badges: ['Google Sign-in']
+        };
+        setProfile(fallbackProf);
+        setDemoUser(null);
         try {
           const prof = await syncUserProfile(result.user);
-          setProfile(prof);
+          if (prof) setProfile(prof);
         } catch (e) {
-          console.warn('Fallback to basic user profile', e);
-          setProfile({
-            uid: result.user.uid,
-            displayName: result.user.displayName || 'Google Voyager',
-            photoURL: result.user.photoURL || '/assets/cat.jpg',
-            createdAt: new Date().toISOString(),
-            readHistory: [],
-            stardustBookmarks: [],
-            badges: ['Google Sign-in']
-          });
+          console.warn('Firestore sync skipped', e);
         }
-        setDemoUser(null);
       }
     }).catch((e) => {
       console.warn('Redirect auth result check:', e);
@@ -55,23 +56,25 @@ export function BoardingModal({ isOpen, onClose }: BoardingModalProps) {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
-        try {
-          const prof = await syncUserProfile(currentUser);
-          setProfile(prof);
-        } catch (e) {
-          console.warn('Fallback to basic user profile onAuthStateChanged', e);
-          setProfile({
-            uid: currentUser.uid,
-            displayName: currentUser.displayName || 'Google Voyager',
-            photoURL: currentUser.photoURL || '/assets/cat.jpg',
-            createdAt: new Date().toISOString(),
-            readHistory: [],
-            stardustBookmarks: [],
-            badges: ['Google Sign-in']
-          });
-        }
+        const fallbackProf: UserProfile = {
+          uid: currentUser.uid,
+          displayName: currentUser.displayName || 'Google Voyager',
+          photoURL: currentUser.photoURL || '/assets/cat.jpg',
+          createdAt: new Date().toISOString(),
+          readHistory: [],
+          stardustBookmarks: [],
+          badges: ['Google Sign-in']
+        };
+        setProfile(fallbackProf);
         setDemoUser(null);
         setErrorMessage(null);
+
+        try {
+          const prof = await syncUserProfile(currentUser);
+          if (prof) setProfile(prof);
+        } catch (e) {
+          console.warn('Firestore user sync warning:', e);
+        }
       } else {
         setProfile(null);
       }
@@ -84,39 +87,43 @@ export function BoardingModal({ isOpen, onClose }: BoardingModalProps) {
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     setErrorMessage(null);
-    setNoticeMessage(null);
+    setNoticeMessage('Google 認証を実行中...');
     try {
       const result = await signInWithPopup(auth, googleProvider);
       setUser(result.user);
+      
+      const fallbackProf: UserProfile = {
+        uid: result.user.uid,
+        displayName: result.user.displayName || 'Google Voyager',
+        photoURL: result.user.photoURL || '/assets/cat.jpg',
+        createdAt: new Date().toISOString(),
+        readHistory: [],
+        stardustBookmarks: [],
+        badges: ['Google Sign-in']
+      };
+      setProfile(fallbackProf);
+      setDemoUser(null);
+      setNoticeMessage('ログインに成功しました！');
+
       try {
         const prof = await syncUserProfile(result.user);
-        setProfile(prof);
+        if (prof) setProfile(prof);
       } catch (e) {
-        setProfile({
-          uid: result.user.uid,
-          displayName: result.user.displayName || 'Google Voyager',
-          photoURL: result.user.photoURL || '/assets/cat.jpg',
-          createdAt: new Date().toISOString(),
-          readHistory: [],
-          stardustBookmarks: [],
-          badges: ['Google Sign-in']
-        });
+        console.warn('Firestore user sync skipped:', e);
       }
-      setDemoUser(null);
-      setNoticeMessage('Google アカウントで正常に乗船いたしました！');
     } catch (e: any) {
-      console.warn('Firebase Google Auth error:', e);
+      console.error('Firebase Google Auth error:', e);
       if (e.code === 'auth/popup-blocked') {
-        setNoticeMessage('ブラウザのポップアップがブロックされたため、直接ログイン画面へ移動します...');
+        setNoticeMessage('ポップアップがブロックされました。直接ログイン画面へ移動します...');
         setTimeout(() => {
           signInWithRedirect(auth, googleProvider);
         }, 1000);
       } else if (e.code === 'auth/popup-closed-by-user') {
         setErrorMessage('Google サインインダイアログが閉じられました。');
-      } else if (e.code === 'auth/api-key-not-valid' || e.message?.includes('api-key')) {
-        setErrorMessage('Firebase API キーが無効です。');
+        setNoticeMessage(null);
       } else {
-        setErrorMessage('ポップアップ認証に失敗しました。下の直接ログインボタンをお試しください。');
+        setErrorMessage(`サインインエラー (${e.code || 'UNKNOWN'}): ${e.message || '認証に失敗しました'}`);
+        setNoticeMessage(null);
       }
     } finally {
       setIsLoading(false);
@@ -126,6 +133,7 @@ export function BoardingModal({ isOpen, onClose }: BoardingModalProps) {
   const handleGoogleRedirectSignIn = () => {
     setIsLoading(true);
     setErrorMessage(null);
+    setNoticeMessage('Google ログイン画面へ接続中...');
     signInWithRedirect(auth, googleProvider);
   };
 
@@ -141,7 +149,7 @@ export function BoardingModal({ isOpen, onClose }: BoardingModalProps) {
     };
     setDemoUser(fallbackDemo);
     setErrorMessage(null);
-    setNoticeMessage('デモ乗船モードでログインしました。体験用プロフィールを表示中。');
+    setNoticeMessage('デモ乗船モードでログインしました。');
   };
 
   const handleSignOut = async () => {
