@@ -75,3 +75,12 @@
 - **決定**:
   - `src/lib/firebase-client.ts` にサイトキー `6LfdWbQsAAAAAGht9Q4Os6xikVRfFBhL8I3GZaBn` および `window.useEnterprise = true` を適用。
   - Firestore Security Rules で `threads` の読取・書込を許可し、未ログインを含む全端末・全ユーザー間でスレッド投稿をリアルタイム共有。
+
+## ADR-011: モバイル表示最適化（ボトムシート、Munchkin Navigator 位置調整、left-0 スライドドロワー）の採用
+- **日付**: 2026-07-25
+- **ステータス**: 承認済 (Accepted)
+- **文脈**: スマートフォン閲覧時における UI コンポーネント重なり（記事カード、星座凡例、AIナビ）およびサイドバー横ずれ表示の解消。
+- **決定**:
+  - `StellarCanvas.tsx`: モバイル閲覧時は画面下部「ボトムシート」に記事情報を集約し、画面要素重なりを 0% 化。
+  - `MunchkinNavigator.tsx`: モバイル表示位置を右上「乗船手続き」ボタンのすぐ真下 (`top-16 right-4`) に再配置し、対話窓を `340px` 幅に最適化。
+  - `Sidebar.tsx`: サイドバーを画面最左端 (`left-0`) 固定のフルハイトドロワーにし、暗転バックドロップタップで閉じるモダン UX を確立。

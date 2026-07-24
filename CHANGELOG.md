@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2026-07-25
+
+### Fixed
+- **Mobile Responsive 3D Stellar Canvas & Zero-Overlap Bottom Sheet (`StellarCanvas.tsx`)**:
+  - Restored 3D star rendering on mobile screens by properly wiring `initialArticles` prop.
+  - Implemented mobile-dedicated Bottom Sheet component for article cards, eliminating UI component overlaps.
+- **Munchkin Navigator Mobile Optimization (`MunchkinNavigator.tsx`)**:
+  - Relocated Munchkin Navigator toggle button right below the top-right Sign-In button (`top-16 right-4`) on mobile screens.
+  - Reduced mobile widget dimensions (`w-[calc(100vw-2rem)] max-w-[340px] h-[340px]`) for a clean, non-intrusive chat UX.
+- **Left-Edge Absolute Slide-In Drawer (`Sidebar.tsx`)**:
+  - Resolved layout bug where sidebar opened with an offset next to the hamburger button.
+  - Enforced `left-0` absolute drawer sliding with smooth backdrop overlay (`bg-black/60 backdrop-blur-sm`).
+
 ## [1.2.0] - 2026-07-25
 
 ### Added

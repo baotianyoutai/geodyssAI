@@ -73,3 +73,17 @@ This document details all the commands, logs, errors, and learning points encoun
 ### 11.2 App Check & Multi-Device Threads Sync
 * **reCAPTCHA Enterprise**: Applied production key (`6LfdWbQsAAAAAGht9Q4Os6xikVRfFBhL8I3GZaBn`) and `window.useEnterprise = true`.
 * **Firestore Security Rules**: Configured `threads` collection read/write rules, allowing seamless cross-device synchronization between Mac and mobile browsers.
+
+## Section 12: Mobile Responsive UI Architecture & Layout Optimization
+
+### 12.1 Mobile Bottom Sheet Pattern (`StellarCanvas.tsx`)
+* **Overlapping Problem**: On small screens (<768px), floating desktop HUD cards, constellation legends, and AI widgets overlapped each other.
+* **Architecture Solution**: Separated mobile view by rendering a bottom-docked slide-up Bottom Sheet for star card metadata, guaranteeing 0% UI overlap.
+
+### 12.2 Right-Top Aligned AI Widget (`MunchkinNavigator.tsx`)
+* **Positioning**: Relocated mobile toggle button right below the Sign-In pill button (`top-16 right-4`).
+* **Widget Sizing**: Restricted mobile chat window bounds to `max-w-[340px] h-[340px]` to maintain 3D canvas visibility while chatting.
+
+### 12.3 Absolute Edge Drawer Navigation (`Sidebar.tsx`)
+* **Layout Bug**: Hamburger button and `aside` drawer shared a flex container, creating an awkward offset from mid-screen.
+* **Fix**: Decoupled trigger button and anchored drawer to `left-0` with `bg-black/60` backdrop blur overlay.
