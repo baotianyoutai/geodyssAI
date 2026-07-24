@@ -57,3 +57,8 @@ This document details all the commands, logs, errors, and learning points encoun
 * **Stardust Bookmarks (`stardustBookmarks`)**:
   - Added "星屑の栞に保存" toggle button on `ArticleNavigator.tsx`, executing `toggleStardustBookmark` to update Firestore `stardustBookmarks`.
   - Cleaned all hardcoded initial dummy arrays (`['post-131', 'post-135']`), establishing a 100% clean user-specific history.
+
+### 10.4 Missing Article Body Fix (`contentMd` Mapping Bug)
+* **Symptom**: On `/articles/[slug]`, header titles and Munchkin Navigator guides rendered, but the primary Markdown article body text was missing.
+* **Root Cause**: `src/lib/firebase-server.ts` `getArticles()` mapped Firestore doc fields into an article object but omitted `contentMd` (or `content`). `[slug].astro` received `undefined` for `article.contentMd`.
+* **Fix**: Updated `getArticles()` to map `contentMd: data.contentMd || data.content || ''`. Verified full HTML generation across all 28 articles in `dist/client/articles/*/index.html`.

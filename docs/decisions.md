@@ -50,3 +50,11 @@
 - **決定**:
   - App Check の初期化において recaptcha キー未設定時は安全にバイパスするガードを追加。
   - `auth/popup-blocked` エラー発生時は自動的に `signInWithRedirect` へリダイレクト切り替えするフォールバックを組み込み、確実なユーザー乗船を保障。
+
+## ADR-008: サーバーサイドデータ取得時における本文フィールド (contentMd) 抽出の保証
+- **日付**: 2026-07-25
+- **ステータス**: 承認済 (Accepted)
+- **文脈**: `firebase-server.ts` の `getArticles()` においてメタデータのみが返され、記事本文（Markdown）がビルド対象から欠落し画面上で消えるバグが発生。
+- **決定**:
+  - `getArticles()` 内の返り値オブジェクトに `contentMd: data.contentMd || data.content || ''` を常時含めるよう型および変換処理を修正。
+  - 静的プレレンダリング（SSG）プロセスにおいて全記事の本文 HTML が正しく展開・生成されることを保証。
