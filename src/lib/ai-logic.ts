@@ -51,7 +51,7 @@ function getGeminiApiKey(): string {
     }
   } catch (e) {}
 
-  return 'AIzaSyD7zwkwv4juqt3v7ueDRXoK1M6Xpcv9NpI';
+  return 'AIzaSyB-5jpp_4PmANU-9scNR0q-ahUJvFpBmUg';
 }
 
 /**
