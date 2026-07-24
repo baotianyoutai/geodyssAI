@@ -300,23 +300,7 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
                 星海図 — Stellar Chart
               </h1>
               
-              {/* 展望台・酒場ボタン */}
-              <div className="flex items-center gap-1.5 pointer-events-auto">
-                <a
-                  href="/observatory"
-                  className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 font-mono text-[10px] rounded-lg transition-colors"
-                  title="展望台 (Observatory)"
-                >
-                  展望台
-                </a>
-                <a
-                  href="/tavern"
-                  className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 border border-amber-500/40 text-amber-300 font-mono text-[10px] rounded-lg transition-colors"
-                  title="星海酒場 (Stellar Tavern)"
-                >
-                  酒場
-                </a>
-              </div>
+
             </div>
             
             <div className="mt-3 flex items-center justify-between bg-slate-900/80 border border-slate-800/90 rounded-lg px-3 py-1.5 pointer-events-auto">
