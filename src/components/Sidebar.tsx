@@ -80,14 +80,9 @@ export function Sidebar({ currentPath = '/', onOpenBoarding, isDark = true }: Si
           {/* ヘッダーロゴ (geodyssAI) */}
           <div className="flex items-center justify-between px-2">
             <a href="/" className="flex items-center font-display font-bold text-xl tracking-tight">
-              <span className="text-[#4285F4]">g</span>
-              <span className="text-[#EA4335]">e</span>
-              <span className="text-[#FBBC05]">o</span>
-              <span className="text-[#4285F4]">d</span>
-              <span className="text-[#34A853]">y</span>
-              <span className="text-[#EA4335]">s</span>
-              <span className="text-[#4285F4]">s</span>
-              <span className="font-extrabold text-sky-400 ml-0.5">AI</span>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#2fd9f4] via-[#38BDF8] to-[#818CF8]">
+                geodyssAI
+              </span>
             </a>
             <button
               onClick={() => setIsOpen(false)}
