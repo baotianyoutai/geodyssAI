@@ -58,3 +58,20 @@
 - **決定**:
   - `getArticles()` 内の返り値オブジェクトに `contentMd: data.contentMd || data.content || ''` を常時含めるよう型および変換処理を修正。
   - 静的プレレンダリング（SSG）プロセスにおいて全記事の本文 HTML が正しく展開・生成されることを保証。
+
+## ADR-009: 公式 Google Gen AI SDK (@google/genai) への移行と Gemini 3.5 Flash / Grounding の採用
+- **日付**: 2026-07-25
+- **ステータス**: 承認済 (Accepted)
+- **文脈**: 非推奨・廃止された旧モデル (`gemini-1.5-flash`, `gemini-2.5-flash`) の通信エラーを回避し、高速かつリアルタイムな AI 応答を実現する。
+- **決定**:
+  - 公式 `@google/genai` SDK を導入し、現行最新モデル `gemini-3.5-flash` を採用。
+  - Google 検索 Grounding (`tools: [{ googleSearch: {} }]`) を有効化し、最新の Web 情報に準拠した回答を生成。
+  - `src/lib/ai-logic.ts` モジュールへカプセル化し、安定した AI 指導・要約・RAG 応答を提供。
+
+## ADR-010: reCAPTCHA Enterprise App Check 適用とスレッド全端末同期
+- **日付**: 2026-07-25
+- **ステータス**: 承認済 (Accepted)
+- **文脈**: 本物の reCAPTCHA Enterprise サイトキー適用および他端末・スマホでの掲示板スレッド同期。
+- **決定**:
+  - `src/lib/firebase-client.ts` にサイトキー `6LfdWbQsAAAAAGht9Q4Os6xikVRfFBhL8I3GZaBn` および `window.useEnterprise = true` を適用。
+  - Firestore Security Rules で `threads` の読取・書込を許可し、未ログインを含む全端末・全ユーザー間でスレッド投稿をリアルタイム共有。

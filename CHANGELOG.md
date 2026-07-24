@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-07-25
+
+### Added
+- **Firebase AI Logic & @google/genai SDK Integration**:
+  - Integrated official `@google/genai` (Google Gen AI SDK) with current `gemini-3.5-flash` model for high-speed AI responses.
+  - Built `src/lib/ai-logic.ts` module handling article summaries, 3-step action roadmaps, and 3D Stellar Canvas RAG chat.
+  - Enabled **Google Search Grounding (`tools: [{ googleSearch: {} }]`)** for real-time web-enhanced AI responses.
+- **Firebase App Check with Official reCAPTCHA Enterprise**:
+  - Applied official reCAPTCHA Enterprise site key (`6LfdWbQsAAAAAGht9Q4Os6xikVRfFBhL8I3GZaBn`) in `src/lib/firebase-client.ts`.
+  - Enabled `window.useEnterprise = true` to protect API endpoints and Firestore resources from unauthorized domain access.
+- **Cross-Device Firestore Thread Synchronization (`StellarTavernView.tsx`)**:
+  - Configured Firestore Security Rules and auto anonymous authentication (`signInAnonymously`) for seamless cross-device thread post synchronization across desktop and mobile devices.
+  - Added `searchQueries` Firestore collection logging to record user search intent for continuous content optimization.
+
 ## [1.1.1] - 2026-07-25
 
 ### Fixed

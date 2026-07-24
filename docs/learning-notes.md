@@ -62,3 +62,14 @@ This document details all the commands, logs, errors, and learning points encoun
 * **Symptom**: On `/articles/[slug]`, header titles and Munchkin Navigator guides rendered, but the primary Markdown article body text was missing.
 * **Root Cause**: `src/lib/firebase-server.ts` `getArticles()` mapped Firestore doc fields into an article object but omitted `contentMd` (or `content`). `[slug].astro` received `undefined` for `article.contentMd`.
 * **Fix**: Updated `getArticles()` to map `contentMd: data.contentMd || data.content || ''`. Verified full HTML generation across all 28 articles in `dist/client/articles/*/index.html`.
+
+## Section 11: Firebase AI Logic, App Check & Multi-Device Thread Sync
+
+### 11.1 Firebase AI Logic & @google/genai SDK Integration
+* **Model Migration**: Deprecated models (`gemini-1.5-flash`, `gemini-2.5-flash`) returned `404 NOT_FOUND`. Migrated to official `@google/genai` (Google Gen AI SDK) using current `gemini-3.5-flash`.
+* **Google Search Grounding**: Enabled `tools: [{ googleSearch: {} }]` for real-time web-enhanced AI responses.
+* **Module Architecture (`src/lib/ai-logic.ts`)**: Centralized AI Logic functions (`generateArticleStepUpGuide`, `askArticleAI`, `generateStellarChatAI`).
+
+### 11.2 App Check & Multi-Device Threads Sync
+* **reCAPTCHA Enterprise**: Applied production key (`6LfdWbQsAAAAAGht9Q4Os6xikVRfFBhL8I3GZaBn`) and `window.useEnterprise = true`.
+* **Firestore Security Rules**: Configured `threads` collection read/write rules, allowing seamless cross-device synchronization between Mac and mobile browsers.
