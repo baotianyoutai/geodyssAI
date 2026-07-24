@@ -296,28 +296,27 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
                 星海図 — Stellar Chart
               </h1>
               
-              {/* 展望台・酒場・自己紹介・乗船（Boarding）ボタン */}
+              {/* 展望台・酒場・乗船（Boarding）ボタン */}
               <div className="flex items-center gap-1.5 pointer-events-auto">
                 <a
                   href="/observatory"
-                  className="px-2 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 font-mono text-[10px] rounded-lg transition-colors"
+                  className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 font-mono text-[10px] rounded-lg transition-colors"
                   title="展望台 (Observatory)"
                 >
-                  📡 展望台
+                  展望台
                 </a>
                 <a
                   href="/tavern"
-                  className="px-2 py-1 bg-slate-900 hover:bg-slate-800 border border-amber-500/40 text-amber-300 font-mono text-[10px] rounded-lg transition-colors"
+                  className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 border border-amber-500/40 text-amber-300 font-mono text-[10px] rounded-lg transition-colors"
                   title="星海酒場 (Stellar Tavern)"
                 >
-                  🍻 酒場
+                  酒場
                 </a>
-
                 <button
                   onClick={() => setIsBoardingOpen(true)}
-                  className="px-2 py-1 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/40 text-sky-300 font-mono text-[10px] rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
+                  className="px-2.5 py-1 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/40 text-sky-300 font-mono text-[10px] rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
                 >
-                  <span>{user ? `👤 ${user.displayName?.split(' ')[0] || 'Voyager'}` : '🚀 乗船'}</span>
+                  <span>{user ? (user.displayName?.split(' ')[0] || 'Voyager') : '乗船'}</span>
                 </button>
               </div>
             </div>
@@ -398,7 +397,7 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
                   </div>
                   <div>
                     <span className="text-slate-500">Difficulty:</span>{' '}
-                    <span className="text-sky-300">{'✦'.repeat(active.difficulty)}</span>
+                    <span className="text-sky-300">Level {active.difficulty}</span>
                   </div>
                 </div>
               </div>

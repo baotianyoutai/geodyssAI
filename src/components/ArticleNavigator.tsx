@@ -128,7 +128,7 @@ export function ArticleNavigator({ article }: { article: ArticleProps }) {
           {guide?.nextSteps && guide.nextSteps.length > 0 && (
             <div className="p-4 bg-slate-900/60 border border-slate-800/80 rounded-xl space-y-3">
               <h4 className="text-xs font-bold font-mono text-indigo-400 flex items-center gap-2">
-                <span>🚀</span> 次に学ぶステップアップ・アドバイス (What to Learn Next)
+                次に学ぶステップアップ・アドバイス (What to Learn Next)
               </h4>
               <ul className="space-y-2 text-xs md:text-sm text-slate-300">
                 {guide.nextSteps.map((step, idx) => (

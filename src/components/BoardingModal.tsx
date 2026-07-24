@@ -14,7 +14,7 @@ const DEMO_MONOLITH: MonolithData = {
   constellationLabel: 'Firebase & Cloud 座',
   unlockedAt: new Date().toISOString(),
   tomeStory: '「太古の星海において、航海士は Firebase 座に属するすべての知の星を繋ぎ合わせ、偉大なるクラウドの光を呼び覚ました。この碑には、未知なる領域を開拓した voyager の不滅の功績が永久に記録されているニャ。」',
-  badge: '✦ Complete: Firebase 座'
+  badge: 'Complete: Firebase 座'
 };
 
 export function BoardingModal({ isOpen, onClose }: BoardingModalProps) {
@@ -64,7 +64,7 @@ export function BoardingModal({ isOpen, onClose }: BoardingModalProps) {
         badges: ['First Voyage', 'Stellar Explorer']
       };
       setDemoUser(fallbackDemo);
-      setNoticeMessage('Firebase API Key未設定のため、デモ乗船モードでログインしました 🚀');
+      setNoticeMessage('Firebase API Key未設定のため、デモ乗船モードでログインしました');
     } finally {
       setIsLoading(false);
     }
@@ -180,8 +180,8 @@ export function BoardingModal({ isOpen, onClose }: BoardingModalProps) {
           /* 未ログイン状態 */
           <div className="space-y-6 text-center">
             <div className="p-6 bg-slate-900/50 border border-slate-800 rounded-xl space-y-3">
-              <div className="w-16 h-16 mx-auto rounded-full bg-slate-800 flex items-center justify-center text-2xl shadow-inner">
-                🚀
+              <div className="w-16 h-16 mx-auto rounded-full bg-slate-800 flex items-center justify-center text-xl font-bold text-sky-400 shadow-inner">
+                GE
               </div>
               <p className="text-xs text-slate-300 leading-relaxed">
                 乗船手続きを行うと、読了した星の記録や「星屑の栞（ブックマーク）」、「知の星海碑（Monoliths）」が保存されます。
