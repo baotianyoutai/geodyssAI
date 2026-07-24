@@ -72,15 +72,29 @@ export function ArticleNavigator({ article }: { article: ArticleProps }) {
         if (res.ok) {
           const data = await res.json();
           setGuide(data);
+        } else {
+          throw new Error('Guide fetch non-ok');
         }
       } catch (e) {
-        console.error('Failed to fetch article guide:', e);
+        console.warn('Using fallback article guide:', e);
+        setGuide({
+          summary: `ニャー！「${article.title}」の読了おめでとうだにゃ 🐾 ${article.excerpt || '知の星海がまた一つ明るく照らされたにゃ！'}`,
+          nextSteps: [
+            "ステップ1 (ハンズオン): 記事内のサンプルコードを手元で実行・検証してみるにゃ",
+            "ステップ2 (ドキュメント): 関連する公式開発リファレンスを参照してみるにゃ",
+            "ステップ3 (発展応用): 自分のアイデアを組み込んで応用プロダクトを作ってみるにゃ"
+          ],
+          webLinks: [
+            { title: "Firebase Console", url: "https://console.firebase.google.com", description: "プロジェクト設定・Firestore・Authの公式管理コンソール" },
+            { title: "Google AI Studio", url: "https://aistudio.google.com", description: "Gemini API キーの発行・プロンプト試行公式環境" }
+          ]
+        });
       } finally {
         setLoading(false);
       }
     }
     fetchGuide();
-  }, [article.slug]);
+  }, [article.slug, article.title]);
 
   const handleAskQuestion = async (e: React.FormEvent) => {
     e.preventDefault();

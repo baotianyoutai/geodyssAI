@@ -170,6 +170,9 @@ ${lastUserMessage}`;
       if (geminiRes.ok) {
         const data = await geminiRes.json();
         botResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      } else {
+        const errText = await geminiRes.text();
+        console.warn('Gemini API returned status:', geminiRes.status, errText);
       }
     } catch (e) {
       console.error('Gemini API call failed:', e);

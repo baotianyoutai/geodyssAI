@@ -4,33 +4,33 @@ import { getFirestore, doc, setDoc, getDoc, updateDoc, arrayUnion, arrayRemove }
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'firebase/app-check';
 
 // Astro (PUBLIC_) および Next.js (NEXT_PUBLIC_) の両方の環境変数命名規則に対応
-const apiKey = import.meta.env.PUBLIC_FIREBASE_API_KEY || 
-               import.meta.env.NEXT_PUBLIC_FIREBASE_API_KEY || 
-               "AIzaSyD7zwkwv4juqt3v7ueDRXoK1M6Xpcv9NpI";
+const apiKey = import.meta.env.PUBLIC_FIREBASE_API_KEY ||
+  import.meta.env.NEXT_PUBLIC_FIREBASE_API_KEY ||
+  "AIzaSyD7zwkwv4juqt3v7ueDRXoK1M6Xpcv9NpI";
 
-const authDomain = import.meta.env.PUBLIC_FIREBASE_AUTH_DOMAIN || 
-                   import.meta.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || 
-                   "my-geodyssai-pro-1744456051163.firebaseapp.com";
+const authDomain = import.meta.env.PUBLIC_FIREBASE_AUTH_DOMAIN ||
+  import.meta.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ||
+  "my-geodyssai-pro-1744456051163.firebaseapp.com";
 
-const projectId = import.meta.env.PUBLIC_FIREBASE_PROJECT_ID || 
-                  import.meta.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 
-                  "my-geodyssai-pro-1744456051163";
+const projectId = import.meta.env.PUBLIC_FIREBASE_PROJECT_ID ||
+  import.meta.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ||
+  "my-geodyssai-pro-1744456051163";
 
-const storageBucket = import.meta.env.PUBLIC_FIREBASE_STORAGE_BUCKET || 
-                      import.meta.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || 
-                      "my-geodyssai-pro-1744456051163.firebasestorage.app";
+const storageBucket = import.meta.env.PUBLIC_FIREBASE_STORAGE_BUCKET ||
+  import.meta.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ||
+  "my-geodyssai-pro-1744456051163.firebasestorage.app";
 
-const messagingSenderId = import.meta.env.PUBLIC_FIREBASE_MESSAGING_SENDER_ID || 
-                          import.meta.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || 
-                          "860359053413";
+const messagingSenderId = import.meta.env.PUBLIC_FIREBASE_MESSAGING_SENDER_ID ||
+  import.meta.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ||
+  "860359053413";
 
-const appId = import.meta.env.PUBLIC_FIREBASE_APP_ID || 
-              import.meta.env.NEXT_PUBLIC_FIREBASE_APP_ID || 
-              "1:860359053413:web:aa543035a595812510b68c";
+const appId = import.meta.env.PUBLIC_FIREBASE_APP_ID ||
+  import.meta.env.NEXT_PUBLIC_FIREBASE_APP_ID ||
+  "1:860359053413:web:aa543035a595812510b68c";
 
-const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY || 
-                         import.meta.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || 
-                         "6LdDummyRecaptchaSiteKeyForDev12345678";
+const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY ||
+  import.meta.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY ||
+  "6LdDummyRecaptchaSiteKeyForDev12345678";
 
 const firebaseConfig = {
   apiKey,
