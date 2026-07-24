@@ -30,8 +30,22 @@ export function BoardingModal({ isOpen, onClose }: BoardingModalProps) {
     // リダイレクト認証結果の検出
     getRedirectResult(auth).then(async (result) => {
       if (result?.user) {
-        const prof = await syncUserProfile(result.user);
-        setProfile(prof);
+        setUser(result.user);
+        try {
+          const prof = await syncUserProfile(result.user);
+          setProfile(prof);
+        } catch (e) {
+          console.warn('Fallback to basic user profile', e);
+          setProfile({
+            uid: result.user.uid,
+            displayName: result.user.displayName || 'Google Voyager',
+            photoURL: result.user.photoURL || '/assets/cat.jpg',
+            createdAt: new Date().toISOString(),
+            readHistory: [],
+            stardustBookmarks: [],
+            badges: ['Google Sign-in']
+          });
+        }
         setDemoUser(null);
       }
     }).catch((e) => {
@@ -44,11 +58,20 @@ export function BoardingModal({ isOpen, onClose }: BoardingModalProps) {
         try {
           const prof = await syncUserProfile(currentUser);
           setProfile(prof);
-          setDemoUser(null);
-          setErrorMessage(null);
         } catch (e) {
-          console.error('Failed to sync user profile:', e);
+          console.warn('Fallback to basic user profile onAuthStateChanged', e);
+          setProfile({
+            uid: currentUser.uid,
+            displayName: currentUser.displayName || 'Google Voyager',
+            photoURL: currentUser.photoURL || '/assets/cat.jpg',
+            createdAt: new Date().toISOString(),
+            readHistory: [],
+            stardustBookmarks: [],
+            badges: ['Google Sign-in']
+          });
         }
+        setDemoUser(null);
+        setErrorMessage(null);
       } else {
         setProfile(null);
       }
@@ -64,23 +87,35 @@ export function BoardingModal({ isOpen, onClose }: BoardingModalProps) {
     setNoticeMessage(null);
     try {
       const result = await signInWithPopup(auth, googleProvider);
-      const prof = await syncUserProfile(result.user);
-      setProfile(prof);
+      setUser(result.user);
+      try {
+        const prof = await syncUserProfile(result.user);
+        setProfile(prof);
+      } catch (e) {
+        setProfile({
+          uid: result.user.uid,
+          displayName: result.user.displayName || 'Google Voyager',
+          photoURL: result.user.photoURL || '/assets/cat.jpg',
+          createdAt: new Date().toISOString(),
+          readHistory: [],
+          stardustBookmarks: [],
+          badges: ['Google Sign-in']
+        });
+      }
       setDemoUser(null);
+      setNoticeMessage('Google アカウントで正常に乗船いたしました！');
     } catch (e: any) {
       console.warn('Firebase Google Auth error:', e);
       if (e.code === 'auth/popup-blocked') {
-        // ポップアップがブラウザにブロックされた場合は、自動的にページリダイレクト方式へ切り替えてログインを継続
-        setNoticeMessage('ブラウザのポップアップがブロックされたため、安全な直接ログイン画面へ移動します...');
+        setNoticeMessage('ブラウザのポップアップがブロックされたため、直接ログイン画面へ移動します...');
         setTimeout(() => {
           signInWithRedirect(auth, googleProvider);
         }, 1000);
       } else if (e.code === 'auth/popup-closed-by-user') {
         setErrorMessage('Google サインインダイアログが閉じられました。');
       } else if (e.code === 'auth/api-key-not-valid' || e.message?.includes('api-key')) {
-        setErrorMessage('Firebase API キーが未設定または無効です。環境変数 PUBLIC_FIREBASE_API_KEY をご確認ください。');
+        setErrorMessage('Firebase API キーが無効です。');
       } else {
-        // ポップアップエラーのフォールバックとしてリダイレクトを提案
         setErrorMessage('ポップアップ認証に失敗しました。下の直接ログインボタンをお試しください。');
       }
     } finally {
@@ -127,8 +162,17 @@ export function BoardingModal({ isOpen, onClose }: BoardingModalProps) {
     }
   };
 
-  const activeProfile = profile || demoUser;
-  const displayAvatar = (!imgError && (activeProfile?.photoURL || user?.photoURL)) || '/assets/cat.jpg';
+  const activeProfile = profile || demoUser || (user ? {
+    uid: user.uid,
+    displayName: user.displayName || 'Google Voyager',
+    photoURL: user.photoURL || '/assets/cat.jpg',
+    createdAt: new Date().toISOString(),
+    readHistory: [],
+    stardustBookmarks: [],
+    badges: ['Google Sign-in']
+  } : null);
+
+  const displayAvatar = (!imgError && (user?.photoURL || activeProfile?.photoURL)) || '/assets/cat.jpg';
   const isLoggedIn = Boolean(user || demoUser);
 
   return (
@@ -184,15 +228,15 @@ export function BoardingModal({ isOpen, onClose }: BoardingModalProps) {
                 onError={() => setImgError(true)}
                 className="w-14 h-14 rounded-full object-cover border-2 border-sky-400 shadow-[0_0_12px_rgba(56,189,248,0.4)]"
               />
-              <div>
-                <h3 className="text-base font-bold text-white font-display">
-                  {activeProfile.displayName}
+              <div className="overflow-hidden">
+                <h3 className="text-base font-bold text-white font-display truncate">
+                  {user?.displayName || activeProfile.displayName}
                 </h3>
-                <p className="text-xs text-slate-400 font-mono truncate max-w-[200px]">
+                <p className="text-xs text-slate-400 font-mono truncate max-w-[220px]">
                   {user?.email || 'voyager@geodyssai.com'}
                 </p>
                 <span className="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-mono bg-sky-500/20 text-sky-300 border border-sky-500/30">
-                  {demoUser ? 'MODE: DEMO VOYAGER' : 'RANK: VOYAGER'}
+                  {demoUser ? 'MODE: DEMO VOYAGER' : 'RANK: GOOGLE VOYAGER'}
                 </span>
               </div>
             </div>
