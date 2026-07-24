@@ -143,12 +143,24 @@ export async function askArticleAI(
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
       model: CURRENT_MODEL,
-      contents: prompt
+      contents: prompt,
+      config: {
+        tools: [{ googleSearch: {} }]
+      }
     });
 
     if (response.text) return response.text;
   } catch (e) {
-    console.warn('GoogleGenAI Q&A error:', e);
+    console.warn('GoogleGenAI Q&A error with grounding:', e);
+    // フォールバック: tools なしで通常生成
+    try {
+      const ai = new GoogleGenAI({ apiKey });
+      const response = await ai.models.generateContent({
+        model: CURRENT_MODEL,
+        contents: prompt
+      });
+      if (response.text) return response.text;
+    } catch (err) {}
   }
 
   return `ニャー！ご質問「${question}」ありがとうございますにゃ 🐾\n記事「${title}」の解説を踏まえて、コードの挙動や実装方法について深く探求してみてにゃ！下記ステップアップリンクも参考にしてほしいにゃ！`;

@@ -30,7 +30,7 @@ const appId = import.meta.env.PUBLIC_FIREBASE_APP_ID ||
 
 const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY ||
   import.meta.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY ||
-  "6LdDummyRecaptchaSiteKeyForDev12345678";
+  "6LfdWbQsAAAAAGht9Q4Os6xikVRfFBhL8I3GZaBn";
 
 const firebaseConfig = {
   apiKey,
@@ -48,8 +48,9 @@ export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 
 // Firebase App Check (reCAPTCHA Enterprise) の初期化
-if (typeof window !== 'undefined' && recaptchaSiteKey && !recaptchaSiteKey.includes('Dummy')) {
+if (typeof window !== 'undefined') {
   try {
+    (window as any).useEnterprise = true;
     if (import.meta.env.DEV) {
       (self as any).FIREBASE_APPCHECK_DEBUG_TOKEN = true;
     }
@@ -57,7 +58,7 @@ if (typeof window !== 'undefined' && recaptchaSiteKey && !recaptchaSiteKey.inclu
       provider: new ReCaptchaEnterpriseProvider(recaptchaSiteKey),
       isTokenAutoRefreshEnabled: true
     });
-    console.log('Firebase App Check successfully initialized.');
+    console.log('Firebase App Check (reCAPTCHA Enterprise) successfully initialized.');
   } catch (e) {
     console.warn('Firebase App Check initialization skipped:', e);
   }
