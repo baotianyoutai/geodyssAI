@@ -49,12 +49,11 @@ export function Sidebar({ currentPath = '/', onOpenBoarding, isDark = true }: Si
   ];
 
   return (
-    <div className="fixed top-0 left-0 z-40 flex items-start pointer-events-none font-sans">
-      
-      {/* 1. ハンバーガー [menu] トリガーボタン */}
+    <>
+      {/* 1. ハンバーガー [menu] トリガーボタン (固定位置 top-3 left-3) */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`m-3 p-2.5 rounded-full backdrop-blur-md transition-all shadow-lg cursor-pointer pointer-events-auto flex items-center justify-center border active:scale-95 ${
+        className={`fixed top-3 left-3 z-50 p-2.5 rounded-full backdrop-blur-md transition-all shadow-lg cursor-pointer flex items-center justify-center border active:scale-95 ${
           isDark
             ? 'bg-slate-900/90 text-slate-100 hover:bg-slate-800 border-slate-700/80'
             : 'bg-white/90 text-slate-700 hover:bg-slate-100 border-slate-200'
@@ -66,19 +65,27 @@ export function Sidebar({ currentPath = '/', onOpenBoarding, isDark = true }: Si
         </svg>
       </button>
 
-      {/* 2. geodyssAI ブランドサイドバーパネル */}
+      {/* 2. 背景暗転バックドロップ（タップで閉じる） */}
+      {isOpen && (
+        <div
+          onClick={() => setIsOpen(false)}
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity animate-fade-in"
+        />
+      )}
+
+      {/* 3. 画面最左端 (left-0) から完璧に滑らかにスライド表示されるサイドバーパネル */}
       <aside
-        className={`h-screen transition-all duration-300 pointer-events-auto flex flex-col justify-between p-4 ${
-          isOpen ? 'w-64 opacity-100 shadow-2xl' : 'w-0 opacity-0 overflow-hidden -translate-x-full pointer-events-none'
+        className={`fixed top-0 left-0 bottom-0 z-50 w-72 h-screen transition-transform duration-300 ease-out flex flex-col justify-between p-5 shadow-2xl ${
+          isOpen ? 'translate-x-0' : '-translate-x-full'
         } ${
           isDark
-            ? 'bg-[#090F1E]/95 border-r border-slate-800/90 text-slate-200 backdrop-blur-xl'
-            : 'bg-white/95 border-r border-slate-200 text-slate-800 backdrop-blur-xl'
+            ? 'bg-[#090F1E]/98 border-r border-slate-800/90 text-slate-200 backdrop-blur-2xl'
+            : 'bg-white/98 border-r border-slate-200 text-slate-800 backdrop-blur-2xl'
         }`}
       >
         <div className="space-y-6 pt-2">
-          {/* ヘッダーロゴ (geodyssAI) */}
-          <div className="flex items-center justify-between px-2">
+          {/* ヘッダーロゴ (geodyssAI) ＆ 閉じるボタン */}
+          <div className="flex items-center justify-between pb-2 border-b border-slate-800/60">
             <a href="/" className="flex items-center font-display font-bold text-xl tracking-tight">
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#2fd9f4] via-[#38BDF8] to-[#818CF8]">
                 geodyssAI
@@ -86,14 +93,14 @@ export function Sidebar({ currentPath = '/', onOpenBoarding, isDark = true }: Si
             </a>
             <button
               onClick={() => setIsOpen(false)}
-              className="p-1 text-slate-400 hover:text-white rounded-full hover:bg-slate-800/60 text-xs cursor-pointer"
+              className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-white rounded-full bg-slate-800/60 hover:bg-slate-800 text-xs cursor-pointer transition-colors"
             >
               ✕
             </button>
           </div>
 
           {/* ナビゲーションメニュー */}
-          <nav className="space-y-1.5">
+          <nav className="space-y-2">
             {menuItems.map((item) => {
               const isActive = currentPath === item.path;
               return (
@@ -125,7 +132,7 @@ export function Sidebar({ currentPath = '/', onOpenBoarding, isDark = true }: Si
                   setIsOpen(false);
                   onOpenBoarding();
                 }}
-                className="w-full mt-3 flex items-center gap-3.5 px-4 py-3 rounded-full text-xs font-bold transition-all bg-[#0B57D0] hover:bg-[#0948AD] text-white shadow-md cursor-pointer"
+                className="w-full mt-4 flex items-center gap-3.5 px-4 py-3 rounded-full text-xs font-bold transition-all bg-[#0B57D0] hover:bg-[#0948AD] text-white shadow-md cursor-pointer active:scale-95"
               >
                 <svg className="w-5 h-5 text-sky-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
@@ -137,10 +144,10 @@ export function Sidebar({ currentPath = '/', onOpenBoarding, isDark = true }: Si
         </div>
 
         {/* フッター情報 */}
-        <div className="px-3 py-3 border-t border-slate-800/50 text-[10px] text-slate-500 font-mono flex items-center justify-between">
+        <div className="px-2 py-3 border-t border-slate-800/50 text-[10px] text-slate-500 font-mono flex items-center justify-between">
           <span>© 2026 geodyssAI</span>
         </div>
       </aside>
-    </div>
+    </>
   );
 }
