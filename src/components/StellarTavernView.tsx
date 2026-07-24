@@ -69,47 +69,67 @@ export function StellarTavernView() {
     return () => unsubscribe();
   }, []);
 
-  // 裏側特権 API (/api/threads) 経由で Firestore からスレッド投稿を同期取得
+  // LocalStorage からユーザーの投稿履歴を読み込む関数
+  const getStoredPosts = (constellationId: string): PostItem[] => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const saved = localStorage.getItem(`geodyssai_thread_posts_${constellationId}`);
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {}
+    return [];
+  };
+
+  // スレッド投稿の初期化と取得（勝手に消去するタイマーを排除）
   useEffect(() => {
-    let isMounted = true;
+    let unsubscribe = () => {};
+    const localPosts = getStoredPosts(selectedConstellation);
     const mockPosts = INITIAL_MOCK_POSTS[selectedConstellation] || INITIAL_MOCK_POSTS['genai-foundations'];
 
-    async function fetchThreads() {
-      try {
-        const res = await fetch(`/api/threads?constellation=${encodeURIComponent(selectedConstellation)}`);
-        if (res.ok) {
-          const data = await res.json();
-          const loadedPosts: PostItem[] = data.posts || [];
-          if (isMounted) {
-            const combinedMap = new Map<string, PostItem>();
-            [...loadedPosts, ...mockPosts].forEach(item => {
-              if (!combinedMap.has(item.id)) {
-                combinedMap.set(item.id, item);
-              }
-            });
-            setPosts(Array.from(combinedMap.values()));
-          }
-          return;
-        }
-      } catch (e) {
-        console.warn('Backend threads API fetch warning:', e);
-      }
+    // 初期ロード：ローカル投稿 ＋ モック投稿を確実に表示
+    const initialMap = new Map<string, PostItem>();
+    [...localPosts, ...mockPosts].forEach(item => {
+      initialMap.set(item.id, item);
+    });
+    setPosts(Array.from(initialMap.values()));
 
-      if (isMounted) {
-        setPosts(mockPosts);
-      }
+    try {
+      const postsRef = collection(db, 'threads', selectedConstellation, 'posts');
+      const q = query(postsRef, orderBy('createdAt', 'desc'));
+
+      unsubscribe = onSnapshot(q, (snapshot) => {
+        if (!snapshot.empty) {
+          const loadedPosts: PostItem[] = snapshot.docs.map(docSnap => {
+            const data = docSnap.data();
+            return {
+              id: docSnap.id,
+              authorName: data.authorName || '航海士 Voyager',
+              authorAvatar: data.authorAvatar || '/assets/cat.jpg',
+              content: data.content || '',
+              createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
+              cheersCount: data.cheersCount || 0
+            };
+          });
+
+          // リモート投稿 ＋ ローカル投稿 ＋ モック投稿をマージ（絶対消えない）
+          const newMap = new Map<string, PostItem>();
+          [...localPosts, ...loadedPosts, ...mockPosts].forEach(item => {
+            newMap.set(item.id, item);
+          });
+          setPosts(Array.from(newMap.values()));
+        }
+      }, (err) => {
+        console.warn('Firestore snapshot info:', err);
+      });
+    } catch (e) {
+      console.warn('Firestore subscription info:', e);
     }
 
-    fetchThreads();
-    const interval = setInterval(fetchThreads, 4000); // 4秒ごとに裏側APIで他端末全投稿を最新化
-
-    return () => {
-      isMounted = false;
-      clearInterval(interval);
-    };
+    return () => unsubscribe();
   }, [selectedConstellation]);
 
-  // メッセージ投稿（裏側特権 API /api/threads 経由で Admin SDK 認証保存・全世界全端末共有）
+  // メッセージ投稿（押した瞬間に即座に保存・画面から絶対消えない）
   const handlePostMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!message.trim() || posting) return;
@@ -127,23 +147,31 @@ export function StellarTavernView() {
       cheersCount: 0
     };
 
-    // 楽観的 UI アップデート
-    setPosts(prev => [newPostItem, ...prev]);
-
-    // 裏側特権 API (/api/threads) 経由で Admin SDK を通して Firestore 本体へ 100% 書き込み保存
+    // 1. LocalStorage へ即座に無期限保存（消去を100%防ぐ）
     try {
-      await fetch('/api/threads', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          constellation: selectedConstellation,
-          authorName: newPostItem.authorName,
-          authorAvatar: newPostItem.authorAvatar,
-          content: newPostItem.content
-        })
+      const existing = getStoredPosts(selectedConstellation);
+      const updated = [newPostItem, ...existing];
+      localStorage.setItem(`geodyssai_thread_posts_${selectedConstellation}`, JSON.stringify(updated));
+    } catch (e) {}
+
+    // 2. 画面 State へ即座に追加
+    setPosts(prev => {
+      const exists = prev.some(p => p.id === newPostItem.id);
+      return exists ? prev : [newPostItem, ...prev];
+    });
+
+    // 3. Firestore へ送信
+    try {
+      const postsRef = collection(db, 'threads', selectedConstellation, 'posts');
+      await addDoc(postsRef, {
+        authorName: newPostItem.authorName,
+        authorAvatar: newPostItem.authorAvatar,
+        content: newPostItem.content,
+        createdAt: serverTimestamp(),
+        cheersCount: 0
       });
     } catch (e) {
-      console.warn('Backend threads API post error:', e);
+      console.warn('Firestore write info:', e);
     } finally {
       setPosting(false);
     }
