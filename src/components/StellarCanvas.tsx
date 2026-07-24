@@ -296,7 +296,7 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
                 星海図 — Stellar Chart
               </h1>
               
-              {/* 展望台・酒場・乗船（Boarding）ボタン */}
+              {/* 展望台・酒場ボタン */}
               <div className="flex items-center gap-1.5 pointer-events-auto">
                 <a
                   href="/observatory"
@@ -312,12 +312,6 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
                 >
                   酒場
                 </a>
-                <button
-                  onClick={() => setIsBoardingOpen(true)}
-                  className="px-2.5 py-1 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/40 text-sky-300 font-mono text-[10px] rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
-                >
-                  <span>{user ? (user.displayName?.split(' ')[0] || 'Voyager') : '乗船'}</span>
-                </button>
               </div>
             </div>
             
@@ -431,8 +425,30 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
         </div>
       </div>
 
-      {/* 右上: 凡例（星座カテゴリ） */}
-      <div className="absolute top-6 right-6 p-4 bg-slate-950/70 border border-slate-800/80 rounded-xl backdrop-blur-md z-10 text-xs font-mono text-slate-300 space-y-2 pointer-events-auto select-none">
+      {/* 右上特等席: 乗船手続き (Sign in / アカウント) ピルボタン */}
+      <div className="absolute top-6 right-6 z-20 pointer-events-auto">
+        <button
+          onClick={() => setIsBoardingOpen(true)}
+          className="px-5 py-2 bg-[#0B57D0] hover:bg-[#0948AD] text-white font-medium text-xs rounded-full shadow-lg transition-all flex items-center gap-2 border border-sky-400/30 cursor-pointer active:scale-95"
+          title="乗船手続き (Sign in)"
+        >
+          {user ? (
+            <>
+              <img
+                src={user.photoURL || '/assets/cat.jpg'}
+                alt="User Avatar"
+                className="w-5 h-5 rounded-full object-cover border border-white/50"
+              />
+              <span className="font-bold">{user.displayName?.split(' ')[0] || 'Voyager'}</span>
+            </>
+          ) : (
+            <span>乗船手続き / Sign in</span>
+          )}
+        </button>
+      </div>
+
+      {/* 右上真下: 凡例（星座カテゴリ - CONSTELLATIONS） */}
+      <div className="absolute top-20 right-6 p-4 bg-slate-950/75 border border-slate-800/80 rounded-xl backdrop-blur-md z-10 text-xs font-mono text-slate-300 space-y-2 pointer-events-auto select-none shadow-2xl">
         <div className="text-slate-500 font-bold border-b border-slate-800/60 pb-2 flex flex-col gap-0.5">
           <span>CONSTELLATIONS</span>
           <span className="text-[9px] text-slate-500/80 font-normal normal-case italic">
