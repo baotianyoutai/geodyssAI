@@ -488,42 +488,7 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
         </button>
       </div>
 
-      {/* 5. 底部 HUD エリア */}
-      <div className="absolute bottom-8 left-8 right-8 flex justify-between items-end z-10 pointer-events-none">
-        
-        {/* 左下: Stratification (階層凡例) */}
-        <div className="bg-slate-950/70 backdrop-blur-md border border-slate-800/80 rounded-xl p-4 shadow-2xl flex flex-col gap-2 pointer-events-auto">
-          <h3 className="font-mono text-[10px] text-slate-500 uppercase tracking-widest mb-1">Stratification</h3>
-          <div className="flex items-center gap-3">
-            <div className="w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_rgba(138,235,255,0.8)]"></div>
-            <span className="font-mono text-xs text-slate-200">Azure (Surface) - 表層 [眩光]</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="w-2 h-2 rounded-full bg-tertiary shadow-[0_0_8px_rgba(208,188,255,0.5)]"></div>
-            <span className="font-mono text-xs text-slate-400">Twilight (Mid) - 薄暮層 [中光]</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="w-2 h-2 rounded-full bg-secondary opacity-40"></div>
-            <span className="font-mono text-xs text-slate-500">Midnight (Deep) - 深層 [微光・減光]</span>
-          </div>
-        </div>
 
-        {/* 右下: Depth Indicator (リアルタイム深度計) */}
-        <div className="flex items-center gap-4 bg-slate-950/70 backdrop-blur-md rounded-xl p-4 border border-slate-800/80 shadow-2xl pointer-events-auto">
-          <div className="flex flex-col items-end">
-            <span className="font-mono text-[10px] text-slate-500 uppercase tracking-wider">Depth</span>
-            <span className="font-display font-bold text-2xl text-primary">{currentDepth}m</span>
-            <span className="font-mono text-[10px] text-slate-400 mt-0.5">{getLayerName(currentDepth)}</span>
-          </div>
-          <div className="h-16 w-0.5 depth-line rounded-full relative">
-            <div 
-              className="absolute left-1/2 -translate-x-1/2 w-2 h-2 bg-primary rounded-full shadow-[0_0_10px_rgba(138,235,255,0.8)] transition-all duration-200"
-              style={{ top: `${(currentDepth / 2400) * 80}%` }}
-            ></div>
-          </div>
-        </div>
-
-      </div>
 
       {/* 6. マンチカン航海士 AI RAG チャットボット・ウィジェット */}
       <MunchkinNavigator />
