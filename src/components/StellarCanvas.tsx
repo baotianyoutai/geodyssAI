@@ -6,6 +6,7 @@ import { StellarChart } from './StellarChart';
 import { NebulaShader } from './NebulaShader';
 import { MunchkinNavigator } from './MunchkinNavigator';
 import { BoardingModal } from './BoardingModal';
+import { Sidebar } from './Sidebar';
 import { auth, onAuthStateChanged } from '../lib/firebase-client';
 import type { User } from 'firebase/auth';
 import * as THREE from 'three';
@@ -285,8 +286,11 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
         )}
       </Canvas>
 
+      {/* 左側 Streamlit / Google Skills スタイルナビゲーションサイドバー */}
+      <Sidebar currentPath="/" onOpenBoarding={() => setIsBoardingOpen(true)} isDark={true} />
+
       {/* 4. 左上: フローティンググラスモルフィックHUD (固定サイズ w-[380px] & h-[450px]) */}
-      <div className="absolute top-6 left-6 pointer-events-none z-10">
+      <div className="absolute top-6 left-16 pointer-events-none z-10">
         <div className="w-[380px] h-[450px] p-6 bg-slate-950/75 border border-slate-800/80 rounded-xl backdrop-blur-md shadow-2xl text-slate-100 font-body flex flex-col justify-between">
           
           {/* ヘッダー ＆ Move Next Star 矢印ナビゲーション ＋ 乗船ボタン */}
