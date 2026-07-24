@@ -1,6 +1,7 @@
 // src/lib/ai-logic.ts
-// Firebase AI Logic (Gemini API) 連携統合モジュール
+// 公式 Google Gen AI / Firebase AI Logic SDK (@google/genai) 統合モジュール
 
+import { GoogleGenAI } from '@google/genai';
 import fs from 'fs';
 import path from 'path';
 
@@ -54,8 +55,11 @@ function getGeminiApiKey(): string {
   return 'AIzaSyB-5jpp_4PmANU-9scNR0q-ahUJvFpBmUg';
 }
 
+// 現行の公式推奨 Gemini 最新モデル
+const CURRENT_MODEL = 'gemini-3.5-flash';
+
 /**
- * 1. 記事末尾用: 要点ノート ＆ 3ステップ学習ガイドの自動生成
+ * 1. 記事末尾用: 要点ノート ＆ 3ステップ学習ガイドの自動生成 (公式 SDK)
  */
 export async function generateArticleStepUpGuide(
   title: string,
@@ -85,33 +89,27 @@ export async function generateArticleStepUpGuide(
 }`;
 
   try {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }]
-      })
+    const ai = new GoogleGenAI({ apiKey });
+    const response = await ai.models.generateContent({
+      model: CURRENT_MODEL,
+      contents: prompt
     });
 
-    if (res.ok) {
-      const data = await res.json();
-      const textRes = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      const cleaned = textRes.replace(/```json|```/g, '').trim();
-      const json = JSON.parse(cleaned);
+    const textRes = response.text || '';
+    const cleaned = textRes.replace(/```json|```/g, '').trim();
+    const json = JSON.parse(cleaned);
 
-      if (json.summary && Array.isArray(json.nextSteps)) {
-        return {
-          summary: json.summary,
-          nextSteps: json.nextSteps,
-          webLinks
-        };
-      }
+    if (json.summary && Array.isArray(json.nextSteps)) {
+      return {
+        summary: json.summary,
+        nextSteps: json.nextSteps,
+        webLinks
+      };
     }
   } catch (e) {
-    console.warn('Gemini AI Logic guide generation warning:', e);
+    console.warn('GoogleGenAI SDK guide generation warning:', e);
   }
 
-  // 100% 安定したフォールバックガイド
   return {
     summary: `ニャー！「${title}」の読了おめでとうだにゃ 🐾 ${excerpt ? excerpt.slice(0, 90) + '...' : '知の星海がまた一つ明るく照らされたにゃ！'}`,
     nextSteps: [
@@ -124,7 +122,7 @@ export async function generateArticleStepUpGuide(
 }
 
 /**
- * 2. 記事質問用: 単一記事に関する Q&A チャット応答
+ * 2. 記事質問用: 単一記事に関する Q&A チャット応答 (公式 SDK)
  */
 export async function askArticleAI(
   title: string,
@@ -142,26 +140,22 @@ export async function askArticleAI(
 【質問】: ${question}`;
 
   try {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+    const ai = new GoogleGenAI({ apiKey });
+    const response = await ai.models.generateContent({
+      model: CURRENT_MODEL,
+      contents: prompt
     });
 
-    if (res.ok) {
-      const data = await res.json();
-      const answer = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (answer) return answer;
-    }
+    if (response.text) return response.text;
   } catch (e) {
-    console.warn('Gemini Q&A error:', e);
+    console.warn('GoogleGenAI Q&A error:', e);
   }
 
   return `ニャー！ご質問「${question}」ありがとうございますにゃ 🐾\n記事「${title}」の解説を踏まえて、コードの挙動や実装方法について深く探求してみてにゃ！下記ステップアップリンクも参考にしてほしいにゃ！`;
 }
 
 /**
- * 3. 3D 星海図用: 全域 RAG ナビゲーション対話
+ * 3. 3D 星海図用: 全域 RAG ナビゲーション対話 (公式 SDK)
  */
 export async function generateStellarChatAI(
   userQuery: string,
@@ -184,22 +178,17 @@ ${contextText}
 ${userQuery}`;
 
   try {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts: [{ text: systemPrompt }] }] })
+    const ai = new GoogleGenAI({ apiKey });
+    const response = await ai.models.generateContent({
+      model: CURRENT_MODEL,
+      contents: systemPrompt
     });
 
-    if (res.ok) {
-      const data = await res.json();
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (text) return text;
-    }
+    if (response.text) return response.text;
   } catch (e) {
-    console.warn('Stellar Chat Gemini error:', e);
+    console.warn('Stellar Chat GoogleGenAI error:', e);
   }
 
-  // 高品質 RAG マークダウンリンク付きフォールバック
   if (targetArticles.length > 0) {
     const top = targetArticles[0];
     const rest = targetArticles.slice(1);
