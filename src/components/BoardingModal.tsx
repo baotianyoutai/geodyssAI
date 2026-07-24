@@ -27,27 +27,25 @@ export function BoardingModal({ isOpen, onClose }: BoardingModalProps) {
   const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
 
   useEffect(() => {
+    if (isOpen && user) {
+      syncUserProfile(user).then(prof => {
+        if (prof) setProfile(prof);
+      }).catch(e => console.warn('Failed to refresh user profile:', e));
+    }
+  }, [isOpen, user]);
+
+  useEffect(() => {
     // リダイレクト認証結果の検出
     getRedirectResult(auth).then(async (result) => {
       if (result?.user) {
         setUser(result.user);
-        const fallbackProf: UserProfile = {
-          uid: result.user.uid,
-          displayName: result.user.displayName || 'Google Voyager',
-          photoURL: result.user.photoURL || '/assets/cat.jpg',
-          createdAt: new Date().toISOString(),
-          readHistory: [],
-          stardustBookmarks: [],
-          badges: ['Google Sign-in']
-        };
-        setProfile(fallbackProf);
-        setDemoUser(null);
         try {
           const prof = await syncUserProfile(result.user);
           if (prof) setProfile(prof);
         } catch (e) {
           console.warn('Firestore sync skipped', e);
         }
+        setDemoUser(null);
       }
     }).catch((e) => {
       console.warn('Redirect auth result check:', e);
@@ -56,25 +54,14 @@ export function BoardingModal({ isOpen, onClose }: BoardingModalProps) {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
-        const fallbackProf: UserProfile = {
-          uid: currentUser.uid,
-          displayName: currentUser.displayName || 'Google Voyager',
-          photoURL: currentUser.photoURL || '/assets/cat.jpg',
-          createdAt: new Date().toISOString(),
-          readHistory: [],
-          stardustBookmarks: [],
-          badges: ['Google Sign-in']
-        };
-        setProfile(fallbackProf);
-        setDemoUser(null);
-        setErrorMessage(null);
-
         try {
           const prof = await syncUserProfile(currentUser);
           if (prof) setProfile(prof);
         } catch (e) {
           console.warn('Firestore user sync warning:', e);
         }
+        setDemoUser(null);
+        setErrorMessage(null);
       } else {
         setProfile(null);
       }

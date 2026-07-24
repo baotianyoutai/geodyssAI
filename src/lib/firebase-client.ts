@@ -102,16 +102,40 @@ export async function syncUserProfile(user: User): Promise<UserProfile> {
       };
     }
   } catch (error) {
-    console.warn('Firestore user sync warning (using fallback profile):', error);
+    console.warn('Firestore user sync warning (using clean fallback profile):', error);
     return {
       uid: user.uid,
       displayName: user.displayName || '航海士 Navigator',
       photoURL: user.photoURL || '/assets/cat.jpg',
       createdAt: new Date().toISOString(),
-      readHistory: ['post-131', 'post-135'],
-      stardustBookmarks: ['post-131'],
-      badges: ['First Voyage']
+      readHistory: [],
+      stardustBookmarks: [],
+      badges: ['Google Sign-in']
     };
+  }
+}
+
+// 記事閲覧時の「読了記録 (readHistory)」の Firestore リアルタイム保存
+export async function markArticleAsRead(uid: string, articleSlug: string): Promise<void> {
+  try {
+    const userRef = doc(db, 'users', uid);
+    await updateDoc(userRef, {
+      readHistory: arrayUnion(articleSlug)
+    });
+  } catch (error) {
+    console.warn('Failed to mark article as read:', error);
+  }
+}
+
+// 星屑の栞（ブックマーク）の保存/解除トグル
+export async function toggleStardustBookmark(uid: string, articleSlug: string, isBookmarked: boolean): Promise<void> {
+  try {
+    const userRef = doc(db, 'users', uid);
+    await updateDoc(userRef, {
+      stardustBookmarks: isBookmarked ? arrayRemove(articleSlug) : arrayUnion(articleSlug)
+    });
+  } catch (error) {
+    console.warn('Failed to toggle bookmark:', error);
   }
 }
 
