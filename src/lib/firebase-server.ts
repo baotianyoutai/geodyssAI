@@ -52,7 +52,8 @@ export async function getArticles() {
         readingTime: data.readingTime || 1,
         difficulty: data.difficulty || 3,
         pos: data.pos || { x: 0, y: 0, z: 0 },
-        neighbors: data.neighbors || []
+        neighbors: data.neighbors || [],
+        contentMd: data.contentMd || data.content || ''
       };
     });
     return articles;
