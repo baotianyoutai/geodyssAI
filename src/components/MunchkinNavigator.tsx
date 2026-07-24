@@ -139,76 +139,73 @@ export const MunchkinNavigator: React.FC<MunchkinNavigatorProps> = ({ articles =
   };
 
   return (
-    <div className="fixed bottom-32 right-8 z-50 font-body select-none">
+    // 最外枠コンテナ (PC: 右下 / スマホ: 右上乗船ボタンのすぐ真下 top-16 right-4)
+    <div className="fixed top-16 right-4 sm:top-auto sm:bottom-6 sm:right-6 z-30 pointer-events-auto flex flex-col items-end">
       
-      {/* 1. チャットウィンドウ */}
+      {/* 1. 会話ウィジェット (スマホ: top-28 right-4, PC: bottom-20 right-0) */}
       {isOpen && (
-        <div className="w-[360px] h-[520px] mb-4 bg-slate-950/90 border border-slate-800/90 rounded-2xl backdrop-blur-xl shadow-[0_10px_40px_rgba(0,0,0,0.6)] flex flex-col overflow-hidden animate-fade-in">
+        <div className="mb-3 w-[calc(100vw-2rem)] sm:w-[360px] max-w-[340px] sm:max-w-[360px] h-[340px] sm:h-[450px] bg-slate-950/95 border border-sky-500/40 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.8)] backdrop-blur-xl flex flex-col overflow-hidden animate-fade-in z-40">
           
           {/* ヘッダー */}
-          <div className="p-4 bg-slate-900/90 border-b border-slate-800/80 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <img
-                  src="/assets/cat.jpg"
-                  alt="Munchkin Navigator"
-                  className="w-9 h-9 rounded-full object-cover border border-sky-400/50 shadow-[0_0_10px_rgba(56,189,248,0.4)]"
-                />
-                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-400 border-2 border-slate-950 rounded-full"></span>
-              </div>
+          <div className="p-3 sm:p-4 bg-slate-900/90 border-b border-slate-800/80 flex items-center justify-between flex-shrink-0">
+            <div className="flex items-center gap-2.5">
+              <img
+                src="/assets/cat.jpg"
+                alt="Munchkin Avatar"
+                className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover border border-sky-400"
+              />
               <div>
-                <h3 className="text-sm font-bold font-display text-white flex items-center gap-1.5">
-                  マンチカン航海士
-                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-sky-500/20 text-sky-300 font-mono border border-sky-500/30">AI RAG</span>
+                <h3 className="text-xs sm:text-sm font-bold text-white font-display flex items-center gap-1.5">
+                  マンチカン航海士 <span className="text-[10px] text-sky-400 font-mono font-normal">AI Guide</span>
                 </h3>
-                <p className="text-[10px] text-slate-400 font-mono">Stellar Navigator • Online</p>
+                <p className="text-[9px] text-slate-400 font-mono">Gemini 3.5 Flash Grounded</p>
               </div>
             </div>
             
             <button
               onClick={() => setIsOpen(false)}
-              className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
+              className="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-full text-xs transition-colors cursor-pointer"
             >
               ✕
             </button>
           </div>
 
-          {/* メッセージ表示エリア */}
-          <div className="flex-1 p-4 overflow-y-auto space-y-3 font-sans text-xs leading-relaxed">
-            {messages.map(msg => (
+          {/* メッセージログ */}
+          <div className="flex-1 p-3 overflow-y-auto space-y-3 text-xs font-body leading-relaxed">
+            {messages.map((msg) => (
               <div
                 key={msg.id}
-                className={`flex gap-2.5 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                className={`flex gap-2 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 {msg.sender === 'bot' && (
                   <img
                     src="/assets/cat.jpg"
                     alt="Munchkin"
-                    className="w-7 h-7 rounded-full object-cover border border-sky-500/30 flex-shrink-0 mt-0.5"
+                    className="w-6 h-6 rounded-full object-cover border border-sky-500/30 flex-shrink-0 mt-0.5"
                   />
                 )}
 
                 <div
-                  className={`max-w-[80%] px-3.5 py-2.5 rounded-2xl ${
+                  className={`max-w-[85%] px-3 py-2 rounded-2xl ${
                     msg.sender === 'user'
                       ? 'bg-sky-600 text-white rounded-br-none shadow-[0_0_15px_rgba(56,189,248,0.2)]'
                       : 'bg-slate-900/90 text-slate-200 border border-slate-800/80 rounded-bl-none shadow-sm'
                   }`}
                 >
                   <p className="whitespace-pre-wrap">{renderFormattedText(msg.text)}</p>
-                  <span className="block text-[9px] opacity-60 text-right mt-1 font-mono">{msg.timestamp}</span>
+                  <span className="block text-[8px] opacity-60 text-right mt-1 font-mono">{msg.timestamp}</span>
                 </div>
               </div>
             ))}
 
             {isLoading && (
-              <div className="flex gap-2.5 items-center text-slate-400 text-xs font-mono">
+              <div className="flex gap-2 items-center text-slate-400 text-xs font-mono">
                 <img
                   src="/assets/cat.jpg"
                   alt="Munchkin"
-                  className="w-7 h-7 rounded-full object-cover animate-pulse"
+                  className="w-6 h-6 rounded-full object-cover animate-pulse"
                 />
-                <div className="bg-slate-900/90 px-3 py-2 rounded-2xl border border-slate-800/80 flex items-center gap-1.5">
+                <div className="bg-slate-900/90 px-3 py-1.5 rounded-2xl border border-slate-800/80 flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 bg-sky-400 rounded-full animate-bounce"></span>
                   <span className="w-1.5 h-1.5 bg-sky-400 rounded-full animate-bounce [animation-delay:0.2s]"></span>
                   <span className="w-1.5 h-1.5 bg-sky-400 rounded-full animate-bounce [animation-delay:0.4s]"></span>
@@ -219,41 +216,41 @@ export const MunchkinNavigator: React.FC<MunchkinNavigatorProps> = ({ articles =
           </div>
 
           {/* おすすめチップ */}
-          <div className="px-3 py-1.5 border-t border-slate-800/60 bg-slate-900/40 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+          <div className="px-2.5 py-1.5 border-t border-slate-800/60 bg-slate-900/40 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
             <button
               onClick={() => handleSend('おすすめの記事を教えてにゃ！')}
-              className="px-2 py-1 bg-slate-800/80 hover:bg-sky-500/20 text-[10px] text-sky-300 rounded-full border border-sky-500/30 whitespace-nowrap transition-colors cursor-pointer"
+              className="px-2 py-0.5 bg-slate-800/80 hover:bg-sky-500/20 text-[10px] text-sky-300 rounded-full border border-sky-500/30 whitespace-nowrap cursor-pointer"
             >
               おすすめ記事
             </button>
             <button
               onClick={() => handleSend('Firebaseについての星はどれ？')}
-              className="px-2 py-1 bg-slate-800/80 hover:bg-amber-500/20 text-[10px] text-amber-300 rounded-full border border-amber-500/30 whitespace-nowrap transition-colors cursor-pointer"
+              className="px-2 py-0.5 bg-slate-800/80 hover:bg-amber-500/20 text-[10px] text-amber-300 rounded-full border border-amber-500/30 whitespace-nowrap cursor-pointer"
             >
               Firebase
             </button>
             <button
               onClick={() => handleSend('RAGとは何か教えて')}
-              className="px-2 py-1 bg-slate-800/80 hover:bg-teal-500/20 text-[10px] text-teal-300 rounded-full border border-teal-500/30 whitespace-nowrap transition-colors cursor-pointer"
+              className="px-2 py-0.5 bg-slate-800/80 hover:bg-teal-500/20 text-[10px] text-teal-300 rounded-full border border-teal-500/30 whitespace-nowrap cursor-pointer"
             >
               RAG解説
             </button>
           </div>
 
           {/* 入力フォーム */}
-          <div className="p-3 bg-slate-900/90 border-t border-slate-800/80 flex items-center gap-2">
+          <div className="p-2.5 bg-slate-900/90 border-t border-slate-800/80 flex items-center gap-2">
             <input
               type="text"
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleSend()}
               placeholder="航海士に質問する..."
-              className="flex-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/60 transition-colors"
+              className="flex-1 px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/60"
             />
             <button
               onClick={() => handleSend()}
               disabled={isLoading || !input.trim()}
-              className="px-3 py-2 bg-sky-500 hover:bg-sky-400 disabled:opacity-40 disabled:hover:bg-sky-500 text-slate-950 font-bold text-xs rounded-xl transition-colors cursor-pointer flex items-center justify-center"
+              className="px-3 py-1.5 bg-sky-500 hover:bg-sky-400 disabled:opacity-40 text-slate-950 font-bold text-xs rounded-xl transition-colors cursor-pointer"
             >
               ➔
             </button>
@@ -262,16 +259,16 @@ export const MunchkinNavigator: React.FC<MunchkinNavigatorProps> = ({ articles =
         </div>
       )}
 
-      {/* 2. フローティング丸型ボタン */}
+      {/* 2. トグルボタン (スマホ: 乗船手続き真下 top-16 right-4, PC: 右下) */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="group relative flex items-center gap-3 px-4 py-3 bg-slate-950/90 border border-sky-500/40 rounded-full shadow-[0_0_30px_rgba(56,189,248,0.25)] hover:border-sky-400 hover:shadow-[0_0_40px_rgba(56,189,248,0.4)] transition-all cursor-pointer backdrop-blur-md"
+        className="group relative flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-3 bg-slate-950/90 border border-sky-500/40 rounded-full shadow-[0_0_20px_rgba(56,189,248,0.2)] hover:border-sky-400 transition-all cursor-pointer backdrop-blur-md active:scale-95"
       >
         <div className="relative">
           <img
             src="/assets/cat.jpg"
             alt="Munchkin Navigator"
-            className="w-10 h-10 rounded-full object-cover border-2 border-sky-400 shadow-[0_0_15px_rgba(56,189,248,0.5)] group-hover:scale-105 transition-transform"
+            className="w-7 h-7 sm:w-10 sm:h-10 rounded-full object-cover border-2 border-sky-400 shadow-[0_0_10px_rgba(56,189,248,0.4)]"
           />
           <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-400 border-2 border-slate-950 rounded-full animate-pulse"></span>
         </div>
