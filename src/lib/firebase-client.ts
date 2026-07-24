@@ -45,6 +45,7 @@ const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({ prompt: 'select_account' });
 
 // Firebase App Check (reCAPTCHA Enterprise) の初期化
 if (typeof window !== 'undefined') {

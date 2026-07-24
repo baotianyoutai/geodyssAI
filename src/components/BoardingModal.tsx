@@ -23,6 +23,7 @@ export function BoardingModal({ isOpen, onClose }: BoardingModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [imgError, setImgError] = useState(false);
   const [demoUser, setDemoUser] = useState<UserProfile | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -32,6 +33,8 @@ export function BoardingModal({ isOpen, onClose }: BoardingModalProps) {
         try {
           const prof = await syncUserProfile(currentUser);
           setProfile(prof);
+          setDemoUser(null);
+          setErrorMessage(null);
         } catch (e) {
           console.error('Failed to sync user profile:', e);
         }
@@ -46,32 +49,45 @@ export function BoardingModal({ isOpen, onClose }: BoardingModalProps) {
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
+    setErrorMessage(null);
     setNoticeMessage(null);
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const prof = await syncUserProfile(result.user);
       setProfile(prof);
+      setDemoUser(null);
     } catch (e: any) {
-      console.warn('Firebase Sign-in error (switching to Demo Voyager Mode):', e);
-      
-      const fallbackDemo: UserProfile = {
-        uid: 'demo-voyager-777',
-        displayName: '星海 航海士 (Voyager)',
-        photoURL: '/assets/cat.jpg',
-        createdAt: new Date().toISOString(),
-        readHistory: ['ai-dojo-day1', 'post-131', 'post-135'],
-        stardustBookmarks: ['post-131'],
-        badges: ['First Voyage', 'Stellar Explorer']
-      };
-      setDemoUser(fallbackDemo);
-      setNoticeMessage('Firebase API Key未設定のため、デモ乗船モードでログインしました');
+      console.warn('Firebase Google Auth error:', e);
+      if (e.code === 'auth/popup-closed-by-user') {
+        setErrorMessage('Google サインインダイアログが閉じられました。');
+      } else if (e.code === 'auth/api-key-not-valid' || e.message?.includes('api-key')) {
+        setErrorMessage('Firebase API キーが未設定または無効です。環境変数 PUBLIC_FIREBASE_API_KEY をご確認ください。');
+      } else {
+        setErrorMessage(`Google サインインエラー: ${e.message || '認証に失敗しました'}`);
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleDemoSignIn = () => {
+    const fallbackDemo: UserProfile = {
+      uid: 'demo-voyager-777',
+      displayName: '星海 航海士 (Voyager)',
+      photoURL: '/assets/cat.jpg',
+      createdAt: new Date().toISOString(),
+      readHistory: ['ai-dojo-day1', 'post-131', 'post-135'],
+      stardustBookmarks: ['post-131'],
+      badges: ['First Voyage', 'Stellar Explorer']
+    };
+    setDemoUser(fallbackDemo);
+    setErrorMessage(null);
+    setNoticeMessage('デモ乗船モードでログインしました。体験用プロフィールを表示中。');
+  };
+
   const handleSignOut = async () => {
     setIsLoading(true);
+    setErrorMessage(null);
     setNoticeMessage(null);
     try {
       if (user) {
@@ -114,6 +130,14 @@ export function BoardingModal({ isOpen, onClose }: BoardingModalProps) {
           </p>
         </div>
 
+        {/* エラーメッセージ */}
+        {errorMessage && (
+          <div className="mb-4 p-3 bg-rose-500/15 border border-rose-500/30 rounded-xl text-xs text-rose-300 font-mono leading-relaxed">
+            {errorMessage}
+          </div>
+        )}
+
+        {/* お知らせメッセージ */}
         {noticeMessage && (
           <div className="mb-4 p-3 bg-sky-500/15 border border-sky-500/30 rounded-xl text-xs text-sky-300 font-mono text-center">
             {noticeMessage}
@@ -159,10 +183,10 @@ export function BoardingModal({ isOpen, onClose }: BoardingModalProps) {
               </div>
             </div>
 
-            {/* 🗿 知の星海碑 (Monoliths Collection) */}
+            {/* 知の星海碑 (Monoliths Collection) */}
             <div className="space-y-3">
               <h4 className="text-xs font-mono font-bold text-amber-400 uppercase tracking-wider flex items-center justify-between">
-                <span>🗿 MONOLITHS (知の星海碑)</span>
+                <span>MONOLITHS (知の星海碑)</span>
                 <span className="text-[10px] text-slate-500 font-normal">1 / 7 Complete</span>
               </h4>
               <MonolithCard monolith={DEMO_MONOLITH} />
@@ -171,34 +195,58 @@ export function BoardingModal({ isOpen, onClose }: BoardingModalProps) {
             <button
               onClick={handleSignOut}
               disabled={isLoading}
-              className="w-full py-2.5 px-4 bg-slate-900 hover:bg-rose-950 text-rose-300 hover:text-rose-200 border border-slate-800 hover:border-rose-800 font-mono text-xs rounded-xl transition-colors cursor-pointer"
+              className="w-full py-2.5 px-4 bg-slate-900 hover:bg-rose-950 text-rose-300 hover:text-rose-200 border border-slate-800 hover:border-rose-800 font-mono text-xs rounded-full transition-colors cursor-pointer"
             >
               Sign Out (下船)
             </button>
           </div>
         ) : (
-          /* 未ログイン状態 */
+          /* 未ログイン状態 (Google Skills スタイル) */
           <div className="space-y-6 text-center">
-            <div className="p-6 bg-slate-900/50 border border-slate-800 rounded-xl space-y-3">
-              <div className="w-16 h-16 mx-auto rounded-full bg-slate-800 flex items-center justify-center text-xl font-bold text-sky-400 shadow-inner">
-                GE
+            <div className="p-6 bg-slate-900/50 border border-slate-800 rounded-2xl space-y-3">
+              <div className="w-16 h-16 mx-auto rounded-full bg-[#F0F4F9] flex items-center justify-center shadow-inner">
+                <svg className="w-8 h-8" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                </svg>
               </div>
-              <p className="text-xs text-slate-300 leading-relaxed">
-                乗船手続きを行うと、読了した星の記録や「星屑の栞（ブックマーク）」、「知の星海碑（Monoliths）」が保存されます。
+              <p className="text-xs text-slate-300 leading-relaxed font-medium">
+                Google アカウントでログインすると、読了した星の記録や「星屑の栞（ブックマーク）」、「知の星海碑」が同期されます。
               </p>
             </div>
 
+            {/* Google アカウントでサインイン Pill ボタン */}
             <button
               onClick={handleGoogleSignIn}
               disabled={isLoading}
-              className="w-full py-3 px-4 bg-slate-900 hover:bg-sky-500 text-slate-200 hover:text-slate-950 border border-slate-700 font-bold font-display text-sm rounded-xl transition-all shadow-[0_0_15px_rgba(56,189,248,0.2)] flex items-center justify-center gap-3 cursor-pointer"
+              className="w-full py-3 px-6 bg-white hover:bg-slate-100 text-slate-800 font-bold font-sans text-xs rounded-full shadow-md transition-all flex items-center justify-center gap-3 cursor-pointer border border-slate-300 active:scale-[0.98]"
             >
               {isLoading ? (
-                <span className="font-mono text-xs animate-pulse">Processing...</span>
+                <span className="font-mono text-slate-600 animate-pulse">Processing...</span>
               ) : (
-                <span>Google アカウントで乗船</span>
+                <>
+                  <svg className="w-4 h-4" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                  </svg>
+                  <span>Google アカウントでサインイン</span>
+                </>
               )}
             </button>
+
+            {/* サブアクション: デモログインボタン */}
+            <div className="pt-2">
+              <button
+                onClick={handleDemoSignIn}
+                className="text-[11px] font-mono text-slate-500 hover:text-sky-400 transition-colors underline cursor-pointer"
+              >
+                デモアカウントで乗船（体験モード）
+              </button>
+            </div>
           </div>
         )}
 
