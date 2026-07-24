@@ -62,3 +62,23 @@ export async function getArticles() {
     return [];
   }
 }
+
+// ユーザーの検索クエリを Firestore の searchQueries コレクションに自動記録・蓄積
+interface SearchQueryLog {
+  query: string;
+  uid?: string;
+  matchedSlugs?: string[];
+}
+
+export async function logSearchQuery(logData: SearchQueryLog) {
+  try {
+    await db.collection('searchQueries').add({
+      query: logData.query,
+      uid: logData.uid || 'anonymous',
+      matchedSlugs: logData.matchedSlugs || [],
+      createdAt: new Date().toISOString()
+    });
+  } catch (error) {
+    console.warn('Failed to log search query to Firestore:', error);
+  }
+}

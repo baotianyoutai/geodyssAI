@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getArticles } from '../../lib/firebase-server';
+import { getArticles, logSearchQuery } from '../../lib/firebase-server';
 import fs from 'fs';
 import path from 'path';
 
@@ -130,6 +130,13 @@ export const POST: APIRoute = async ({ request }) => {
   }).slice(0, 4);
 
   const targetArticles = matchedArticles.length > 0 ? matchedArticles : allArticles.slice(0, 4);
+
+  // ユーザーの欲しかった記事・検索クエリを Firestore の searchQueries コレクションに非同期記録
+  const matchedSlugs = targetArticles.map(a => a.slug);
+  logSearchQuery({
+    query: lastUserMessage,
+    matchedSlugs
+  }).catch(e => console.warn('Query logging skipped:', e));
 
   // 3. Gemini API 呼び出し
   const apiKey = getApiKey();
