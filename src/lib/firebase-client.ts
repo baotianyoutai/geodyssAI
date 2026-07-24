@@ -48,7 +48,7 @@ export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 
 // Firebase App Check (reCAPTCHA Enterprise) の初期化
-if (typeof window !== 'undefined') {
+if (typeof window !== 'undefined' && recaptchaSiteKey && !recaptchaSiteKey.includes('Dummy')) {
   try {
     if (import.meta.env.DEV) {
       (self as any).FIREBASE_APPCHECK_DEBUG_TOKEN = true;
@@ -59,7 +59,7 @@ if (typeof window !== 'undefined') {
     });
     console.log('Firebase App Check successfully initialized.');
   } catch (e) {
-    console.warn('Firebase App Check initialization skipped (development/unconfigured):', e);
+    console.warn('Firebase App Check initialization skipped:', e);
   }
 }
 
