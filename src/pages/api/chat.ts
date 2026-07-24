@@ -1,10 +1,9 @@
 import type { APIRoute } from 'astro';
 import { getArticles, logSearchQuery } from '../../lib/firebase-server';
-import fs from 'fs';
-import path from 'path';
+import { generateStellarChatAI } from '../../lib/ai-logic';
 
 export const GET: APIRoute = async () => {
-  return new Response(JSON.stringify({ status: 'active', agent: 'Munchkin Navigator' }), {
+  return new Response(JSON.stringify({ status: 'active', agent: 'Munchkin Navigator AI Logic' }), {
     status: 200,
     headers: { 'Content-Type': 'application/json' }
   });
@@ -16,25 +15,6 @@ const MOCK_ARTICLES = [
   { title: "Gemini API Python SDKとChromaDBを使用してRAG-Systemを開発する", slug: "gemini-api-python-sdkとchromadbを使用してrag-systemを開発する【ハンズオン", category: "dl", excerpt: "ChromaDBとGeminiによる本格RAGハンズオン" },
   { title: "Gemini APIs Embedding Endpointを利用して、類似度を探索する", slug: "gemini-apis-embedding-endpointを利用して、類似度を探索する【ハンズ", category: "dl", excerpt: "テキスト埋め込みベクトルとコサイン類似度探索" }
 ];
-
-function getApiKey(): string {
-  if (import.meta.env.GEMINI_API_KEY) return import.meta.env.GEMINI_API_KEY;
-  if (process.env.GEMINI_API_KEY) return process.env.GEMINI_API_KEY;
-  if (process.env.GOOGLE_API_KEY) return process.env.GOOGLE_API_KEY;
-
-  try {
-    const envPath = path.resolve(process.cwd(), '.env');
-    if (fs.existsSync(envPath)) {
-      const envContent = fs.readFileSync(envPath, 'utf8');
-      const match = envContent.match(/^GEMINI_API_KEY\s*=\s*(.+)$/m);
-      if (match && match[1]) {
-        return match[1].trim().replace(/^["']|["']$/g, '');
-      }
-    }
-  } catch (e) {}
-
-  return '';
-}
 
 export const POST: APIRoute = async ({ request }) => {
   let lastUserMessage = '';
@@ -118,61 +98,8 @@ export const POST: APIRoute = async ({ request }) => {
     matchedSlugs
   }).catch(e => console.warn('Query logging skipped:', e));
 
-  // 3. Gemini API 呼び出し
-  const apiKey = getApiKey();
-  let botResponse = "";
-
-  if (apiKey) {
-    const contextText = targetArticles.map((art, idx) => 
-      `【記事${idx + 1}】タイトル: "${art.title}" (カテゴリ: ${art.category})\n概要: ${art.excerpt}\nURL: /articles/${encodeURIComponent(art.slug)}`
-    ).join("\n\n");
-
-    const systemPrompt = `あなたは「geodyssAI (星海図)」のナビゲーターである、知的で可愛らしい猫の「マンチカン航海士 (Munchkin Navigator)」です。
-ユーザーからの質問に対して、語尾に「〜にゃ」「〜だにゃ」を付けて回答してください。
-以下の記事コンテキストを参照し、関連する記事があれば Markdown リンク [記事タイトル](/articles/slug) を含めて案内してください。
-
-【参照記事コンテキスト】
-${contextText}
-
-【ユーザーの質問】
-${lastUserMessage}`;
-
-    try {
-      const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: systemPrompt }] }]
-        })
-      });
-
-      if (geminiRes.ok) {
-        const data = await geminiRes.json();
-        botResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-      }
-    } catch (e) {
-      console.error('Gemini API call failed:', e);
-    }
-  }
-
-  // 4. 動的 RAG フォールバック（Gemini APIキー未設定・エラー時でも100%確実にリンク付き回答を返答）
-  if (!botResponse) {
-    if (matchedArticles.length > 0) {
-      const topArt = matchedArticles[0];
-      const otherArts = matchedArticles.slice(1);
-      
-      let text = `ニャー！ご質問「${lastUserMessage}」に関連する星を発見したにゃ 🐾\n\n👉 [${topArt.title}](/articles/${encodeURIComponent(topArt.slug)})\n*${topArt.excerpt || '詳細はこちらの星を参照してにゃ！'}*`;
-      if (otherArts.length > 0) {
-        text += `\n\nこちらの関連記事もおすすめだにゃ：\n` + otherArts.map(a => `・ [${a.title}](/articles/${encodeURIComponent(a.slug)})`).join("\n");
-      }
-      botResponse = text;
-    } else {
-      const hash = lastUserMessage.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-      const pickArt = allArticles[hash % allArticles.length];
-      
-      botResponse = `ニャー！ご質問「${lastUserMessage}」について知の星海を探索したにゃ 🐾\n\nおすすめの星はこちらだにゃ：\n👉 [${pickArt.title}](/articles/${encodeURIComponent(pickArt.slug)})\n*${pickArt.excerpt || '星の海を深く探検してみてにゃ！'}*`;
-    }
-  }
+  // 3. AI Logic による回答生成
+  const botResponse = await generateStellarChatAI(lastUserMessage, targetArticles);
 
   return new Response(JSON.stringify({ response: botResponse }), {
     status: 200,
