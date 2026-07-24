@@ -6,27 +6,27 @@ import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'firebase/app-ch
 // Astro (PUBLIC_) および Next.js (NEXT_PUBLIC_) の両方の環境変数命名規則に対応
 const apiKey = import.meta.env.PUBLIC_FIREBASE_API_KEY || 
                import.meta.env.NEXT_PUBLIC_FIREBASE_API_KEY || 
-               "AIzaSyDummyKeyForDevelopment12345";
+               "AIzaSyD7zwkwv4juqt3v7ueDRXoK1M6Xpcv9NpI";
 
 const authDomain = import.meta.env.PUBLIC_FIREBASE_AUTH_DOMAIN || 
                    import.meta.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || 
-                   "geodyssai.firebaseapp.com";
+                   "my-geodyssai-pro-1744456051163.firebaseapp.com";
 
 const projectId = import.meta.env.PUBLIC_FIREBASE_PROJECT_ID || 
                   import.meta.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 
-                  "geodyssai";
+                  "my-geodyssai-pro-1744456051163";
 
 const storageBucket = import.meta.env.PUBLIC_FIREBASE_STORAGE_BUCKET || 
                       import.meta.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || 
-                      "geodyssai.appspot.com";
+                      "my-geodyssai-pro-1744456051163.firebasestorage.app";
 
 const messagingSenderId = import.meta.env.PUBLIC_FIREBASE_MESSAGING_SENDER_ID || 
                           import.meta.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || 
-                          "1234567890";
+                          "860359053413";
 
 const appId = import.meta.env.PUBLIC_FIREBASE_APP_ID || 
               import.meta.env.NEXT_PUBLIC_FIREBASE_APP_ID || 
-              "1:1234567890:web:abcdef123456";
+              "1:860359053413:web:aa543035a595812510b68c";
 
 const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY || 
                          import.meta.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || 
