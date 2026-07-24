@@ -312,13 +312,7 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
                 >
                   🍻 酒場
                 </a>
-                <a
-                  href="/captain"
-                  className="px-2 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 font-mono text-[10px] rounded-lg transition-colors"
-                  title="キャプテン自己紹介 (Captain's Profile)"
-                >
-                  👨‍✈️ Captain
-                </a>
+
                 <button
                   onClick={() => setIsBoardingOpen(true)}
                   className="px-2 py-1 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/40 text-sky-300 font-mono text-[10px] rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
