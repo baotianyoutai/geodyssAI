@@ -171,16 +171,15 @@ export interface ArticleData {
 }
 
 interface StellarCanvasProps {
-  initialArticles: ArticleData[];
+  initialArticles?: ArticleData[];
 }
 
-export function StellarCanvas() {
+export function StellarCanvas({ initialArticles = [] }: StellarCanvasProps) {
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
-  const [initialArticles, setInitialArticles] = useState<ArticleData[]>([]);
-  const [articles, setArticles] = useState<ArticleData[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [articles, setArticles] = useState<ArticleData[]>(initialArticles);
+  const [loading, setLoading] = useState<boolean>(false);
   const [hoveredArticle, setHoveredArticle] = useState<ArticleData | null>(null);
-  const [selectedStar, setSelectedStar] = useState<ArticleData | null>(null);
+  const [selectedStar, setSelectedStar] = useState<ArticleData | null>(initialArticles[0] || null);
   const [transitioning, setTransitioning] = useState<boolean>(false);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [currentDepth, setCurrentDepth] = useState<number>(0);
@@ -203,6 +202,15 @@ export function StellarCanvas() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  useEffect(() => {
+    if (initialArticles && initialArticles.length > 0) {
+      setArticles(initialArticles);
+      if (!selectedStar) {
+        setSelectedStar(initialArticles[0]);
+      }
+    }
+  }, [initialArticles]);
 
   useEffect(() => {
     const isMobile = /Mobi|Android/i.test(navigator.userAgent);
@@ -307,18 +315,14 @@ export function StellarCanvas() {
       {/* 左側 Streamlit / Google Skills スタイルナビゲーションサイドバー */}
       <Sidebar currentPath="/" onOpenBoarding={() => setIsBoardingOpen(true)} isDark={true} />
 
-      {/* 4. 左上: フローティンググラスモルフィックHUD (レスポンシブサイズ) */}
-      <div className="absolute top-16 sm:top-6 left-4 sm:left-16 pointer-events-none z-10">
-        <div className="w-[calc(100vw-2rem)] sm:w-[380px] max-w-[380px] h-[340px] sm:h-[450px] p-4 sm:p-6 bg-slate-950/80 border border-slate-800/80 rounded-xl backdrop-blur-md shadow-2xl text-slate-100 font-body flex flex-col justify-between">
-          
-          {/* ヘッダー ＆ Move Next Star 矢印ナビゲーション ＋ 乗船ボタン */}
+      {/* 4. PC向けフローティングHUD (hidden sm:block) */}
+      <div className="hidden sm:block absolute top-6 left-16 pointer-events-none z-10">
+        <div className="w-[380px] h-[450px] p-6 bg-slate-950/80 border border-slate-800/80 rounded-xl backdrop-blur-md shadow-2xl text-slate-100 font-body flex flex-col justify-between">
           <div className="border-b border-slate-800/60 pb-3 flex-shrink-0">
             <div className="flex items-center justify-between">
               <h1 className="text-xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-indigo-400">
                 星海図 — Stellar Chart
               </h1>
-              
-
             </div>
             
             <div className="mt-3 flex items-center justify-between bg-slate-900/80 border border-slate-800/90 rounded-lg px-3 py-1.5 pointer-events-auto">
@@ -329,17 +333,17 @@ export function StellarCanvas() {
                 <button
                   onClick={() => handleMoveStar(-1)}
                   className="w-6 h-6 flex items-center justify-center bg-slate-800 hover:bg-sky-500 hover:text-slate-950 text-sky-400 font-bold rounded text-xs transition-colors cursor-pointer"
-                  title="Previous Star (前の星へ)"
+                  title="Previous Star"
                 >
                   ←
                 </button>
                 <span className="font-mono text-xs text-slate-200 font-bold px-1">
-                  #{String(currentIndex + 1).padStart(2, '0')} <span className="text-slate-500 font-normal">/ {initialArticles.length}</span>
+                  #{String(currentIndex + 1).padStart(2, '0')} <span className="text-slate-500 font-normal">/ {articles.length}</span>
                 </span>
                 <button
                   onClick={() => handleMoveStar(1)}
                   className="w-6 h-6 flex items-center justify-center bg-slate-800 hover:bg-sky-500 hover:text-slate-950 text-sky-400 font-bold rounded text-xs transition-colors cursor-pointer"
-                  title="Next Star (次の星へ)"
+                  title="Next Star"
                 >
                   →
                 </button>
@@ -349,16 +353,10 @@ export function StellarCanvas() {
 
           {/* メタデータ領域 */}
           {(() => {
-            const active = hoveredArticle || selectedStar || initialArticles[currentIndex];
-            if (!active) {
-              return (
-                <div className="flex-1 flex items-center justify-center text-sm text-slate-500 italic leading-relaxed text-center">
-                  Hover over a star or click arrows to navigate.
-                </div>
-              );
-            }
-            const activeIdx = initialArticles.findIndex(a => a.slug === active.slug);
-            const displayNum = activeIdx !== -1 ? `#${String(activeIdx + 1).padStart(2, '0')}` : `#${String(currentIndex + 1).padStart(2, '0')}`;
+            const active = hoveredArticle || selectedStar || articles[currentIndex];
+            if (!active) return null;
+            const activeIdx = articles.findIndex(a => a.slug === active.slug);
+            const displayNum = `#${String(activeIdx !== -1 ? activeIdx + 1 : currentIndex + 1).padStart(2, '0')}`;
 
             return (
               <div className="flex-1 my-3 flex flex-col justify-between animate-fade-in pointer-events-auto overflow-hidden">
@@ -367,19 +365,14 @@ export function StellarCanvas() {
                     <span className="px-2 py-0.5 rounded text-[10px] font-bold font-mono bg-sky-500/20 text-sky-300 border border-sky-500/40">
                       {displayNum}
                     </span>
-                    <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold font-mono tracking-wider text-slate-950 ${active.category === 'firebase' ? 'bg-[#F59E0B]' :
+                    <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold font-mono tracking-wider text-slate-950 ${
+                      active.category === 'firebase' ? 'bg-[#F59E0B]' :
                       active.category === 'claude' ? 'bg-[#E07B54]' :
-                        active.category === 'dl' ? 'bg-[#2DD4BF]' : 'bg-[#3B82F6]'
-                      }`}>
+                      active.category === 'dl' ? 'bg-[#2DD4BF]' : 'bg-[#3B82F6]'
+                    }`}>
                       {active.category.toUpperCase()}
                     </span>
-                    {active.status !== 'publish' && (
-                      <span className="px-2.5 py-0.5 rounded text-[10px] font-bold font-mono bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                        DRAFT
-                      </span>
-                    )}
                   </div>
-                  
                   <div>
                     <h2 className="text-base font-bold leading-snug text-white font-display line-clamp-2 h-[48px]">
                       {active.title}
@@ -404,10 +397,9 @@ export function StellarCanvas() {
             );
           })()}
 
-          {/* ボタンエリア */}
           <div className="flex flex-col gap-2 pt-2 border-t border-slate-800/60 flex-shrink-0 pointer-events-auto">
             {(() => {
-              const active = hoveredArticle || selectedStar || initialArticles[currentIndex];
+              const active = hoveredArticle || selectedStar || articles[currentIndex];
               return (
                 <>
                   <a
@@ -416,7 +408,6 @@ export function StellarCanvas() {
                   >
                     go to star for reading →
                   </a>
-
                   <button
                     onClick={handleResetFocus}
                     className="w-full py-1.5 px-3 bg-slate-900/80 hover:bg-slate-800 text-slate-400 hover:text-slate-200 text-[11px] font-mono text-center rounded border border-slate-800/80 transition-colors pointer-events-auto cursor-pointer"
@@ -427,15 +418,86 @@ export function StellarCanvas() {
               );
             })()}
           </div>
-
         </div>
       </div>
 
+      {/* 5. スマホ専用ボトムシート (Mobile Bottom Sheet - sm:hidden) */}
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-20 pointer-events-auto p-3 bg-slate-950/90 border-t border-slate-800/80 backdrop-blur-xl rounded-t-2xl shadow-2xl">
+        <div className="flex items-center justify-between pb-2 border-b border-slate-800/60">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => handleMoveStar(-1)}
+              className="px-2.5 py-1 bg-slate-800 text-sky-400 font-bold rounded text-xs active:scale-95"
+            >
+              ← 前の星
+            </button>
+            <span className="font-mono text-xs text-slate-300">
+              #{String(currentIndex + 1).padStart(2, '0')} / {articles.length}
+            </span>
+            <button
+              onClick={() => handleMoveStar(1)}
+              className="px-2.5 py-1 bg-slate-800 text-sky-400 font-bold rounded text-xs active:scale-95"
+            >
+              次の星 →
+            </button>
+          </div>
+
+          <button
+            onClick={() => setIsLegendOpen(!isLegendOpen)}
+            className="px-2.5 py-1 bg-slate-900 border border-slate-700 text-slate-300 text-[10px] font-mono rounded"
+          >
+            {isLegendOpen ? '閉じる ▲' : '絞り込み ▼'}
+          </button>
+        </div>
+
+        {/* モバイル絞り込みパネル */}
+        {isLegendOpen && (
+          <div className="py-2 border-b border-slate-800/60 grid grid-cols-2 gap-1.5 text-[11px] font-mono">
+            <button onClick={() => { setActiveFilter(null); setIsLegendOpen(false); }} className="p-1.5 bg-slate-900 text-sky-400 rounded text-left">✦ All (全表示)</button>
+            <button onClick={() => { setActiveFilter('firebase'); setIsLegendOpen(false); }} className="p-1.5 bg-slate-900 text-[#F59E0B] rounded text-left">✦ Firebase</button>
+            <button onClick={() => { setActiveFilter('claude'); setIsLegendOpen(false); }} className="p-1.5 bg-slate-900 text-[#E07B54] rounded text-left">✦ Claude / LLM</button>
+            <button onClick={() => { setActiveFilter('dl'); setIsLegendOpen(false); }} className="p-1.5 bg-slate-900 text-[#2DD4BF] rounded text-left">✦ Deep Learning</button>
+          </div>
+        )}
+
+        {/* アクティブ記事情報 */}
+        {(() => {
+          const active = hoveredArticle || selectedStar || articles[currentIndex];
+          if (!active) return null;
+
+          return (
+            <div className="pt-2 space-y-1.5">
+              <h3 className="text-sm font-bold text-white font-display line-clamp-1">
+                {active.title}
+              </h3>
+              <p className="text-[11px] text-slate-400 line-clamp-1">
+                {active.excerpt}
+              </p>
+
+              <div className="pt-1 flex items-center gap-2">
+                <a
+                  href={`/articles/${decodeURIComponent(active.slug)}`}
+                  className="flex-1 py-1.5 bg-[#38BDF8] text-slate-950 font-bold text-xs text-center rounded-lg shadow-md"
+                >
+                  記事を読む →
+                </a>
+                <button
+                  onClick={handleResetFocus}
+                  className="px-3 py-1.5 bg-slate-900 text-slate-400 text-[11px] rounded border border-slate-800"
+                >
+                  解除
+                </button>
+              </div>
+            </div>
+          );
+        })()}
+      </div>
+
       {/* 右上特等席: 乗船手続き (Sign in / アカウント) ピルボタン */}
-      <div className="absolute top-6 right-6 z-20 pointer-events-auto">
+      <div className="absolute top-4 sm:top-6 right-4 sm:right-6 z-20 pointer-events-auto">
         <button
           onClick={() => setIsBoardingOpen(true)}
-          className="px-5 py-2 bg-[#0B57D0] hover:bg-[#0948AD] text-white font-medium text-xs rounded-full shadow-lg transition-all flex items-center gap-2 border border-sky-400/30 cursor-pointer active:scale-95"
+          className="px-4 sm:px-5 py-1.5 sm:py-2 bg-[#0B57D0] hover:bg-[#0948AD] text-white font-medium text-xs rounded-full shadow-lg transition-all flex items-center gap-1.5 border border-sky-400/30 cursor-pointer active:scale-95"
           title="乗船手続き (Sign in)"
         >
           {user ? (
@@ -443,80 +505,65 @@ export function StellarCanvas() {
               <img
                 src={user.photoURL || '/assets/cat.jpg'}
                 alt="User Avatar"
-                className="w-5 h-5 rounded-full object-cover border border-white/50"
+                className="w-4 h-4 sm:w-5 sm:h-5 rounded-full object-cover border border-white/50"
               />
               <span className="font-bold">{user.displayName?.split(' ')[0] || 'Voyager'}</span>
             </>
           ) : (
-            <span>乗船手続き / Sign in</span>
+            <span>乗船手続き</span>
           )}
         </button>
       </div>
 
-      {/* 右上真下: 凡例（星座カテゴリ - CONSTELLATIONS） - スマホではトグル折りたたみ */}
-      <div className="absolute top-20 right-4 sm:right-6 z-10 pointer-events-auto select-none">
-        {/* モバイル用トグルボタン */}
-        <button
-          onClick={() => setIsLegendOpen(!isLegendOpen)}
-          className="sm:hidden px-3 py-1.5 bg-slate-950/80 border border-slate-800 text-slate-300 rounded-lg backdrop-blur-md text-xs font-mono flex items-center gap-1.5 shadow-lg"
-        >
-          <span className="w-2 h-2 rounded-full bg-[#38BDF8] animate-pulse" />
+      {/* PC向け: 右上真下 凡例 (CONSTELLATIONS) */}
+      <div className="hidden sm:block absolute top-20 right-6 p-4 bg-slate-950/85 border border-slate-800/80 rounded-xl backdrop-blur-md z-10 text-xs font-mono text-slate-300 space-y-2 pointer-events-auto select-none shadow-2xl">
+        <div className="text-slate-500 font-bold border-b border-slate-800/60 pb-2 flex flex-col gap-0.5">
           <span>CONSTELLATIONS</span>
-          <span className="text-[10px] text-slate-400">{isLegendOpen ? '▲' : '▼'}</span>
+          <span className="text-[9px] text-slate-500/80 font-normal normal-case italic">
+            Click constellation to filter
+          </span>
+        </div>
+        
+        <button
+          onClick={() => setActiveFilter(null)}
+          className={`flex items-center gap-2 w-full text-left px-2 py-1.5 rounded transition-all cursor-pointer ${activeFilter === null ? 'bg-sky-500/20 text-[#38BDF8] font-bold border border-sky-500/30' : 'hover:bg-slate-900/60 text-slate-300'}`}
+        >
+          <span className="w-2.5 h-2.5 rounded-full bg-[#38BDF8] shadow-[0_0_8px_rgba(56,189,248,0.6)] animate-pulse" />
+          <span>All (全表示)</span>
+        </button>
+        
+        <button
+          onClick={() => setActiveFilter(activeFilter === 'firebase' ? null : 'firebase')}
+          className={`flex items-center gap-2 w-full text-left px-2 py-1 rounded transition-all cursor-pointer ${activeFilter === 'firebase' ? 'bg-[#F59E0B]/20 text-[#F59E0B] font-bold border border-[#F59E0B]/30' : 'hover:bg-slate-900/60 text-slate-300'}`}
+        >
+          <span className="w-2.5 h-2.5 rounded-full bg-[#F59E0B]" />
+          <span>Firebase</span>
         </button>
 
-        {/* 凡例本体パネル */}
-        <div className={`mt-2 sm:mt-0 p-3 sm:p-4 bg-slate-950/85 border border-slate-800/80 rounded-xl backdrop-blur-md text-xs font-mono text-slate-300 space-y-1.5 sm:space-y-2 shadow-2xl transition-all ${isLegendOpen ? 'block' : 'hidden sm:block'}`}>
-          <div className="text-slate-500 font-bold border-b border-slate-800/60 pb-1.5 flex flex-col gap-0.5">
-            <span>CONSTELLATIONS</span>
-            <span className="text-[9px] text-slate-500/80 font-normal normal-case italic">
-              Click constellation to filter
-            </span>
-          </div>
-          
-          <button
-            onClick={() => setActiveFilter(null)}
-            className={`flex items-center gap-2 w-full text-left px-2 py-1 sm:py-1.5 rounded transition-all cursor-pointer ${activeFilter === null ? 'bg-sky-500/20 text-[#38BDF8] font-bold border border-sky-500/30' : 'hover:bg-slate-900/60 text-slate-300'}`}
-          >
-            <span className="w-2 h-2 rounded-full bg-[#38BDF8] shadow-[0_0_8px_rgba(56,189,248,0.6)] animate-pulse" />
-            <span>All (全表示)</span>
-          </button>
-          
-          <button
-            onClick={() => setActiveFilter(activeFilter === 'firebase' ? null : 'firebase')}
-            className={`flex items-center gap-2 w-full text-left px-2 py-1 rounded transition-all cursor-pointer ${activeFilter === 'firebase' ? 'bg-[#F59E0B]/20 text-[#F59E0B] font-bold border border-[#F59E0B]/30' : 'hover:bg-slate-900/60 text-slate-300'}`}
-          >
-            <span className="w-2 h-2 rounded-full bg-[#F59E0B]" />
-            <span>Firebase</span>
-          </button>
+        <button
+          onClick={() => setActiveFilter(activeFilter === 'claude' ? null : 'claude')}
+          className={`flex items-center gap-2 w-full text-left px-2 py-1 rounded transition-all cursor-pointer ${activeFilter === 'claude' ? 'bg-[#E07B54]/20 text-[#E07B54] font-bold border border-[#E07B54]/30' : 'hover:bg-slate-900/60 text-slate-300'}`}
+        >
+          <span className="w-2.5 h-2.5 rounded-full bg-[#E07B54]" />
+          <span>Claude / LLM</span>
+        </button>
 
-          <button
-            onClick={() => setActiveFilter(activeFilter === 'claude' ? null : 'claude')}
-            className={`flex items-center gap-2 w-full text-left px-2 py-1 rounded transition-all cursor-pointer ${activeFilter === 'claude' ? 'bg-[#E07B54]/20 text-[#E07B54] font-bold border border-[#E07B54]/30' : 'hover:bg-slate-900/60 text-slate-300'}`}
-          >
-            <span className="w-2 h-2 rounded-full bg-[#E07B54]" />
-            <span>Claude / LLM</span>
-          </button>
+        <button
+          onClick={() => setActiveFilter(activeFilter === 'dl' ? null : 'dl')}
+          className={`flex items-center gap-2 w-full text-left px-2 py-1 rounded transition-all cursor-pointer ${activeFilter === 'dl' ? 'bg-[#2DD4BF]/20 text-[#2DD4BF] font-bold border border-[#2DD4BF]/30' : 'hover:bg-slate-900/60 text-slate-300'}`}
+        >
+          <span className="w-2.5 h-2.5 rounded-full bg-[#2DD4BF]" />
+          <span>Deep Learning</span>
+        </button>
 
-          <button
-            onClick={() => setActiveFilter(activeFilter === 'dl' ? null : 'dl')}
-            className={`flex items-center gap-2 w-full text-left px-2 py-1 rounded transition-all cursor-pointer ${activeFilter === 'dl' ? 'bg-[#2DD4BF]/20 text-[#2DD4BF] font-bold border border-[#2DD4BF]/30' : 'hover:bg-slate-900/60 text-slate-300'}`}
-          >
-            <span className="w-2 h-2 rounded-full bg-[#2DD4BF]" />
-            <span>Deep Learning</span>
-          </button>
-
-          <button
-            onClick={() => setActiveFilter(activeFilter === 'default' ? null : 'default')}
-            className={`flex items-center gap-2 w-full text-left px-2 py-1 rounded transition-all cursor-pointer ${activeFilter === 'default' ? 'bg-[#3B82F6]/20 text-[#3B82F6] font-bold border border-[#3B82F6]/30' : 'hover:bg-slate-900/60 text-slate-300'}`}
-          >
-            <span className="w-2 h-2 rounded-full bg-[#3B82F6]" />
-            <span>Default Star</span>
-          </button>
-        </div>
+        <button
+          onClick={() => setActiveFilter(activeFilter === 'default' ? null : 'default')}
+          className={`flex items-center gap-2 w-full text-left px-2 py-1 rounded transition-all cursor-pointer ${activeFilter === 'default' ? 'bg-[#3B82F6]/20 text-[#3B82F6] font-bold border border-[#3B82F6]/30' : 'hover:bg-slate-900/60 text-slate-300'}`}
+        >
+          <span className="w-2.5 h-2.5 rounded-full bg-[#3B82F6]" />
+          <span>Default Star</span>
+        </button>
       </div>
-
-
 
       {/* 6. マンチカン航海士 AI RAG チャットボット・ウィジェット */}
       <MunchkinNavigator />
