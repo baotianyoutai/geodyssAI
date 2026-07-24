@@ -174,17 +174,35 @@ interface StellarCanvasProps {
   initialArticles: ArticleData[];
 }
 
-export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
-  const [hoveredArticle, setHoveredArticle] = useState<ArticleData | null>(null);
-  const [currentIndex, setCurrentIndex] = useState<number>(0);
-  const [selectedStar, setSelectedStar] = useState<ArticleData | null>(initialArticles[0] || null);
-  const [transitioning, setTransitioning] = useState<boolean>(false);
+export function StellarCanvas() {
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
-  const [isLowPower, setIsLowPower] = useState<boolean>(false);
+  const [initialArticles, setInitialArticles] = useState<ArticleData[]>([]);
+  const [articles, setArticles] = useState<ArticleData[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [hoveredArticle, setHoveredArticle] = useState<ArticleData | null>(null);
+  const [selectedStar, setSelectedStar] = useState<ArticleData | null>(null);
+  const [transitioning, setTransitioning] = useState<boolean>(false);
+  const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [currentDepth, setCurrentDepth] = useState<number>(0);
-  const [isBoardingOpen, setIsBoardingOpen] = useState<boolean>(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isBoardingOpen, setIsBoardingOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const [isLegendOpen, setIsLegendOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isLowPower, setIsLowPower] = useState<boolean>(false);
+
   const controlsRef = useRef<any>(null);
+
+  // 画面サイズのレスポンシブ検知
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     const isMobile = /Mobi|Android/i.test(navigator.userAgent);
@@ -289,9 +307,9 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
       {/* 左側 Streamlit / Google Skills スタイルナビゲーションサイドバー */}
       <Sidebar currentPath="/" onOpenBoarding={() => setIsBoardingOpen(true)} isDark={true} />
 
-      {/* 4. 左上: フローティンググラスモルフィックHUD (固定サイズ w-[380px] & h-[450px]) */}
-      <div className="absolute top-6 left-16 pointer-events-none z-10">
-        <div className="w-[380px] h-[450px] p-6 bg-slate-950/75 border border-slate-800/80 rounded-xl backdrop-blur-md shadow-2xl text-slate-100 font-body flex flex-col justify-between">
+      {/* 4. 左上: フローティンググラスモルフィックHUD (レスポンシブサイズ) */}
+      <div className="absolute top-16 sm:top-6 left-4 sm:left-16 pointer-events-none z-10">
+        <div className="w-[calc(100vw-2rem)] sm:w-[380px] max-w-[380px] h-[340px] sm:h-[450px] p-4 sm:p-6 bg-slate-950/80 border border-slate-800/80 rounded-xl backdrop-blur-md shadow-2xl text-slate-100 font-body flex flex-col justify-between">
           
           {/* ヘッダー ＆ Move Next Star 矢印ナビゲーション ＋ 乗船ボタン */}
           <div className="border-b border-slate-800/60 pb-3 flex-shrink-0">
@@ -435,54 +453,67 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
         </button>
       </div>
 
-      {/* 右上真下: 凡例（星座カテゴリ - CONSTELLATIONS） */}
-      <div className="absolute top-20 right-6 p-4 bg-slate-950/75 border border-slate-800/80 rounded-xl backdrop-blur-md z-10 text-xs font-mono text-slate-300 space-y-2 pointer-events-auto select-none shadow-2xl">
-        <div className="text-slate-500 font-bold border-b border-slate-800/60 pb-2 flex flex-col gap-0.5">
+      {/* 右上真下: 凡例（星座カテゴリ - CONSTELLATIONS） - スマホではトグル折りたたみ */}
+      <div className="absolute top-20 right-4 sm:right-6 z-10 pointer-events-auto select-none">
+        {/* モバイル用トグルボタン */}
+        <button
+          onClick={() => setIsLegendOpen(!isLegendOpen)}
+          className="sm:hidden px-3 py-1.5 bg-slate-950/80 border border-slate-800 text-slate-300 rounded-lg backdrop-blur-md text-xs font-mono flex items-center gap-1.5 shadow-lg"
+        >
+          <span className="w-2 h-2 rounded-full bg-[#38BDF8] animate-pulse" />
           <span>CONSTELLATIONS</span>
-          <span className="text-[9px] text-slate-500/80 font-normal normal-case italic">
-            Click constellation to filter this
-          </span>
+          <span className="text-[10px] text-slate-400">{isLegendOpen ? '▲' : '▼'}</span>
+        </button>
+
+        {/* 凡例本体パネル */}
+        <div className={`mt-2 sm:mt-0 p-3 sm:p-4 bg-slate-950/85 border border-slate-800/80 rounded-xl backdrop-blur-md text-xs font-mono text-slate-300 space-y-1.5 sm:space-y-2 shadow-2xl transition-all ${isLegendOpen ? 'block' : 'hidden sm:block'}`}>
+          <div className="text-slate-500 font-bold border-b border-slate-800/60 pb-1.5 flex flex-col gap-0.5">
+            <span>CONSTELLATIONS</span>
+            <span className="text-[9px] text-slate-500/80 font-normal normal-case italic">
+              Click constellation to filter
+            </span>
+          </div>
+          
+          <button
+            onClick={() => setActiveFilter(null)}
+            className={`flex items-center gap-2 w-full text-left px-2 py-1 sm:py-1.5 rounded transition-all cursor-pointer ${activeFilter === null ? 'bg-sky-500/20 text-[#38BDF8] font-bold border border-sky-500/30' : 'hover:bg-slate-900/60 text-slate-300'}`}
+          >
+            <span className="w-2 h-2 rounded-full bg-[#38BDF8] shadow-[0_0_8px_rgba(56,189,248,0.6)] animate-pulse" />
+            <span>All (全表示)</span>
+          </button>
+          
+          <button
+            onClick={() => setActiveFilter(activeFilter === 'firebase' ? null : 'firebase')}
+            className={`flex items-center gap-2 w-full text-left px-2 py-1 rounded transition-all cursor-pointer ${activeFilter === 'firebase' ? 'bg-[#F59E0B]/20 text-[#F59E0B] font-bold border border-[#F59E0B]/30' : 'hover:bg-slate-900/60 text-slate-300'}`}
+          >
+            <span className="w-2 h-2 rounded-full bg-[#F59E0B]" />
+            <span>Firebase</span>
+          </button>
+
+          <button
+            onClick={() => setActiveFilter(activeFilter === 'claude' ? null : 'claude')}
+            className={`flex items-center gap-2 w-full text-left px-2 py-1 rounded transition-all cursor-pointer ${activeFilter === 'claude' ? 'bg-[#E07B54]/20 text-[#E07B54] font-bold border border-[#E07B54]/30' : 'hover:bg-slate-900/60 text-slate-300'}`}
+          >
+            <span className="w-2 h-2 rounded-full bg-[#E07B54]" />
+            <span>Claude / LLM</span>
+          </button>
+
+          <button
+            onClick={() => setActiveFilter(activeFilter === 'dl' ? null : 'dl')}
+            className={`flex items-center gap-2 w-full text-left px-2 py-1 rounded transition-all cursor-pointer ${activeFilter === 'dl' ? 'bg-[#2DD4BF]/20 text-[#2DD4BF] font-bold border border-[#2DD4BF]/30' : 'hover:bg-slate-900/60 text-slate-300'}`}
+          >
+            <span className="w-2 h-2 rounded-full bg-[#2DD4BF]" />
+            <span>Deep Learning</span>
+          </button>
+
+          <button
+            onClick={() => setActiveFilter(activeFilter === 'default' ? null : 'default')}
+            className={`flex items-center gap-2 w-full text-left px-2 py-1 rounded transition-all cursor-pointer ${activeFilter === 'default' ? 'bg-[#3B82F6]/20 text-[#3B82F6] font-bold border border-[#3B82F6]/30' : 'hover:bg-slate-900/60 text-slate-300'}`}
+          >
+            <span className="w-2 h-2 rounded-full bg-[#3B82F6]" />
+            <span>Default Star</span>
+          </button>
         </div>
-        
-        <button
-          onClick={() => setActiveFilter(null)}
-          className={`flex items-center gap-2 w-full text-left px-2 py-1.5 rounded transition-all cursor-pointer pointer-events-auto ${activeFilter === null ? 'bg-sky-500/20 text-[#38BDF8] font-bold border border-sky-500/30' : 'hover:bg-slate-900/60 text-slate-300'}`}
-        >
-          <span className="w-2.5 h-2.5 rounded-full bg-[#38BDF8] shadow-[0_0_8px_rgba(56,189,248,0.6)] animate-pulse" />
-          <span>All (全表示)</span>
-        </button>
-        
-        <button
-          onClick={() => setActiveFilter(activeFilter === 'firebase' ? null : 'firebase')}
-          className={`flex items-center gap-2 w-full text-left px-2 py-1 rounded transition-all cursor-pointer pointer-events-auto ${activeFilter === 'firebase' ? 'bg-[#F59E0B]/20 text-[#F59E0B] font-bold border border-[#F59E0B]/30' : 'hover:bg-slate-900/60 text-slate-300'}`}
-        >
-          <span className="w-2.5 h-2.5 rounded-full bg-[#F59E0B]" />
-          <span>Firebase</span>
-        </button>
-
-        <button
-          onClick={() => setActiveFilter(activeFilter === 'claude' ? null : 'claude')}
-          className={`flex items-center gap-2 w-full text-left px-2 py-1 rounded transition-all cursor-pointer pointer-events-auto ${activeFilter === 'claude' ? 'bg-[#E07B54]/20 text-[#E07B54] font-bold border border-[#E07B54]/30' : 'hover:bg-slate-900/60 text-slate-300'}`}
-        >
-          <span className="w-2.5 h-2.5 rounded-full bg-[#E07B54]" />
-          <span>Claude / LLM</span>
-        </button>
-
-        <button
-          onClick={() => setActiveFilter(activeFilter === 'dl' ? null : 'dl')}
-          className={`flex items-center gap-2 w-full text-left px-2 py-1 rounded transition-all cursor-pointer pointer-events-auto ${activeFilter === 'dl' ? 'bg-[#2DD4BF]/20 text-[#2DD4BF] font-bold border border-[#2DD4BF]/30' : 'hover:bg-slate-900/60 text-slate-300'}`}
-        >
-          <span className="w-2.5 h-2.5 rounded-full bg-[#2DD4BF]" />
-          <span>Deep Learning</span>
-        </button>
-
-        <button
-          onClick={() => setActiveFilter(activeFilter === 'default' ? null : 'default')}
-          className={`flex items-center gap-2 w-full text-left px-2 py-1 rounded transition-all cursor-pointer pointer-events-auto ${activeFilter === 'default' ? 'bg-[#3B82F6]/20 text-[#3B82F6] font-bold border border-[#3B82F6]/30' : 'hover:bg-slate-900/60 text-slate-300'}`}
-        >
-          <span className="w-2.5 h-2.5 rounded-full bg-[#3B82F6]" />
-          <span>Default Star</span>
-        </button>
       </div>
 
 
