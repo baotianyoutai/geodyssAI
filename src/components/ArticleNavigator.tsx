@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { auth, onAuthStateChanged, toggleStardustBookmark, syncUserProfile } from '../lib/firebase-client';
 
 interface WebLink {
   title: string;
@@ -26,6 +27,33 @@ export function ArticleNavigator({ article }: { article: ArticleProps }) {
   const [question, setQuestion] = useState('');
   const [answering, setAnswering] = useState(false);
   const [answers, setAnswers] = useState<Array<{ q: string; a: string }>>([]);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isBookmarked, setIsBookmarked] = useState(false);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, async (u) => {
+      setCurrentUser(u);
+      if (u) {
+        try {
+          const prof = await syncUserProfile(u);
+          if (prof?.stardustBookmarks?.includes(article.slug)) {
+            setIsBookmarked(true);
+          }
+        } catch (e) {}
+      }
+    });
+    return () => unsub();
+  }, [article.slug]);
+
+  const handleBookmarkToggle = async () => {
+    if (!currentUser) {
+      alert('星屑の栞（ブックマーク）を同期するには、乗船手続き（Googleログイン）をお願いいたします！');
+      return;
+    }
+    const nextState = !isBookmarked;
+    setIsBookmarked(nextState);
+    await toggleStardustBookmark(currentUser.uid, article.slug, !nextState);
+  };
 
   useEffect(() => {
     async function fetchGuide() {
@@ -95,13 +123,26 @@ export function ArticleNavigator({ article }: { article: ArticleProps }) {
           alt="Munchkin Navigator"
           className="w-14 h-14 rounded-full object-cover border-2 border-sky-400 shadow-[0_0_15px_rgba(56,189,248,0.4)]"
         />
-        <div>
-          <span className="text-[10px] font-mono tracking-widest text-sky-400 uppercase bg-sky-500/10 px-2.5 py-0.5 rounded border border-sky-500/20">
-            ARTICLE VOYAGE GUIDE
-          </span>
-          <h3 className="text-lg md:text-xl font-bold font-display text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-indigo-300 mt-1">
-            マンチカン航海士のステップアップ指導
-          </h3>
+        <div className="flex-1 flex items-center justify-between flex-wrap gap-2">
+          <div>
+            <span className="text-[10px] font-mono tracking-widest text-sky-400 uppercase bg-sky-500/10 px-2.5 py-0.5 rounded border border-sky-500/20">
+              ARTICLE VOYAGE GUIDE
+            </span>
+            <h3 className="text-lg md:text-xl font-bold font-display text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-indigo-300 mt-1">
+              マンチカン航海士のステップアップ指導
+            </h3>
+          </div>
+          
+          <button
+            onClick={handleBookmarkToggle}
+            className={`px-3 py-1.5 rounded-full text-xs font-mono transition-all flex items-center gap-1.5 cursor-pointer border ${
+              isBookmarked
+                ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-[0_0_10px_rgba(245,158,11,0.3)]'
+                : 'bg-slate-900 text-slate-300 hover:bg-slate-800 border-slate-700'
+            }`}
+          >
+            <span>{isBookmarked ? '星屑の栞に保存済み' : '星屑の栞に保存'}</span>
+          </button>
         </div>
       </div>
 
@@ -128,7 +169,7 @@ export function ArticleNavigator({ article }: { article: ArticleProps }) {
           {guide?.nextSteps && guide.nextSteps.length > 0 && (
             <div className="p-4 bg-slate-900/60 border border-slate-800/80 rounded-xl space-y-3">
               <h4 className="text-xs font-bold font-mono text-indigo-400 flex items-center gap-2">
-                <span>🚀</span> 次に学ぶステップアップ・アドバイス (What to Learn Next)
+                次に学ぶステップアップ・アドバイス (What to Learn Next)
               </h4>
               <ul className="space-y-2 text-xs md:text-sm text-slate-300">
                 {guide.nextSteps.map((step, idx) => (

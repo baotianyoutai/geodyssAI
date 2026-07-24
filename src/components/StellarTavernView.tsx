@@ -46,7 +46,7 @@ const INITIAL_MOCK_POSTS: Record<string, PostItem[]> = {
       id: 'mock-3',
       authorName: 'マンチカン航海士 (Navigator)',
       authorAvatar: '/assets/cat.jpg',
-      content: 'AI エージェント座だにゃ 🤖 ADK や MCP サーバーの自作についてのアイデアを語り合うにゃ！',
+      content: 'AI エージェント座だにゃ ADK や MCP サーバーの自作についてのアイデアを語り合うにゃ！',
       createdAt: new Date().toISOString(),
       cheersCount: 15
     }
@@ -167,7 +167,7 @@ export function StellarTavernView() {
           STELLAR TAVERN — リアルタイム技術議論場
         </span>
         <h1 className="text-2xl md:text-4xl font-bold font-display text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-sky-300 to-indigo-400">
-          🍻 星海酒場 — Stellar Tavern
+          星海酒場 — Stellar Tavern
         </h1>
         <p className="text-xs md:text-sm text-slate-400 max-w-xl mx-auto leading-relaxed">
           全7星座の技術スレッドで、コードの疑問、実装のアイデア、探検の感想を語り合うリアルタイム酒場。
@@ -199,7 +199,7 @@ export function StellarTavernView() {
       <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl flex items-center justify-between backdrop-blur-md">
         <div>
           <h2 className="text-sm md:text-base font-bold font-display flex items-center gap-2" style={{ color: activeConstellation.color }}>
-            <span>🍻</span> {activeConstellation.label} ディスカッションスレッド
+            {activeConstellation.label} ディスカッションスレッド
           </h2>
           <p className="text-xs text-slate-400 mt-0.5">
             {activeConstellation.desc}
@@ -230,7 +230,7 @@ export function StellarTavernView() {
             disabled={posting || !message.trim()}
             className="px-5 py-2.5 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-slate-950 font-bold text-xs rounded-xl transition-all cursor-pointer font-mono shadow-[0_0_12px_rgba(245,158,11,0.3)] shrink-0"
           >
-            {posting ? '投函中...' : '乾杯投稿 🍻'}
+            {posting ? '投函中...' : '投稿する'}
           </button>
         </div>
       </form>
@@ -265,7 +265,7 @@ export function StellarTavernView() {
                 onClick={() => handleCheer(post.id)}
                 className="px-3 py-1 bg-slate-900 hover:bg-amber-950 text-amber-300 border border-slate-800 hover:border-amber-500/40 rounded-lg text-xs font-mono transition-colors flex items-center gap-1.5 cursor-pointer"
               >
-                <span>✦ Stardust Cheer</span>
+                <span>Stardust Cheer</span>
                 <span className="font-bold text-amber-400">{post.cheersCount}</span>
               </button>
             </div>

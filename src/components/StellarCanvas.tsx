@@ -6,6 +6,7 @@ import { StellarChart } from './StellarChart';
 import { NebulaShader } from './NebulaShader';
 import { MunchkinNavigator } from './MunchkinNavigator';
 import { BoardingModal } from './BoardingModal';
+import { Sidebar } from './Sidebar';
 import { auth, onAuthStateChanged } from '../lib/firebase-client';
 import type { User } from 'firebase/auth';
 import * as THREE from 'three';
@@ -285,8 +286,11 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
         )}
       </Canvas>
 
+      {/* 左側 Streamlit / Google Skills スタイルナビゲーションサイドバー */}
+      <Sidebar currentPath="/" onOpenBoarding={() => setIsBoardingOpen(true)} isDark={true} />
+
       {/* 4. 左上: フローティンググラスモルフィックHUD (固定サイズ w-[380px] & h-[450px]) */}
-      <div className="absolute top-6 left-6 pointer-events-none z-10">
+      <div className="absolute top-6 left-16 pointer-events-none z-10">
         <div className="w-[380px] h-[450px] p-6 bg-slate-950/75 border border-slate-800/80 rounded-xl backdrop-blur-md shadow-2xl text-slate-100 font-body flex flex-col justify-between">
           
           {/* ヘッダー ＆ Move Next Star 矢印ナビゲーション ＋ 乗船ボタン */}
@@ -296,36 +300,7 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
                 星海図 — Stellar Chart
               </h1>
               
-              {/* 展望台・酒場・自己紹介・乗船（Boarding）ボタン */}
-              <div className="flex items-center gap-1.5 pointer-events-auto">
-                <a
-                  href="/observatory"
-                  className="px-2 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 font-mono text-[10px] rounded-lg transition-colors"
-                  title="展望台 (Observatory)"
-                >
-                  📡 展望台
-                </a>
-                <a
-                  href="/tavern"
-                  className="px-2 py-1 bg-slate-900 hover:bg-slate-800 border border-amber-500/40 text-amber-300 font-mono text-[10px] rounded-lg transition-colors"
-                  title="星海酒場 (Stellar Tavern)"
-                >
-                  🍻 酒場
-                </a>
-                <a
-                  href="/captain"
-                  className="px-2 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 font-mono text-[10px] rounded-lg transition-colors"
-                  title="キャプテン自己紹介 (Captain's Profile)"
-                >
-                  👨‍✈️ Captain
-                </a>
-                <button
-                  onClick={() => setIsBoardingOpen(true)}
-                  className="px-2 py-1 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/40 text-sky-300 font-mono text-[10px] rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
-                >
-                  <span>{user ? `👤 ${user.displayName?.split(' ')[0] || 'Voyager'}` : '🚀 乗船'}</span>
-                </button>
-              </div>
+
             </div>
             
             <div className="mt-3 flex items-center justify-between bg-slate-900/80 border border-slate-800/90 rounded-lg px-3 py-1.5 pointer-events-auto">
@@ -404,7 +379,7 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
                   </div>
                   <div>
                     <span className="text-slate-500">Difficulty:</span>{' '}
-                    <span className="text-sky-300">{'✦'.repeat(active.difficulty)}</span>
+                    <span className="text-sky-300">Level {active.difficulty}</span>
                   </div>
                 </div>
               </div>
@@ -438,8 +413,30 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
         </div>
       </div>
 
-      {/* 右上: 凡例（星座カテゴリ） */}
-      <div className="absolute top-6 right-6 p-4 bg-slate-950/70 border border-slate-800/80 rounded-xl backdrop-blur-md z-10 text-xs font-mono text-slate-300 space-y-2 pointer-events-auto select-none">
+      {/* 右上特等席: 乗船手続き (Sign in / アカウント) ピルボタン */}
+      <div className="absolute top-6 right-6 z-20 pointer-events-auto">
+        <button
+          onClick={() => setIsBoardingOpen(true)}
+          className="px-5 py-2 bg-[#0B57D0] hover:bg-[#0948AD] text-white font-medium text-xs rounded-full shadow-lg transition-all flex items-center gap-2 border border-sky-400/30 cursor-pointer active:scale-95"
+          title="乗船手続き (Sign in)"
+        >
+          {user ? (
+            <>
+              <img
+                src={user.photoURL || '/assets/cat.jpg'}
+                alt="User Avatar"
+                className="w-5 h-5 rounded-full object-cover border border-white/50"
+              />
+              <span className="font-bold">{user.displayName?.split(' ')[0] || 'Voyager'}</span>
+            </>
+          ) : (
+            <span>乗船手続き / Sign in</span>
+          )}
+        </button>
+      </div>
+
+      {/* 右上真下: 凡例（星座カテゴリ - CONSTELLATIONS） */}
+      <div className="absolute top-20 right-6 p-4 bg-slate-950/75 border border-slate-800/80 rounded-xl backdrop-blur-md z-10 text-xs font-mono text-slate-300 space-y-2 pointer-events-auto select-none shadow-2xl">
         <div className="text-slate-500 font-bold border-b border-slate-800/60 pb-2 flex flex-col gap-0.5">
           <span>CONSTELLATIONS</span>
           <span className="text-[9px] text-slate-500/80 font-normal normal-case italic">
@@ -488,42 +485,7 @@ export function StellarCanvas({ initialArticles }: StellarCanvasProps) {
         </button>
       </div>
 
-      {/* 5. 底部 HUD エリア */}
-      <div className="absolute bottom-8 left-8 right-8 flex justify-between items-end z-10 pointer-events-none">
-        
-        {/* 左下: Stratification (階層凡例) */}
-        <div className="bg-slate-950/70 backdrop-blur-md border border-slate-800/80 rounded-xl p-4 shadow-2xl flex flex-col gap-2 pointer-events-auto">
-          <h3 className="font-mono text-[10px] text-slate-500 uppercase tracking-widest mb-1">Stratification</h3>
-          <div className="flex items-center gap-3">
-            <div className="w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_rgba(138,235,255,0.8)]"></div>
-            <span className="font-mono text-xs text-slate-200">Azure (Surface) - 表層 [眩光]</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="w-2 h-2 rounded-full bg-tertiary shadow-[0_0_8px_rgba(208,188,255,0.5)]"></div>
-            <span className="font-mono text-xs text-slate-400">Twilight (Mid) - 薄暮層 [中光]</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="w-2 h-2 rounded-full bg-secondary opacity-40"></div>
-            <span className="font-mono text-xs text-slate-500">Midnight (Deep) - 深層 [微光・減光]</span>
-          </div>
-        </div>
 
-        {/* 右下: Depth Indicator (リアルタイム深度計) */}
-        <div className="flex items-center gap-4 bg-slate-950/70 backdrop-blur-md rounded-xl p-4 border border-slate-800/80 shadow-2xl pointer-events-auto">
-          <div className="flex flex-col items-end">
-            <span className="font-mono text-[10px] text-slate-500 uppercase tracking-wider">Depth</span>
-            <span className="font-display font-bold text-2xl text-primary">{currentDepth}m</span>
-            <span className="font-mono text-[10px] text-slate-400 mt-0.5">{getLayerName(currentDepth)}</span>
-          </div>
-          <div className="h-16 w-0.5 depth-line rounded-full relative">
-            <div 
-              className="absolute left-1/2 -translate-x-1/2 w-2 h-2 bg-primary rounded-full shadow-[0_0_10px_rgba(138,235,255,0.8)] transition-all duration-200"
-              style={{ top: `${(currentDepth / 2400) * 80}%` }}
-            ></div>
-          </div>
-        </div>
-
-      </div>
 
       {/* 6. マンチカン航海士 AI RAG チャットボット・ウィジェット */}
       <MunchkinNavigator />

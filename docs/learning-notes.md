@@ -216,3 +216,28 @@ npm install firebase-admin marked @types/marked
   - API の有効化 (`gcloud services`): https://cloud.google.com/sdk/gcloud/reference/services/enable
   - IAM 権限の操作 (`gcloud projects add-iam-policy-binding`): https://cloud.google.com/sdk/gcloud/reference/projects/add-iam-policy-binding
   - Firestore データベースの作成 (`gcloud firestore databases create`): https://cloud.google.com/sdk/gcloud/reference/firestore/databases/create
+
+---
+
+## 9. Phase 4: Production Deployment & DNS Migration (本番公開 ＆ DNS移行)
+
+### 9.1 Astro Build & Firebase Deploy Verification
+* **Commands Executed**:
+  ```bash
+  npm run build
+  npx -p firebase-tools firebase deploy --only hosting
+  ```
+* **Dist Architecture Breakdown**:
+  - **`dist/client`**: Static pre-rendered HTML files (`/index.html`, `/articles/*/index.html`, `/captain/index.html`), bundled JavaScript (`_astro/`), CSS, and media assets served directly via Firebase Hosting CDN.
+  - **`dist/server`**: Node.js SSR runtime entrypoints (`entry.mjs`) and backend API route handlers (`/api/chat` for Munchkin Navigator RAG chatbot).
+
+### 9.2 ConoHa WING DNS Migration (`geodyssai.com`)
+* **DNS Record Changes**:
+  - **A Record**: Pointed `@` and `www` from ConoHa IP (`118.27.122.217`) to Firebase Hosting IP (`199.36.158.100`).
+  - **TXT Record**: Added domain verification token (`hosting-site=my-geodyssai-pro-1744456051163`) at `@`.
+* **Key Learning Concepts**:
+  - **A Record vs TXT Record**: A Record dictates packet routing target; TXT Record acts as unroutable metadata proof for SSL/Domain ownership verification.
+  - **ACME Challenge & Auto SSL**: Automatic issuance of Let's Encrypt / Google Trust Services SSL certificates upon A Record resolution.
+  - **Cost Architecture Impact**: Eliminated ~15,000 JPY/year fixed WordPress hosting fees; transitioned to ~2,000 JPY/year domain-only model leveraging Firebase Free Tier.
+  - **Safety Rollback Protocol**: Maintaining ConoHa server subscription for 30 days post-migration to enable 5-minute A-record rollback if required.
+

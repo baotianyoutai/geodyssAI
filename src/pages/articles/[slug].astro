@@ -136,7 +136,7 @@ const parsedSegments = await Promise.all(
               {article.category.toUpperCase()}
             </span>
             <span class="text-xs text-slate-500 font-mono">
-              Difficulty: <span class="text-sky-400">{'✦'.repeat(article.difficulty)}</span>
+              Difficulty: <span class="text-sky-400">Level {article.difficulty}</span>
             </span>
           </div>
           
@@ -296,3 +296,17 @@ const parsedSegments = await Promise.all(
     font-style: italic;
   }
 </style>
+
+<script>
+  import { auth, onAuthStateChanged, markArticleAsRead } from '../../lib/firebase-client';
+
+  // 記事読了記録の自動連携
+  const currentSlug = window.location.pathname.split('/').filter(Boolean).pop();
+  if (currentSlug) {
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        markArticleAsRead(user.uid, currentSlug).catch(console.warn);
+      }
+    });
+  }
+</script>

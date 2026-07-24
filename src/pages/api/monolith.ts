@@ -86,7 +86,7 @@ ${articleSummaryText}
       constellationLabel,
       unlockedAt: new Date().toISOString(),
       tomeStory,
-      badge: `✦ Complete: ${constellationLabel}`
+      badge: `Complete: ${constellationLabel}`
     };
 
     return new Response(JSON.stringify({ monolith: monolithData }), {
@@ -103,7 +103,7 @@ ${articleSummaryText}
         constellationLabel: 'GenAI 基礎座',
         unlockedAt: new Date().toISOString(),
         tomeStory: '「知の星々を全て巡破せし航海士の功績が、永遠にこの星海碑に刻まれているニャ。」',
-        badge: '✦ Complete: GenAI 基礎座'
+        badge: 'Complete: GenAI 基礎座'
       }
     }), {
       status: 200,

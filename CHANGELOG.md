@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2026-07-25
+
+### Added
+- Complete Production Launch on Firebase Hosting (`https://geodyssai.com`).
+- Full DNS migration from ConoHa WING to Firebase Hosting with SSL/HTTPS.
+- ADR-004 documentation in `docs/decisions.md`.
+
 ## [0.2.0] - 2026-07-21
 
 ### Added

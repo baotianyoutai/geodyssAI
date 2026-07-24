@@ -199,19 +199,19 @@ export function MunchkinNavigator() {
               onClick={() => handleSend('おすすめの記事を教えてにゃ！')}
               className="px-2 py-1 bg-slate-800/80 hover:bg-sky-500/20 text-[10px] text-sky-300 rounded-full border border-sky-500/30 whitespace-nowrap transition-colors cursor-pointer"
             >
-              ✦ おすすめ記事
+              おすすめ記事
             </button>
             <button
               onClick={() => handleSend('Firebaseについての星はどれ？')}
               className="px-2 py-1 bg-slate-800/80 hover:bg-amber-500/20 text-[10px] text-amber-300 rounded-full border border-amber-500/30 whitespace-nowrap transition-colors cursor-pointer"
             >
-              ✦ Firebase
+              Firebase
             </button>
             <button
               onClick={() => handleSend('RAGとは何か教えて')}
               className="px-2 py-1 bg-slate-800/80 hover:bg-teal-500/20 text-[10px] text-teal-300 rounded-full border border-teal-500/30 whitespace-nowrap transition-colors cursor-pointer"
             >
-              ✦ RAG解説
+              RAG解説
             </button>
           </div>
 
