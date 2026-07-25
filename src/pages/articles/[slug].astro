@@ -135,6 +135,15 @@ const parsedSegments = await Promise.all(
             <span class="px-2.5 py-0.5 rounded text-[10px] font-bold font-mono tracking-wider text-slate-950 bg-primary">
               {article.category.toUpperCase()}
             </span>
+            {article.status === 'draft' ? (
+              <span class="px-2.5 py-0.5 rounded text-[10px] font-bold font-mono tracking-wider text-amber-950 bg-amber-400 border border-amber-300 shadow-[0_0_10px_rgba(251,191,36,0.5)]">
+                ✦ DRAFT (下書き)
+              </span>
+            ) : (
+              <span class="px-2.5 py-0.5 rounded text-[10px] font-bold font-mono tracking-wider text-emerald-950 bg-emerald-400 border border-emerald-300">
+                PUBLISHED
+              </span>
+            )}
             <span class="text-xs text-slate-500 font-mono">
               Difficulty: <span class="text-sky-400">Level {article.difficulty}</span>
             </span>

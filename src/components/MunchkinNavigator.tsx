@@ -141,11 +141,11 @@ export const MunchkinNavigator: React.FC<MunchkinNavigatorProps> = ({ articles =
   return (
     // 最外枠コンテナ (PC: 右下 / スマホ: 右上乗船ボタンのすぐ真下 top-16 right-4)
     <div className="fixed top-16 right-4 sm:top-auto sm:bottom-6 sm:right-6 z-30 pointer-events-auto flex flex-col items-end">
-      
+
       {/* 1. 会話ウィジェット (スマホ: top-28 right-4, PC: bottom-20 right-0) */}
       {isOpen && (
         <div className="mb-3 w-[calc(100vw-2rem)] sm:w-[360px] max-w-[340px] sm:max-w-[360px] h-[340px] sm:h-[450px] bg-slate-950/95 border border-sky-500/40 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.8)] backdrop-blur-xl flex flex-col overflow-hidden animate-fade-in z-40">
-          
+
           {/* ヘッダー */}
           <div className="p-3 sm:p-4 bg-slate-900/90 border-b border-slate-800/80 flex items-center justify-between flex-shrink-0">
             <div className="flex items-center gap-2.5">
@@ -161,7 +161,7 @@ export const MunchkinNavigator: React.FC<MunchkinNavigatorProps> = ({ articles =
                 <p className="text-[9px] text-slate-400 font-mono">Gemini 3.5 Flash Grounded</p>
               </div>
             </div>
-            
+
             <button
               onClick={() => setIsOpen(false)}
               className="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-full text-xs transition-colors cursor-pointer"
@@ -186,11 +186,10 @@ export const MunchkinNavigator: React.FC<MunchkinNavigatorProps> = ({ articles =
                 )}
 
                 <div
-                  className={`max-w-[85%] px-3 py-2 rounded-2xl ${
-                    msg.sender === 'user'
+                  className={`max-w-[85%] px-3 py-2 rounded-2xl ${msg.sender === 'user'
                       ? 'bg-sky-600 text-white rounded-br-none shadow-[0_0_15px_rgba(56,189,248,0.2)]'
                       : 'bg-slate-900/90 text-slate-200 border border-slate-800/80 rounded-bl-none shadow-sm'
-                  }`}
+                    }`}
                 >
                   <p className="whitespace-pre-wrap">{renderFormattedText(msg.text)}</p>
                   <span className="block text-[8px] opacity-60 text-right mt-1 font-mono">{msg.timestamp}</span>
@@ -272,7 +271,7 @@ export const MunchkinNavigator: React.FC<MunchkinNavigatorProps> = ({ articles =
           />
           <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-400 border-2 border-slate-950 rounded-full animate-pulse"></span>
         </div>
-        
+
         <div className="text-left pr-1">
           <p className="text-xs font-bold text-white group-hover:text-sky-300 transition-colors">
             Munchkin Navigator

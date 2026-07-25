@@ -43,7 +43,7 @@ export async function getArticles() {
         id: doc.id,
         title: data.title || '',
         slug: data.slug || '',
-        status: data.status || '',
+        status: data.status || (data.draft ? 'draft' : 'publish') || 'draft',
         excerpt: data.excerpt || '',
         category: data.category || '',
         tags: data.tags || [],

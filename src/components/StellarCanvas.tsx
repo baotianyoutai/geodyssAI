@@ -361,7 +361,7 @@ export function StellarCanvas({ initialArticles = [] }: StellarCanvasProps) {
             return (
               <div className="flex-1 my-3 flex flex-col justify-between animate-fade-in pointer-events-auto overflow-hidden">
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 mb-1.5">
                     <span className="px-2 py-0.5 rounded text-[10px] font-bold font-mono bg-sky-500/20 text-sky-300 border border-sky-500/40">
                       {displayNum}
                     </span>
@@ -372,6 +372,16 @@ export function StellarCanvas({ initialArticles = [] }: StellarCanvasProps) {
                     }`}>
                       {active.category.toUpperCase()}
                     </span>
+
+                    {active.status === 'draft' ? (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold font-mono text-amber-950 bg-amber-400 border border-amber-300 shadow-[0_0_10px_rgba(251,191,36,0.5)]">
+                        ✦ DRAFT (下書き)
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold font-mono text-emerald-950 bg-emerald-400 border border-emerald-300">
+                        PUBLISHED
+                      </span>
+                    )}
                   </div>
                   <div>
                     <h2 className="text-base font-bold leading-snug text-white font-display line-clamp-2 h-[48px]">
@@ -467,9 +477,20 @@ export function StellarCanvas({ initialArticles = [] }: StellarCanvasProps) {
 
           return (
             <div className="pt-2 space-y-1.5">
-              <h3 className="text-sm font-bold text-white font-display line-clamp-1">
-                {active.title}
-              </h3>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-white font-display line-clamp-1 flex-1">
+                  {active.title}
+                </h3>
+                {active.status === 'draft' ? (
+                  <span className="px-2 py-0.5 rounded text-[9px] font-bold font-mono text-amber-950 bg-amber-400 flex-shrink-0">
+                    DRAFT (下書き)
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded text-[9px] font-bold font-mono text-emerald-950 bg-emerald-400 flex-shrink-0">
+                    PUBLISHED
+                  </span>
+                )}
+              </div>
               <p className="text-[11px] text-slate-400 line-clamp-1">
                 {active.excerpt}
               </p>
