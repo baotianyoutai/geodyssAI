@@ -75,3 +75,11 @@
 - **決定**:
   - `src/lib/firebase-client.ts` にサイトキー `6LfdWbQsAAAAAGht9Q4Os6xikVRfFBhL8I3GZaBn` および `window.useEnterprise = true` を適用。
   - Firestore Security Rules で `threads` の読取・書込を許可し、未ログインを含む全端末・全ユーザー間でスレッド投稿をリアルタイム共有。
+
+## ADR-012: DRAFT ステータスタグバッジ復元 ＆ Cloud Next Tokyo 選考資料 (.pptx) 自動生成
+- **日付**: 2026-07-25
+- **ステータス**: 承認済 (Accepted)
+- **文脈**: 下書き記事 (draft) の視覚バッジ欠落の修正、および Google Cloud Next Tokyo デモ選考用プレゼンテーション資料構築。
+- **決定**:
+  - `firebase-server.ts` / `StellarCanvas.tsx` / `[slug].astro` に `✦ DRAFT (下書き)` アンバータグバッジを追加。
+  - `pptxgenjs` スクリプト (`scripts/generate_pptx.cjs`) により `DESIGN.md` 準拠・発表者ノート付き 12 スライド `.pptx` 資料を出力保存 (`geodyssAI_Presentation.pptx`)。

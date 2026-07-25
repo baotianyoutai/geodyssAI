@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.2] - 2026-07-25
+
+### Added & Fixed
+- **DRAFT Article Status Badge Tag UI Integration (`StellarCanvas.tsx`, `[slug].astro`, `firebase-server.ts`)**:
+  - Restored `status` field mapping in `firebase-server.ts` to properly identify draft articles (`status === 'draft'`).
+  - Added amber glowing `✦ DRAFT (下書き)` badge tags on 3D Canvas desktop HUD card, Mobile Bottom Sheet, and article detail header.
+- **Google Cloud Next Tokyo Official Presentation Deck (`scripts/generate_pptx.cjs`, `geodyssAI_Presentation.pptx`)**:
+  - Created a 12-slide wide-format presentation using `pptxgenjs`, strictly adhering to `DESIGN.md` (Dark Theme `#090F1E`, Seikai Accent `#2fd9f4`-`#818CF8`).
+  - Embedded Accenture Song 73% Sea of Sameness data & 6x profit growth, Think with Google 11M page speed 123% bounce rate prevention, MOOC 5-13% vs 30% Constellation completion KPI, and Agentic Era tech stack (NotebookLM x Stitch x Antigravity).
+  - Embedded complete Speaker Notes across all 12 slides.
+
 ## [1.2.0] - 2026-07-25
 
 ### Added

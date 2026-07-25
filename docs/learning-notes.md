@@ -73,3 +73,23 @@ This document details all the commands, logs, errors, and learning points encoun
 ### 11.2 App Check & Multi-Device Threads Sync
 * **reCAPTCHA Enterprise**: Applied production key (`6LfdWbQsAAAAAGht9Q4Os6xikVRfFBhL8I3GZaBn`) and `window.useEnterprise = true`.
 * **Firestore Security Rules**: Configured `threads` collection read/write rules, allowing seamless cross-device synchronization between Mac and mobile browsers.
+
+## Section 12: Mobile Responsive UI Architecture & Layout Optimization
+
+### 12.1 Mobile Bottom Sheet Pattern (`StellarCanvas.tsx`)
+* **Overlapping Problem**: On small screens (<768px), floating desktop HUD cards, constellation legends, and AI widgets overlapped each other.
+* **Architecture Solution**: Separated mobile view by rendering a bottom-docked slide-up Bottom Sheet for star card metadata, guaranteeing 0% UI overlap.
+
+### 12.2 Absolute Edge Drawer Navigation (`Sidebar.tsx`)
+* **Layout Bug**: Hamburger button and `aside` drawer shared a flex container, creating an awkward offset from mid-screen.
+* **Fix**: Decoupled trigger button and anchored drawer to `left-0` with `bg-black/60` backdrop blur overlay.
+
+## Section 13: DRAFT Status Badge UI & Automated PPTX Generation
+
+### 13.1 DRAFT Status Badge UI Integration
+* **Problem**: Draft articles (`status === 'draft'`) lacked visual indicator badges in the UI.
+* **Fix**: Mapped `status` in `firebase-server.ts` and added amber glowing `✦ DRAFT (下書き)` badges to 3D Canvas HUD, Mobile Bottom Sheet, and article detail headers.
+
+### 13.2 Automated PPTX Presentation Generation (`pptxgenjs`)
+* **Google Cloud Next Tokyo Submission**: Generated a 12-slide presentation (`geodyssAI_Presentation.pptx`) with full Speaker Notes and `DESIGN.md` dark theme aesthetics.
+* **Data Metrics**: Integrated Accenture Song 73% Sea of Sameness data, Think with Google 11M mobile speed metrics, and MOOC 5-13% vs 30% Constellation completion KPI.
