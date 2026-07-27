@@ -1,6 +1,6 @@
 // scripts/generate_pptx.cjs
-// geodyssAI Google Cloud Next Tokyo Submission Presentation Generator
-// Uses pptxgenjs according to SKILL.md and DESIGN.md guidelines
+// geodyssAI Official Presentation Generator (14-Slide Final Deluxe Edition)
+// Adheres strictly to DESIGN.md (#090F1E, Seikai Colors) and pptx SKILL.md rules
 
 const pptxgen = require('pptxgenjs');
 const path = require('path');
@@ -9,9 +9,9 @@ const fs = require('fs');
 async function buildPresentation() {
   const pptx = new pptxgen();
 
-  // 1. キャンバス設定: 16:9 ワイドスクリーン (13.33 x 7.5 インチ)
+  // 1. 16:9 ワイドスクリーン layout (13.33 x 7.5 インチ)
   pptx.layout = 'LAYOUT_WIDE';
-  pptx.title = 'geodyssAI (星海図) - Google Cloud Next Tokyo Submission';
+  pptx.title = 'geodyssAI (星海図) - Google Cloud Next Tokyo Final Presentation';
   pptx.author = 'Yuta Tokita (baotianyoutai)';
   pptx.company = 'geodyssAI';
 
@@ -30,16 +30,16 @@ async function buildPresentation() {
     AMBER: 'FBBF24'
   };
 
-  // 共通の背景＆ヘッダー生成ヘルパー
+  // 共通背景 ＆ カテゴリバッジ ＆ メインタイトル設定
   function setBaseSlide(slide, categoryTitle, mainMessageTitle) {
     slide.background = { color: C.BG_DARK };
 
     // カテゴリバッジ
     slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
-      x: 0.6, y: 0.4, w: 2.4, h: 0.35, rectRadius: 0.1, fill: { color: '1E293B' }, line: { color: C.SKY_BLUE, width: 1 }
+      x: 0.6, y: 0.4, w: 2.6, h: 0.35, rectRadius: 0.1, fill: { color: '1E293B' }, line: { color: C.SKY_BLUE, width: 1 }
     });
     slide.addText(categoryTitle.toUpperCase(), {
-      x: 0.6, y: 0.4, w: 2.4, h: 0.35, fontSize: 10, fontFace: 'Orbitron', color: C.CYAN, bold: true, align: 'center', valign: 'middle', margin: 0
+      x: 0.6, y: 0.4, w: 2.6, h: 0.35, fontSize: 10, fontFace: 'Orbitron', color: C.CYAN, bold: true, align: 'center', valign: 'middle', margin: 0
     });
 
     // 1スライド 1メッセージ メインタイトル
@@ -226,11 +226,42 @@ async function buildPresentation() {
   }
 
   // -------------------------------------------------------------
-  // SLIDE 05: SOLUTION (3D 意味空間アーキテクチャ)
+  // SLIDE 05: NEW! DEMO SHOWCASE (各画面・機能詳細ガイド)
   // -------------------------------------------------------------
   {
     const slide = pptx.addSlide();
-    setBaseSlide(slide, '04. ARCHITECTURE', 'Vertex AI Embedding (768d) × UMAP (3D) × 難易度アビス (Z軸) による意味空間自動生成');
+    setBaseSlide(slide, '04. DEMO SHOWCASE', 'geodyssai.com の主要画面と機能が果たす役割 — デモで魅せる5大ビュー');
+
+    const views = [
+      { title: '① 3D 星海図トップ (/)', desc: 'Vertex AI Embedding による全28記事の3D意味空間マップ。光の糸と星座カテゴリ線で直感探索。', color: C.CYAN },
+      { title: '② 記事詳細 (Lighthouse)', desc: 'マンチカン航海士の3ステップ学習指導カード ＆ カスタムブロック (MunchkinSpeech) の可読画面。', color: C.SKY_BLUE },
+      { title: '③ 知の星海 展望台 (/observatory)', desc: '全7星座カテゴリ別の読破進捗・未読マーク・読書完了ステータスを一括監視する管理ボード。', color: C.INDIGO },
+      { title: '④ 星海酒場 (/tavern)', desc: 'Firestore onSnapshot リアルタイムリスナーによる全端末同期ディスカッション＆星屑の応援リアクション。', color: C.AMBER },
+      { title: '⑤ キャプテンアビス (/captain)', desc: 'カメラが3D深海アビスへ潜航するポートフォリオ画面。Z軸深度計と直感的ナビゲーションを搭載。', color: C.GREEN }
+    ];
+
+    views.forEach((v, idx) => {
+      const y = 1.6 + idx * 0.95;
+      slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
+        x: 0.6, y: y, w: 12.0, h: 0.85, rectRadius: 0.08, fill: { color: C.CARD_BG }, line: { color: v.color, width: 1 }
+      });
+      slide.addText(v.title, {
+        x: 0.8, y: y + 0.1, w: 3.5, h: 0.65, fontSize: 12, color: v.color, bold: true, valign: 'middle', margin: 0
+      });
+      slide.addText(v.desc, {
+        x: 4.4, y: y + 0.1, w: 8.0, h: 0.65, fontSize: 11, color: C.TEXT_WHITE, valign: 'middle', margin: 0
+      });
+    });
+
+    slide.addNotes('【発表者ノート】\nデモ発表でご体験いただく geodyssai.com の主要5画面について説明します。単なるトップページだけでなく、全28記事が星として輝く「3D星海図」、要約と学習導線を提示する「記事詳細」、星座ごとの進捗を追う「展望台」、全端末リアルタイム同期の「星海酒場」、そして深海潜航アニメーションの「キャプテンアビス」まで、あらゆる画面が読者の学びと没入感を支える役割を持っています。');
+  }
+
+  // -------------------------------------------------------------
+  // SLIDE 06: SOLUTION (3D 意味空間アーキテクチャ)
+  // -------------------------------------------------------------
+  {
+    const slide = pptx.addSlide();
+    setBaseSlide(slide, '05. ARCHITECTURE', 'Vertex AI Embedding (768d) × UMAP (3D) × 難易度アビス (Z軸) による意味空間自動生成');
 
     slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
       x: 0.6, y: 1.6, w: 5.8, h: 4.8, rectRadius: 0.1, fill: { color: C.CARD_BG }, line: { color: C.CARD_BORDER, width: 1 }
@@ -264,11 +295,11 @@ async function buildPresentation() {
   }
 
   // -------------------------------------------------------------
-  // SLIDE 06: AI NAVIGATOR (マンチカン航海士)
+  // SLIDE 07: AI NAVIGATOR (マンチカン航海士)
   // -------------------------------------------------------------
   {
     const slide = pptx.addSlide();
-    setBaseSlide(slide, '05. AI RAG GUIDE', 'Gemini 3.5 Flash ＋ Google 検索 Grounding による対話型 RAG ナビゲーション');
+    setBaseSlide(slide, '06. AI RAG GUIDE', 'Gemini 3.5 Flash ＋ Google 検索 Grounding による対話型 RAG ナビゲーション');
 
     slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
       x: 0.6, y: 1.6, w: 5.8, h: 4.8, rectRadius: 0.1, fill: { color: C.CARD_BG }, line: { color: C.CARD_BORDER, width: 1 }
@@ -299,11 +330,56 @@ async function buildPresentation() {
   }
 
   // -------------------------------------------------------------
-  // SLIDE 07: TECHNICAL STACK & PERFORMANCE (速度 & コスト)
+  // SLIDE 08: NEW! AGENTIC 1-PICTURE PIPELINE (1枚絵開発フロー)
   // -------------------------------------------------------------
   {
     const slide = pptx.addSlide();
-    setBaseSlide(slide, '06. PERFORMANCE', 'Headless Astro × Firebase 移行により表示遅延123%増を防止し年間コスト85%削減');
+    setBaseSlide(slide, '07. AGENTIC PIPELINE', 'NotebookLM ➔ Google Stitch ➔ StitchMCP ➔ Antigravity による自律統合開発フロー');
+
+    // 1枚絵中央フローカード (4 Stage Arrow Flow)
+    const stages = [
+      { num: '01', name: 'NotebookLM', desc: 'AGENTS.md / DESIGN.md\n骨子・要件・思想解析', color: C.CYAN },
+      { num: '02', name: 'Google Stitch', desc: 'Seikai カラーパレット ＆\nUI/UX デザインシステム生成', color: C.SKY_BLUE },
+      { num: '03', name: 'StitchMCP', desc: 'MCP Tool 経由で\nデザインデータ自動連携', color: C.INDIGO },
+      { num: '04', name: 'Antigravity Agent', desc: 'Gemini 3.5ペアプロによる\n自動コード実装 ＆ 本番デプロイ', color: C.GREEN }
+    ];
+
+    stages.forEach((st, idx) => {
+      const x = 0.6 + idx * 3.05;
+      slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
+        x: x, y: 1.6, w: 2.8, h: 4.8, rectRadius: 0.1, fill: { color: C.CARD_BG }, line: { color: st.color, width: 1.5 }
+      });
+
+      slide.addText(`STAGE ${st.num}`, {
+        x: x + 0.2, y: 1.8, w: 2.4, h: 0.3, fontSize: 11, fontFace: 'Orbitron', color: st.color, bold: true
+      });
+      slide.addText(st.name, {
+        x: x + 0.2, y: 2.2, w: 2.4, h: 0.6, fontSize: 14, fontFace: 'Noto Sans JP', color: C.TEXT_WHITE, bold: true
+      });
+      slide.addText(st.desc, {
+        x: x + 0.2, y: 3.0, w: 2.4, h: 3.0, fontSize: 10, color: C.TEXT_MUTED
+      });
+
+      if (idx < 3) {
+        slide.addText('➔', {
+          x: x + 2.7, y: 3.6, w: 0.4, h: 0.4, fontSize: 16, color: C.CYAN, bold: true, align: 'center'
+        });
+      }
+    });
+
+    slide.addText('★ AI エージェント連携により、1人開発でありながら従来の数ヶ月の開発期間をわずか数時間へと圧縮。', {
+      x: 0.6, y: 6.6, w: 12.0, h: 0.3, fontSize: 10, color: C.GREEN, bold: true, align: 'center'
+    });
+
+    slide.addNotes('【発表者ノート】\n1枚絵で表現する Agentic Era の自律統合開発パイプラインです。まず NotebookLM に論文や構想資料を読み込ませて AGENTS.md と DESIGN.md の骨子と要件を自動生成。次に Google Stitch で Seikai カラーパレットとUIコンポーネントを作成し、StitchMCP ツールでデザインデータをダイレクト連携。最後に Google DeepMind の Antigravity Agent (Gemini 3.5) がコード実装からデプロイまでを一気通貫で自動化しました。まさに一人開発の限界を突破する新しい開発パラダイムです。');
+  }
+
+  // -------------------------------------------------------------
+  // SLIDE 09: TECHNICAL STACK & PERFORMANCE (速度 & コスト)
+  // -------------------------------------------------------------
+  {
+    const slide = pptx.addSlide();
+    setBaseSlide(slide, '08. PERFORMANCE', 'Headless Astro × Firebase 移行により表示遅延123%増を防止し年間コスト85%削減');
 
     slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
       x: 0.6, y: 1.6, w: 5.8, h: 4.8, rectRadius: 0.1, fill: { color: C.CARD_BG }, line: { color: C.RED, width: 1 }
@@ -361,11 +437,11 @@ async function buildPresentation() {
   }
 
   // -------------------------------------------------------------
-  // SLIDE 08: APP CHECK & STELLAR TAVERN (セキュリティ & リアルタイム)
+  // SLIDE 10: APP CHECK & STELLAR TAVERN (セキュリティ & リアルタイム)
   // -------------------------------------------------------------
   {
     const slide = pptx.addSlide();
-    setBaseSlide(slide, '07. SECURITY & THREADS', 'reCAPTCHA Enterprise App Check 鉄壁保護 ＆ 全端末リアルタイム同期掲示板');
+    setBaseSlide(slide, '09. SECURITY & THREADS', 'reCAPTCHA Enterprise App Check 鉄壁保護 ＆ 全端末リアルタイム同期掲示板');
 
     slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
       x: 0.6, y: 1.6, w: 5.8, h: 4.8, rectRadius: 0.1, fill: { color: C.CARD_BG }, line: { color: C.CYAN, width: 1 }
@@ -397,11 +473,11 @@ async function buildPresentation() {
   }
 
   // -------------------------------------------------------------
-  // SLIDE 09: MOBILE RESPONSIVE & BOTTOM SHEET
+  // SLIDE 11: MOBILE RESPONSIVE & BOTTOM SHEET
   // -------------------------------------------------------------
   {
     const slide = pptx.addSlide();
-    setBaseSlide(slide, '08. MOBILE RESPONSIVE', 'スマホ閲覧時のコンポーネント重なり0%化を実現する「ボトムシート」UI設計');
+    setBaseSlide(slide, '10. MOBILE RESPONSIVE', 'スマホ閲覧時のコンポーネント重なり0%化を実現する「ボトムシート」UI設計');
 
     slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
       x: 0.6, y: 1.6, w: 5.8, h: 4.8, rectRadius: 0.1, fill: { color: C.CARD_BG }, line: { color: C.CARD_BORDER, width: 1 }
@@ -432,11 +508,11 @@ async function buildPresentation() {
   }
 
   // -------------------------------------------------------------
-  // SLIDE 10: QUANTITATIVE KPI & VERIFICATION (完走率 30% KPI)
+  // SLIDE 12: QUANTITATIVE KPI & VERIFICATION (完走率 30% KPI)
   // -------------------------------------------------------------
   {
     const slide = pptx.addSlide();
-    setBaseSlide(slide, '09. KPI & VERIFICATION', '「MOOC完走率 5〜13%」の限界に対し「星座完成率 30%」を目指す定量検証モデル');
+    setBaseSlide(slide, '11. KPI & VERIFICATION', '「MOOC完走率 5〜13%」の限界に対し「星座完成率 30%」を目指す定量検証モデル');
 
     slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
       x: 0.6, y: 1.6, w: 5.8, h: 4.8, rectRadius: 0.1, fill: { color: C.CARD_BG }, line: { color: C.GREEN, width: 1 }
@@ -484,47 +560,53 @@ async function buildPresentation() {
   }
 
   // -------------------------------------------------------------
-  // SLIDE 11: AGENTIC ERA ECOSYSTEM (NotebookLM × Stitch × Antigravity)
+  // SLIDE 13: GITHUB AGILITY & ADR PROCESS
   // -------------------------------------------------------------
   {
     const slide = pptx.addSlide();
-    setBaseSlide(slide, '10. DEVELOPMENT', 'NotebookLM × Google Stitch (MCP) × Antigravity による自律開発エコシステム');
+    setBaseSlide(slide, '12. GITHUB & ADR', '27 件の Issue ＆ 28 件の PR / 12 件の ADR 記録による確実な CI/CD トラッキング');
 
     slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
       x: 0.6, y: 1.6, w: 5.8, h: 4.8, rectRadius: 0.1, fill: { color: C.CARD_BG }, line: { color: C.CARD_BORDER, width: 1 }
     });
-    slide.addText('【Agentic Era の一人開発体制】', { x: 0.8, y: 1.8, w: 5.4, h: 0.4, fontSize: 13, color: C.CYAN, bold: true });
+    slide.addText('【GitHub 完全オープン開発トラッキング】', { x: 0.8, y: 1.8, w: 5.4, h: 0.4, fontSize: 13, color: C.CYAN, bold: true });
     slide.addText([
-      { text: '• NotebookLM (リサーチ・企画整理):\n', options: { color: C.CYAN, bold: true } },
-      { text: '  論文・経産省資料・Accenture調査をグラウンディング解析。\n\n', options: { color: C.TEXT_MUTED } },
-      { text: '• Google Stitch MCP (UI/UX デザイン生成):\n', options: { color: C.SKY_BLUE, bold: true } },
-      { text: '  Seikai カラーパレットおよびUIデザインシステムをコンポーネント化。\n\n', options: { color: C.TEXT_MUTED } },
-      { text: '• Antigravity (Gemini 3.5 DeepMind Agent):\n', options: { color: C.INDIGO, bold: true } },
-      { text: '  自律型エージェントによるコード生成、デバッグ、本番デプロイの自動化。', options: { color: C.TEXT_MUTED } }
+      { text: '• 27 件の GitHub Issue ＆ 28 件の Pull Request:\n', options: { color: C.TEXT_WHITE, bold: true } },
+      { text: '  すべての開発機能、バグ修正、UI改善を GitHub 上で完全透明にログ管理。\n\n', options: { color: C.TEXT_MUTED } },
+      { text: '• 12 件の ADR (Architecture Decision Records):\n', options: { color: C.TEXT_WHITE, bold: true } },
+      { text: '  docs/decisions.md に設計根拠・意思決定プロセス (ADR-001〜ADR-012) を保存。\n\n', options: { color: C.TEXT_MUTED } },
+      { text: '• 即時ロールバック ＆ 自動ビルド検証:\n', options: { color: C.GREEN, bold: true } },
+      { text: '  npm run build 検証と Git コミットツリー管理により本番品質を鉄壁担保。', options: { color: C.TEXT_MUTED } }
     ], { x: 0.8, y: 2.3, w: 5.4, h: 3.9, fontSize: 10, margin: 0 });
 
     slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
       x: 6.8, y: 1.6, w: 5.8, h: 4.8, rectRadius: 0.1, fill: { color: C.CARD_BG }, line: { color: C.GREEN, width: 1 }
     });
-    slide.addText('【GitHub トラッキング ＆ ADR 記録】', { x: 7.0, y: 1.8, w: 5.4, h: 0.4, fontSize: 13, color: C.GREEN, bold: true });
+    slide.addText('【アーキテクチャ意思決定プロセス (ADR サマリー)】', { x: 7.0, y: 1.8, w: 5.4, h: 0.4, fontSize: 12, color: C.GREEN, bold: true });
     slide.addText([
-      { text: '• 25 件の GitHub Issue ＆ 26 件の Pull Request:\n', options: { color: C.TEXT_WHITE, bold: true } },
-      { text: '  すべての開発機能、バグ修正、UI改善を GitHub 上で徹底ログ化。\n\n', options: { color: C.TEXT_MUTED } },
-      { text: '• 11 件の ADR (Architecture Decision Records):\n', options: { color: C.TEXT_WHITE, bold: true } },
-      { text: '  docs/decisions.md に意思決定プロセス (ADR-001〜ADR-011) を厳密記録。\n\n', options: { color: C.TEXT_MUTED } },
-      { text: '• アジリティと本番品質の両立:\n', options: { color: C.CYAN, bold: true } },
-      { text: '  個人の開発速度を AI エージェント連携により10倍化。', options: { color: C.TEXT_MUTED } }
-    ], { x: 7.0, y: 2.3, w: 5.4, h: 3.9, fontSize: 10, margin: 0 });
+      { text: '・ADR-001: ', options: { color: C.CYAN, bold: true } },
+      { text: 'ETL パイプラインと UMAP 3D 空間マッピング採用\n', options: { color: C.TEXT_MUTED } },
+      { text: '・ADR-005: ', options: { color: C.CYAN, bold: true } },
+      { text: 'Seikai オリジナルブランドカラーバレット統一\n', options: { color: C.TEXT_MUTED } },
+      { text: '・ADR-009: ', options: { color: C.CYAN, bold: true } },
+      { text: 'Firebase AI Logic (@google/genai) 統合\n', options: { color: C.TEXT_MUTED } },
+      { text: '・ADR-010: ', options: { color: C.CYAN, bold: true } },
+      { text: 'reCAPTCHA Enterprise App Check 鉄壁保護\n', options: { color: C.TEXT_MUTED } },
+      { text: '・ADR-011: ', options: { color: C.CYAN, bold: true } },
+      { text: 'モバイル専用ボトムシート ＆ left-0 ドロワー\n', options: { color: C.TEXT_MUTED } },
+      { text: '・ADR-012: ', options: { color: C.CYAN, bold: true } },
+      { text: 'DRAFT ステータスタグバッジ ＆ PPTX 自動生成', options: { color: C.TEXT_MUTED } }
+    ], { x: 7.0, y: 2.3, w: 5.4, h: 3.9, fontSize: 9.5, margin: 0 });
 
-    slide.addNotes('【発表者ノート】\n開発体制についてです。本プロジェクトは Agentic Era（エージェント時代）の先端開発エコシステムをフル活用しています。NotebookLM によるリサーチ・企画整理、Google Stitch MCP によるUIシステム生成、そして Google DeepMind チームが手がける Antigravity (Gemini AI Agent) とのペアプログラミングにより、圧倒的な品質とスピードを実現しました。GitHub 上で25のIssue、26のPR、11のADRを管理し、プロダクトの確かなアジリティと品質を担保しています。');
+    slide.addNotes('【発表者ノート】\nGitHub 上でのアジリティと品質管理についてです。本プロジェクトはただ動くものを作っただけでなく、27のIssue、28のPR、そして12のADR（アーキテクチャ意思決定記録）を通じて、全てのコード変更と技術的決定の根拠を完全にドキュメント化し透明性を担保しています。万が一の不具合時にもワンコマンドで安全にロールバックできる高度な開発プロセスを確立しています。');
   }
 
   // -------------------------------------------------------------
-  // SLIDE 12: FUTURE ROADMAP & NEXT TOKYO DEMO
+  // SLIDE 14: FUTURE ROADMAP & NEXT TOKYO DEMO
   // -------------------------------------------------------------
   {
     const slide = pptx.addSlide();
-    setBaseSlide(slide, '11. FUTURE ROADMAP', '個人ポートフォリオから組織内知見ナレッジグラフへ — Cloud Next Tokyo デモ予告');
+    setBaseSlide(slide, '13. FUTURE ROADMAP', '個人ポートフォリオから組織内知見ナレッジグラフへ — Cloud Next Tokyo デモ予告');
 
     slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
       x: 0.6, y: 1.6, w: 3.8, h: 4.8, rectRadius: 0.1, fill: { color: C.CARD_BG }, line: { color: C.CYAN, width: 1 }
@@ -558,16 +640,20 @@ async function buildPresentation() {
   }
 
   // -------------------------------------------------------------
-  // 保存処理
+  // 保存処理 (geodyssAI_Final_Submission.pptx & geodyssAI_Presentation.pptx)
   // -------------------------------------------------------------
-  const artifactPath = '/Users/tokitayuta/.gemini/antigravity-ide/brain/c1a777e4-faee-48a2-82ac-2cdad406c1e9/geodyssAI_Google_Cloud_Next_Tokyo_Presentation.pptx';
-  const rootPath = '/Users/tokitayuta/geodyssAI/geodyssAI_Presentation.pptx';
+  const artifactPath = '/Users/tokitayuta/.gemini/antigravity-ide/brain/c1a777e4-faee-48a2-82ac-2cdad406c1e9/geodyssAI_Final_Submission.pptx';
+  const rootPath1 = '/Users/tokitayuta/geodyssAI/geodyssAI_Final_Submission.pptx';
+  const rootPath2 = '/Users/tokitayuta/geodyssAI/geodyssAI_Presentation.pptx';
+  const rootPath3 = '/Users/tokitayuta/geodyssAI/geodyssAI_Google_Cloud_Next_Tokyo_Presentation.pptx';
 
   await pptx.writeFile({ fileName: artifactPath });
   console.log(`Successfully generated presentation artifact at: ${artifactPath}`);
 
-  fs.copyFileSync(artifactPath, rootPath);
-  console.log(`Copied presentation file to root workspace at: ${rootPath}`);
+  fs.copyFileSync(artifactPath, rootPath1);
+  fs.copyFileSync(artifactPath, rootPath2);
+  fs.copyFileSync(artifactPath, rootPath3);
+  console.log(`Copied presentation files to root workspace.`);
 }
 
 buildPresentation().catch(err => {
