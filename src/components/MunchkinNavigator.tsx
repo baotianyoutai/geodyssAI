@@ -84,19 +84,26 @@ export const MunchkinNavigator: React.FC<MunchkinNavigatorProps> = ({ articles =
       throw new Error('API returned empty or invalid response');
 
     } catch (error) {
-      console.warn('Fallback to client RAG search:', error);
-      // エラー発生時：ユーザーにエラー文言を出さず、クライアント側で動的 RAG 検索を実行
+      console.warn('Fallback RAG search:', error);
       const q = textToSend.toLowerCase();
 
-      let replyText = "";
-      if (q.includes('firebase') || q.includes('firestore') || q.includes('auth')) {
-        replyText = `ニャー！Firebaseに関する知の星を発見したにゃ 🐾\n\n👉 [AI-Dojo デイ1](/articles/ai-dojo-day1)\n*FirebaseとAI Logicの基本活用ガイドだにゃ！*\n\n・ [DevOPS x AI Agent Hackathon 2026](/articles/devops-x-ai-agent-hackathon-2026-%E3%81%AB%E5%8F%82%E5%8A%A0%E3%81%97%E3%81%BE%E3%81%99%E3%80%82)`;
-      } else if (q.includes('rag') || q.includes('embedding') || q.includes('chroma') || q.includes('vector')) {
-        replyText = `ニャー！RAG・ベクトル検索に関する星を発見したにゃ 🐾\n\n👉 [Gemini API Python SDKとChromaDBを使用してRAG-Systemを開発する](/articles/gemini-api-python-sdk%E3%81%A8chromadb%E3%82%92%E4%BD%BF%E7%94%A8%E3%81%97%E3%81%A6rag-system%E3%82%92%E9%96%8B%E7%99%BA%E3%81%99%E3%82%8B%E3%80%90%E3%83%8F%E3%83%B3%E3%82%BA%E3%82%AA%E3%83%B3)\n*ChromaDBとGeminiによる本格ハンズオン解説だにゃ！*\n\n・ [Gemini APIs Embedding Endpointを利用して類似度を探索する](/articles/gemini-apis-embedding-endpoint%E3%82%92%E5%88%A9%E7%94%A8%E3%81%97%E3%81%A6%E3%80%81%E9%A1%9E%E4%BC%BC%E5%BA%A6%E3%82%92%E6%8E%A2%E7%B4%A2%E3%81%99%E3%82%8B%E3%80%90%E3%83%8F%E3%83%B3%E3%82%BA)`;
-      } else if (q.includes('claude') || q.includes('agent') || q.includes('antigravity')) {
-        replyText = `ニャー！AI AgentとAntigravityの星を発見したにゃ 🐾\n\n👉 [DevOPS x AI Agent Hackathon 2026](/articles/devops-x-ai-agent-hackathon-2026-%E3%81%AB%E5%8F%82%E5%8A%A0%E3%81%97%E3%81%BE%E3%81%99%E3%80%82)\n*最新の自律型エージェントに関する開発記だにゃ！*`;
+      const matched = articles.filter(art => {
+        const title = (art.title || '').toLowerCase();
+        const excerpt = (art.excerpt || '').toLowerCase();
+        const category = (art.category || '').toLowerCase();
+        return title.includes(q) || excerpt.includes(q) || category.includes(q);
+      }).slice(0, 3);
+
+      const targetList = matched.length > 0 ? matched : articles.slice(0, 3);
+      let replyText = `ニャー！「${textToSend}」に関する知の星海探索結果だニャ 🐾\n\n`;
+
+      if (targetList.length > 0) {
+        replyText += `👉 [${targetList[0].title}](/articles/${encodeURIComponent(targetList[0].slug)})\n*${targetList[0].excerpt || '気になる技術記事を探索してみてニャ！'}*\n\n`;
+        if (targetList.length > 1) {
+          replyText += `こちらの星もおすすめだニャ：\n` + targetList.slice(1).map(a => `・ [${a.title}](/articles/${encodeURIComponent(a.slug)})`).join('\n');
+        }
       } else {
-        replyText = `ニャー！ご質問「${textToSend}」について知の星海を探索したにゃ 🐾\n\nおすすめの星はこちらだにゃ：\n👉 [Gemini API Python SDKとChromaDBを使用してRAG-Systemを開発する](/articles/gemini-api-python-sdk%E3%81%A8chromadb%E3%82%92%E4%BD%BF%E7%94%A8%E3%81%97%E3%81%A6rag-system%E3%82%92%E9%96%8B%E7%99%BA%E3%81%99%E3%82%8B%E3%80%90%E3%83%8F%E3%83%B3%E3%82%BA%E3%82%AA%E3%83%B3)\n*探検を楽しんでほしいにゃ！*`;
+        replyText += `星の海を自由に探訪してみてニャ 🐾`;
       }
 
       const botMsg: Message = {
