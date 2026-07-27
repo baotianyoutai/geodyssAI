@@ -55,7 +55,7 @@ export const MunchkinNavigator: React.FC<MunchkinNavigatorProps> = ({ articles =
 
     try {
       // 1. クライアント側で直接 GoogleGenAI (Gemini AI Logic) を呼び出し
-      const apiKey = import.meta.env.PUBLIC_FIREBASE_API_KEY || import.meta.env.GEMINI_API_KEY || 'AIzaSyB-5jpp_4PmANU-9scNR0q-ahUJvFpBmUg';
+      const apiKey = import.meta.env.PUBLIC_GEMINI_API_KEY || import.meta.env.PUBLIC_FIREBASE_API_KEY || 'AIzaSyBPQroXo69568ahiG1Zydzy1r9gTcb7Rxo';
       const { GoogleGenAI } = await import('@google/genai');
       const ai = new GoogleGenAI({ apiKey });
 
@@ -81,7 +81,7 @@ ${contextText}
 【ユーザーの質問】
 最新のGoogle検索結果や関連記事を踏まえて答えてニャ：${textToSend}`;
 
-      const CANDIDATE_MODELS = ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-1.5-flash'];
+      const CANDIDATE_MODELS = ['gemini-flash-latest', 'gemini-2.0-flash', 'gemini-1.5-flash'];
       let aiText = '';
 
       for (const modelName of CANDIDATE_MODELS) {
