@@ -1,3 +1,5 @@
+export const prerender = false;
+
 import type { APIRoute } from 'astro';
 import { getArticles, logSearchQuery } from '../../lib/firebase-server';
 import { generateStellarChatAI } from '../../lib/ai-logic';
