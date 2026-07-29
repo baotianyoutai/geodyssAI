@@ -33,10 +33,77 @@ export const AdminCMS: React.FC = () => {
   const [selectedArticle, setSelectedArticle] = useState<ArticleItem | null>(null);
   const [isEditing, setIsEditing] = useState(false);
 
+  const sendSecurityNotification = async (userEmail: string) => {
+    const loginTime = new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
+    const userAgent = navigator.userAgent;
+    const passwordResetUrl = `https://geodyssai.com/admin?action=reset_password`;
+
+    const mailBody = `
+==================================================
+🚨 geodyssAI 管理画面へのアクセスが検出されました
+==================================================
+
+【詳細情報】
+・ログイン日時: ${loginTime}
+・対象ユーザー: ${userEmail}
+・ユーザーエージェント: ${userAgent}
+・アクセス URL: https://geodyssai.com/admin
+
+--------------------------------------------------
+⚠️ 【身に覚えのない不審なアクセスの場合はこちら】
+--------------------------------------------------
+👉 パスワードを緊急リセットする: ${passwordResetUrl}
+
+--
+geodyssAI Admin Security System
+`;
+
+    try {
+      const docRef = await addDoc(collection(db, 'mail'), {
+        to: ['baotianyoutai1@gmail.com'],
+        message: {
+          subject: `🚨 geodyssAI 管理画面にログイン・アクセスがありました [${loginTime}]`,
+          text: mailBody,
+          html: `
+            <div style="font-family: sans-serif; background: #0f172a; color: #f8fafc; padding: 24px; border-radius: 16px;">
+              <h2 style="color: #38bdf8;">🚨 geodyssAI 管理画面 アクセス検出</h2>
+              <p>geodyssAI Admin CMS への管理者アクセスが検出されました。</p>
+              <hr style="border-color: #334155;" />
+              <h3>【詳細情報】</h3>
+              <ul>
+                <li><b>アクセス日時:</b> ${loginTime}</li>
+                <li><b>対象ユーザー:</b> ${userEmail}</li>
+                <li><b>ユーザーエージェント:</b> ${userAgent}</li>
+              </ul>
+              <hr style="border-color: #334155;" />
+              <h4 style="color: #fbbf24;">⚠️ 身に覚えのないアクセスの場合はこちら</h4>
+              <p><a href="${passwordResetUrl}" style="color: #38bdf8; text-decoration: underline;">👉 パスワードを緊急リセットする</a></p>
+            </div>
+          `
+        },
+        createdAt: serverTimestamp()
+      });
+      console.log('✅ Security email document added with ID:', docRef.id);
+      return true;
+    } catch (e) {
+      console.error('Failed to write security mail document:', e);
+      return false;
+    }
+  };
+
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       setAuthLoading(false);
+
+      if (currentUser && currentUser.email) {
+        // セッション毎に 1 回のみ自動通知
+        const sessionKey = `notified_${currentUser.uid}_${new Date().toDateString()}`;
+        if (!sessionStorage.getItem(sessionKey)) {
+          sessionStorage.setItem(sessionKey, 'true');
+          await sendSecurityNotification(currentUser.email);
+        }
+      }
     });
     return () => unsubscribe();
   }, []);
@@ -48,71 +115,9 @@ export const AdminCMS: React.FC = () => {
 
     try {
       const userCred = await signInWithEmailAndPassword(auth, emailInput.trim(), passwordInput);
-      const loggedUser = userCred.user;
-      const userEmail = loggedUser.email || emailInput.trim();
-      const loginTime = new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
-      const userAgent = navigator.userAgent;
-
-      const emergencyActionUrl = `https://geodyssai.com/admin?action=emergency_lockout`;
-      const passwordResetUrl = `https://geodyssai.com/admin?action=reset_password`;
-
-      const mailBody = `
-==================================================
-🚨 geodyssAI 管理画面へのログインが検出されました
-==================================================
-
-【ログイン詳細情報】
-・ログイン日時: ${loginTime}
-・対象ユーザー: ${userEmail}
-・ユーザーエージェント: ${userAgent}
-・アクセス URL: https://geodyssai.com/admin
-
---------------------------------------------------
-⚠️ 【身に覚えのない不審なログインの場合のアクション】
---------------------------------------------------
-万が一、ご自身でのログインでない場合は、以下のいずれかのアクションを実行してください：
-
-1. パスワードの緊急リセット（攻撃者のアクセスを遮断）:
-   👉 ${passwordResetUrl}
-
-2. 全端末からの強制ログアウト:
-   👉 ${emergencyActionUrl}
-
---
-geodyssAI Admin Security System
-`;
-
-      // 🧠 Firebase Trigger Email Extension 用の mail ドキュメント追加 (確定同期)
-      try {
-        const mailDocRef = await addDoc(collection(db, 'mail'), {
-          to: ['baotianyoutai1@gmail.com'],
-          message: {
-            subject: `🚨 geodyssAI 管理画面にログインがありました [${loginTime}]`,
-            text: mailBody,
-            html: `
-              <div style="font-family: sans-serif; background: #0f172a; color: #f8fafc; padding: 24px; border-radius: 16px;">
-                <h2 style="color: #38bdf8;">🚨 geodyssAI 管理画面 ログイン検出</h2>
-                <p>geodyssAI 管理画面 (Admin CMS) へのログインが成功いたしました。</p>
-                <hr style="border-color: #334155;" />
-                <h3>【ログイン詳細情報】</h3>
-                <ul>
-                  <li><b>ログイン日時:</b> ${loginTime}</li>
-                  <li><b>対象ユーザー:</b> ${userEmail}</li>
-                  <li><b>ユーザーエージェント:</b> ${userAgent}</li>
-                </ul>
-                <hr style="border-color: #334155;" />
-                <h4 style="color: #fbbf24;">⚠️ 身に覚えのない不審なログインの場合</h4>
-                <p><a href="${passwordResetUrl}" style="color: #38bdf8; text-decoration: underline;">👉 パスワードを緊急リセットする</a></p>
-              </div>
-            `
-          },
-          createdAt: serverTimestamp()
-        });
-        console.log('✅ Firebase Trigger Email document written with ID:', mailDocRef.id);
-      } catch (mailErr) {
-        console.error('Firestore mail document write error:', mailErr);
+      if (userCred.user && userCred.user.email) {
+        await sendSecurityNotification(userCred.user.email);
       }
-
     } catch (err: any) {
       console.error('SignIn failed:', err);
       if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
@@ -284,6 +289,18 @@ geodyssAI Admin Security System
         </div>
 
         <div className="flex items-center gap-3">
+          <button
+            onClick={async () => {
+              if (user && user.email) {
+                const res = await sendSecurityNotification(user.email);
+                if (res) alert('📧 セキュリティ通知メールの送信リクエストを発行しました！受信トレイをご確認ください。');
+                else alert('❌ メールの送信リクエストでエラーが発生しました。');
+              }
+            }}
+            className="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-xs rounded-lg transition-all cursor-pointer font-bold"
+          >
+            📧 セキュリティ通知テスト送信
+          </button>
           <a href="/" className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 rounded-lg transition-colors">
             ← メインサイトへ
           </a>
