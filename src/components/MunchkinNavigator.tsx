@@ -101,7 +101,7 @@ export const MunchkinNavigator: React.FC<MunchkinNavigatorProps> = ({ articles =
         const contextText = targetList.map((art, idx) => {
           const decodedSlug = decodeURIComponent(art.slug);
           const isPublished = activeSlugs.has(decodedSlug) && art.status !== 'draft';
-          return `【記事${idx + 1}】\nタイトル: "${art.title}"\nカテゴリ: ${art.category}\nステータス: ${isPublished ? 'PUBLISHED (公開中)' : 'DRAFT (下書き準備中)'}\n概要: ${art.excerpt || '技術解説記事'}`;
+          return `【記事${idx + 1}】\nタイトル: "${art.title}"\nカテゴリ: ${art.category}\nステータス: ${isPublished ? 'PUBLISHED (公開中・閲覧可能)' : 'DRAFT (下書き準備中)'}\n概要: ${art.excerpt || '技術解説記事'}`;
         }).join("\n\n");
 
         const sys = `あなたはブログ「geodyssAI」の案内ガイド「マンチカン航海士」だニャ。
@@ -112,34 +112,30 @@ export const MunchkinNavigator: React.FC<MunchkinNavigatorProps> = ({ articles =
 
         const CANDIDATE_MODELS = ['gemini-2.5-flash-lite', 'gemini-3.5-flash-lite', 'gemini-2.5-flash'];
         
-        // 4秒タイムアウト約束
-        const aiPromise = (async () => {
-          for (const modelName of CANDIDATE_MODELS) {
-            try {
-              const model = getGenerativeModel(ai, { model: modelName });
-              const result = await model.generateContent(prompt);
-              const response = await result.response;
-              if (response && response.text) return response.text();
-            } catch (mErr) {
-              console.warn(`Model ${modelName} call warning:`, mErr);
+        // Gemini API が完了するまでじっくり待機
+        for (const modelName of CANDIDATE_MODELS) {
+          try {
+            const model = getGenerativeModel(ai, { model: modelName });
+            const result = await model.generateContent(prompt);
+            const response = await result.response;
+            if (response && response.text) {
+              aiText = response.text();
+              break;
             }
+          } catch (mErr) {
+            console.warn(`Model ${modelName} call warning:`, mErr);
           }
-          return '';
-        })();
-
-        const timeoutPromise = new Promise<string>((resolve) => setTimeout(() => resolve(''), 4500));
-        aiText = await Promise.race([aiPromise, timeoutPromise]);
-
+        }
       } catch (aiErr) {
-        console.warn('Firebase AI Logic call skipped, falling back to local navigator:', aiErr);
+        console.warn('Firebase AI Logic call error:', aiErr);
       }
 
-      // 4. AI 応答がある場合は AI 応答 ＋ 記事カード、失敗・遅延時はローカル高速ナビゲーション返答を即座に出力！
+      // Gemini AI からの回答が得られた場合は AI の回答 ＋ 確定動作記事カード、未取得時のみフォールバック案内
       let finalText = '';
       if (aiText) {
         finalText = aiText + (aiText.includes('/articles/') ? '' : articleCardBlock);
       } else {
-        finalText = `ニャー！「${textToSend}」に関する知の星海探索結果だニャ 🐾\n\n探したいテーマにぴったりの記事を航海日誌から見つけたニャ！` + articleCardBlock;
+        finalText = `ニャー！「${textToSend}」に関する知の星海探索結果だニャ 🐾\n\n航海日誌からおすすめの記事を見つけたニャ！` + articleCardBlock;
       }
 
       const botMsg: Message = {
