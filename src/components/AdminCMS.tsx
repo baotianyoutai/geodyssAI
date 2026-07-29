@@ -48,12 +48,11 @@ export const AdminCMS: React.FC = () => {
     try {
       await signInWithEmailAndPassword(auth, emailInput.trim(), passwordInput);
     } catch (err: any) {
-      console.warn('SignIn failed, attempting automatic admin account creation:', err);
-      // アカウントが存在しない場合は自動作成を試行
-      try {
-        await createUserWithEmailAndPassword(auth, emailInput.trim(), passwordInput);
-      } catch (createErr: any) {
-        setAuthError(createErr.message || 'ログイン/認証に失敗しました');
+      console.error('SignIn failed:', err);
+      if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
+        setAuthError('メールアドレスまたはパスワードが正しくありません。');
+      } else {
+        setAuthError(err.message || 'ログイン認証に失敗しました。');
       }
     }
   };
@@ -171,7 +170,7 @@ export const AdminCMS: React.FC = () => {
               <input
                 type="email"
                 required
-                placeholder="baotianyoutai1@gmail.com"
+                placeholder="Enter your email address"
                 value={emailInput}
                 onChange={e => setEmailInput(e.target.value)}
                 className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-600 focus:border-sky-500 focus:outline-none"
@@ -183,7 +182,7 @@ export const AdminCMS: React.FC = () => {
               <input
                 type="password"
                 required
-                placeholder="••••••••"
+                placeholder="Enter your password"
                 value={passwordInput}
                 onChange={e => setPasswordInput(e.target.value)}
                 className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-600 focus:border-sky-500 focus:outline-none"
