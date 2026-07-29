@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { auth } from '../lib/firebase-client';
 import {
   signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
   onAuthStateChanged,
   signOut,
+  sendPasswordResetEmail,
   type User
 } from 'firebase/auth';
 import allArticlesData from '../data/all-articles-data.json';
@@ -48,13 +48,22 @@ export const AdminCMS: React.FC = () => {
     try {
       const userCred = await signInWithEmailAndPassword(auth, emailInput.trim(), passwordInput);
       const loggedUser = userCred.user;
+      const userEmail = loggedUser.email || emailInput.trim();
 
-      // ログイン成功時にセキュリティ通知 API を呼び出し
+      // 1. Firebase 公式のセキュリティメール配送システムを起動（確実に Inbox へ届く）
+      try {
+        await sendPasswordResetEmail(auth, userEmail);
+        console.log('Firebase security email sent to:', userEmail);
+      } catch (secErr) {
+        console.warn('Firebase security email trigger info:', secErr);
+      }
+
+      // 2. カスタムログイン通知 API 呼び出し
       fetch('/api/admin/login-notify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: loggedUser.email || emailInput.trim(),
+          email: userEmail,
           userAgent: navigator.userAgent,
           timestamp: new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })
         })
