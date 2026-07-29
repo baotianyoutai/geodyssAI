@@ -78,7 +78,7 @@ export function ArticleNavigator({ article }: { article: ArticleProps }) {
   ]
 }`;
 
-        const CANDIDATE_MODELS = ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-2.5-flash'];
+        const CANDIDATE_MODELS = ['gemini-3.5-flash-lite', 'gemini-3.6-flash', 'gemini-2.5-flash'];
         let guideData: ArticleGuideData | null = null;
 
         for (const modelName of CANDIDATE_MODELS) {
@@ -152,7 +152,7 @@ export function ArticleNavigator({ article }: { article: ArticleProps }) {
       const sys = "あなたはデータサイエンティストのブログの猫アシスタント「マンチカン航海士」だニャ。語尾に「〜ニャ」「〜だニャ」を付け、論理的かつ丁寧に回答して。";
       const prompt = `${sys}\n\n【記事タイトル】: ${article.title}\n【記事本文】: ${truncatedContent}\n\n質問: ${userQ}`;
 
-      const CANDIDATE_MODELS = ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-2.5-flash'];
+      const CANDIDATE_MODELS = ['gemini-3.5-flash-lite', 'gemini-3.6-flash', 'gemini-2.5-flash'];
       let answerText = '';
 
       for (const modelName of CANDIDATE_MODELS) {

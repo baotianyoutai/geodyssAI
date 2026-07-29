@@ -90,8 +90,8 @@ export const MunchkinNavigator: React.FC<MunchkinNavigatorProps> = ({ articles =
 
       const prompt = `${sys}\n\n【ブログ内公開記事リスト】\n${contextText}\n\n【ユーザーの入力】\n${textToSend}`;
 
-      // 公式サポートアクティブモデルリスト
-      const CANDIDATE_MODELS = ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-2.5-flash'];
+      // 高速・最安・軽量な gemini-3.5-flash-lite を主軸モデルとして利用
+      const CANDIDATE_MODELS = ['gemini-3.5-flash-lite', 'gemini-3.6-flash', 'gemini-2.5-flash'];
       let aiText = '';
       let lastErr = null;
 
