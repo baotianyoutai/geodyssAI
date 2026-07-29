@@ -1,0 +1,163 @@
+[
+  {
+    "slug": "test",
+    "title": "Test",
+    "excerpt": "あ っ H2 H2の下や伝えにくい部分に画像を挿入する H３ H４ 白抜きボックス 案内ボックス H2 ダンサー 解説または気持ちを代弁するわ ボックスは多くて２、３種類 あ い 転載にならないように",
+    "category": "Uncategorized",
+    "status": "draft"
+  },
+  {
+    "slug": "agent-development-kit-(adk)-とは",
+    "title": "Agent Development Kit (ADK) とは",
+    "excerpt": "Agent Development Kit (ADK) とは Agent Development Kit (ADK) とは、AIエージェントの開発とデプロイのための柔軟でモジュール化されたフレームワークです。ADKは、一般的なLLM（大規模言語モデル）やオープンソースの生成AIツールと連携して使用でき、GoogleのエコシステムとGeminiモデルとの緊密な",
+    "category": "GenAI",
+    "status": "draft"
+  },
+  {
+    "slug": "google主催「5日間集中-gen-ai-集中コース」を徹底解説！～generative-aiの基礎から応用まで、自宅でじっくり学ぼう！～",
+    "title": "Google主催「5日間集中 Gen AI 集中コース」を徹底解説！～Generative AIの基礎から応用まで、自宅でじっくり学ぼう！～",
+    "excerpt": "YOU 「Generative AIって最近よく聞くけど、一体何から学べばいいの？」 そんな疑問をお持ちのあなたに朗報です！ Googleが2025年3月31日から4月4日にかけて開催した、大好評のライブイベント「5-Day Gen AI Intensive Course」が、なんと自己学習形式で無料公開されました！ Generative AI（生成AI）の",
+    "category": "Uncategorized",
+    "status": "draft"
+  },
+  {
+    "slug": "ai-dojo-day1",
+    "title": "AI-Dojo",
+    "excerpt": "あああ H2 midashi fff XX block ssssss [XXX](ddd)より引用 add one category",
+    "category": "Uncategorized",
+    "status": "draft"
+  },
+  {
+    "slug": "antigravity-で仕様駆動開発を始める",
+    "title": "Antigravity で仕様駆動開発を始める",
+    "excerpt": "このラボの目的 このハンズオンラボでは、Antigravity を使用して&nbsp;Google Antigravity&nbsp;を使用してアプリケーションを作成し、Google Cloud にデプロイする方法を学びます。このラボでは、**仕様駆動開発**のコンセプトについても説明します。 学習内容 Google Antigravity&nbsp;の基本",
+    "category": "Uncategorized",
+    "status": "draft"
+  },
+  {
+    "slug": "firebase-でアプリにエージェント型-ai-機能を構築する",
+    "title": "Firebase でアプリにエージェント型 AI 機能を構築する",
+    "excerpt": "Firebase のAI Logicを用いて、ユーザー、App側にAI機能を簡単に組み込むことが可能なことを体験することが目的のセッションなので、深いコードの理解は目的としていません。 Agentic AI や AI 支援ツールを用いたアプリ構築については広く語られていますが、もう一つの側面、つまり『ユーザーのための AI 機能』をアプリに実装することについ",
+    "category": "Uncategorized",
+    "status": "draft"
+  },
+  {
+    "slug": "gemini-cli-と-go-を使用して-mcp-サーバーを構築してみよう",
+    "title": "Gemini CLI と Go を使用して MCP サーバーを構築してみよう",
+    "excerpt": "本ハンズオンセッションでは、このセッションでは、Gemini CLI を使って Model Context Protocol（MCP）サーバーを構築してデプロイし、Gemini CLI の機能を拡張する方法を学びます。 必要スキルレベル：L200（中級） 参加登録 登録リンク：https://gdg.community.dev/e/mrsdcf/ 講師 Ta",
+    "category": "Uncategorized",
+    "status": "draft"
+  },
+  {
+    "slug": "sec3_the-vibe-shift---gemini時代における「ものづくり」",
+    "title": "Sec3_The Vibe Shift - Gemini時代における「ものづくり」",
+    "excerpt": "本ハンズオンセッションでは、 Google AI Studio: DeepMindの最新のモデルを試す方法を学びます。 Jules: バックグラウンドでタスクを実行させる設定を学び、クリエイティブな作業に集中できる環境を構築します。 必要スキルレベル：L100（入門） 参加登録 登録リンク：https://gdg.community.dev/e/mjjksx",
+    "category": "Uncategorized",
+    "status": "draft"
+  },
+  {
+    "slug": "adk-gemini-live-api-toolkitで作るリアルタイム音声aiエージェント",
+    "title": "ADK Gemini Live API Toolkitで作るリアルタイム音声AIエージェント",
+    "excerpt": "Gemini Live APIとADK（Agent Development Kit）を用い、双方向（Bidirectional）ストリーミングに対応した音声AIエージェントを構築するワークショップです。WebSocket通信を基盤に、ユーザーの音声・画像入力へのリアルタイム応答や、自然な割り込み制御、Google検索ツールの統合などを実装します。全8ステップ",
+    "category": "Uncategorized",
+    "status": "draft"
+  },
+  {
+    "slug": "フェルミ推定",
+    "title": "フェルミ推定",
+    "excerpt": "フェルミ推定を学ぶ意義 P: 地頭を鍛えられる R E P 本書を通して、 6 + 1 パターン15個のコア問題で地頭を鍛えます。(Ch2) +15問の練習問題(Ch3) 選定された100問の良問(Ch4) フェルミ推定の解き方 以下の5ステップで論理的に解いていきます。 前提確認 アプローチ設定 モデル化 計算実行 現実性検証 機械学習・深層学習での解き方",
+    "category": "Uncategorized",
+    "status": "draft"
+  },
+  {
+    "slug": "hello-world",
+    "title": "Hello world!",
+    "excerpt": "Welcome to WordPress. This is your first post. Edit or delete it, then start writing!",
+    "category": "Uncategorized",
+    "status": "publish"
+  },
+  {
+    "slug": "gemini-api-python-sdk%e3%81%a8chromadb%e3%82%92%e4%bd%bf%e7%94%a8%e3%81%97%e3%81%a6rag-system%e3%82%92%e9%96%8b%e7%99%ba%e3%81%99%e3%82%8b%e3%80%90%e3%83%8f%e3%83%b3%e3%82%ba%e3%82%aa%e3%83%b3",
+    "title": "Gemini API Python SDKとChromaDBを使用してRAG systemを開発する【ハンズオン】",
+    "excerpt": "Day 2 - Document Q&amp;A with RAG using Chroma（5-Day Gen AI Intensive Course with Google） をGCPのVertexAI上で利用できるように改変したものになります。 コード全体 LLMの大きな２つの制限 トレーニングを受けた情報しか「知らない」こと 入力コンテキスト ウィン",
+    "category": "GenAI",
+    "status": "publish"
+  },
+  {
+    "slug": "gemini-apis-embedding-endpoint%e3%82%92%e5%88%a9%e7%94%a8%e3%81%97%e3%81%a6%e3%80%81%e9%a1%9e%e4%bc%bc%e5%ba%a6%e3%82%92%e6%8e%a2%e7%b4%a2%e3%81%99%e3%82%8b%e3%80%90%e3%83%8f%e3%83%b3%e3%82%ba",
+    "title": "Gemini API's embedding endpointを利用して、類似度を探索する【ハンズオン】",
+    "excerpt": "text-embedding-004(genai)で作成したembeddingsの類似度(内積により算出)を計算し、可視化(sns.heatmap)できるようになる SDKのセットアップ !pip install -qU google-genai from google import genai from google.genai import types ",
+    "category": "GenAI",
+    "status": "publish"
+  },
+  {
+    "slug": "ケース面接",
+    "title": "ケース面接",
+    "excerpt": "",
+    "category": "Uncategorized",
+    "status": "draft"
+  },
+  {
+    "slug": "devops-x-ai-agent-hackathon-2026-%e3%81%ab%e5%8f%82%e5%8a%a0%e3%81%97%e3%81%be%e3%81%99%e3%80%82",
+    "title": "DevOPS x AI Agent Hackathon 2026 に参加します。",
+    "excerpt": "AIエージェントをつくり、まわし、とどけよう DevOPS x AI Agent Hackathon 2026 Situation 生成AIの活用は、チャットで「答える」段階から、「自律的に実行する」段階に急速に変化していいます。皆さんも業務の中でその変化を体感しているのではないでしょうか。 上記のトレンドの中、グーグル・クラウド・ジャパン合同会社協賛のもと",
+    "category": "Uncategorized",
+    "status": "draft"
+  },
+  {
+    "slug": "cluade-beginer-to-master-:-claude-をマスターしよう",
+    "title": "Cluade beginer to master : Claude をマスターしよう",
+    "excerpt": "本記事で学べること 「Claude とは何か」、「その設計の指針となる原則」について説明できる。 「Clauade のケイパビリティ」や「チャットボットとの差異」を説明できる。 「Claude にアクセスできる方法(Web, Desktop, Mobile)」を特定することができる。 Claude 101 とは？ リンクはこちら Claude 101 は「日",
+    "category": "Uncategorized",
+    "status": "draft"
+  },
+  {
+    "slug": "ゼロから作るdeep-learning-6-~llm編",
+    "title": "ゼロから作るDeep Learning 6 ~LLM編",
+    "excerpt": "はじめに 本書では、スクラッチ開発していきます。期待できることとして、「ChatGPTのようなLLMの魔法のような能力を仕組みから実装することで解き明かす体験ができます。CodeBotからStoryBot、WebBotの三段階のチャットボット開発を通して、具体的には以下に細分化された技術要素を学びます。 トークナイザー Transformer 事前学習 事後",
+    "category": "Uncategorized",
+    "status": "draft"
+  },
+  {
+    "slug": "コンサル1年目が学ぶこと　大石-哲之",
+    "title": "コンサル1年目が学ぶこと　大石 哲之",
+    "excerpt": "TL;DR 職業、業種を問わず20年と長期的に役立つ技能を説明する書籍。 大枠 話す技術：主にコミュニケーション面 思考術 デスクワーク ビジネスマインド 1章：話す技術 結論から話す PREP 法 結論から手短に話す話法 Point (結論)、Reason (理由)、Example (具体例)、再度の Point (結論)、の順で話す 他方、一番伝わる説明",
+    "category": "Uncategorized",
+    "status": "draft"
+  },
+  {
+    "slug": "logical-thinking",
+    "title": "Logical Thinking",
+    "excerpt": "パフォーマンスを上げるロジカル・シンキング 標準学習時間：10.00 時間&nbsp; 標準受講期間：6 ヶ月&nbsp; 受講期限：2026-12-17 まで コース概要&nbsp; 本コースは、はじめて管理職になった方やその候補となる方を対象にしたコースです。本コースでは、はじめにロジカル・シンキングに取り組むための心構えを学習します。つづいて、ロジカル",
+    "category": "Uncategorized",
+    "status": "draft"
+  },
+  {
+    "slug": "powerpoint",
+    "title": "PowerPoint",
+    "excerpt": "PowerPoint 2019-2021 Learning（入門から活用まで）&nbsp; 標準学習時間：14.00 時間 標準受講期間：6 ヶ月 受講期限：2026-12-18 まで コース概要&nbsp; 本コースは、Microsoft Office 初心者に向けた、PowerPoint の入門から活用方法までを学習するコースです。Microsoft P",
+    "category": "Uncategorized",
+    "status": "draft"
+  },
+  {
+    "slug": "5-day-ai-agents:-intensive-vibe-coding-course-with-google",
+    "title": "5-Day AI Agents: Intensive Vibe Coding Course With Google",
+    "excerpt": "Overview day1 Summary Day0 ; Brief summary of how the course works &amp; How to setup In this section, we includes a brief summary of how the course works and detailed instructions",
+    "category": "Uncategorized",
+    "status": "draft"
+  },
+  {
+    "slug": "getting-started-with-google-antigravity",
+    "title": "Getting Started with Google Antigravity",
+    "excerpt": "- google antigravity を使ってみる ## 1. Introduction この Codelab では、エージェントの時代に開発を支援するために設計されたエージェント型開発プラットフォームである&nbsp;Google Antigravity&nbsp;について学びます。Antigravity 2.0 は AI エージェントの中央コマンド ",
+    "category": "Uncategorized",
+    "status": "draft"
+  },
+  {
+    "slug": "deploy-from-ai-studio-to-cloud-run",
+    "title": "Deploy from AI Studio to Cloud Run",
+    "excerpt": "Reference Deploy from AI Studio to Cloud Run Overview Where does building with AI start today? For most of us, it starts with a simple question: Can I quickly prototype a solution ",
+    "category": "Uncategorized",
+    "status": "draft"
+  }
+]

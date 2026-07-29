@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { app } from '../lib/firebase-client';
 import { getAI, getGenerativeModel } from 'firebase/ai';
+import allArticlesData from '../data/all-articles-data.json';
 
 interface Message {
   id: string;
@@ -61,15 +62,20 @@ export const MunchkinNavigator: React.FC<MunchkinNavigatorProps> = ({ articles =
       // 1. 公式 Firebase AI Logic SDK
       const ai = getAI(app);
 
-      // 2. 公開記事および DRAFT（下書き）記事を含む全記事からのキーワード検索
-      const matched = articles.filter(art => {
+      // 2. Props記事および静的WordPress抽出データの全23+記事を統合
+      const fullCatalog = [...articles, ...allArticlesData];
+      const uniqueCatalog = Array.from(new Map(fullCatalog.map(item => [item.slug, item])).values());
+
+      // 入力キーワードに対するマッチング（Antigravity, ADK, RAG, Firebase, etc.）
+      const matched = uniqueCatalog.filter(art => {
         const title = (art.title || '').toLowerCase();
         const excerpt = (art.excerpt || '').toLowerCase();
         const category = (art.category || '').toLowerCase();
-        return title.includes(q) || excerpt.includes(q) || category.includes(q);
+        const slug = (art.slug || '').toLowerCase();
+        return title.includes(q) || excerpt.includes(q) || category.includes(q) || slug.includes(q);
       });
 
-      const targetList = matched.length > 0 ? matched.slice(0, 6) : articles.slice(0, 6);
+      const targetList = matched.length > 0 ? matched.slice(0, 6) : uniqueCatalog.slice(0, 6);
       const contextText = targetList.map((art, idx) => {
         const isDraft = art.status === 'draft';
         const statusLabel = isDraft ? ' [✦ DRAFT/下書き記事]' : ' [公開記事]';
