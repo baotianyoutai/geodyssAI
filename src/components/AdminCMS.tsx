@@ -50,15 +50,7 @@ export const AdminCMS: React.FC = () => {
       const loggedUser = userCred.user;
       const userEmail = loggedUser.email || emailInput.trim();
 
-      // 1. Firebase 公式のセキュリティメール配送システムを起動（確実に Inbox へ届く）
-      try {
-        await sendPasswordResetEmail(auth, userEmail);
-        console.log('Firebase security email sent to:', userEmail);
-      } catch (secErr) {
-        console.warn('Firebase security email trigger info:', secErr);
-      }
-
-      // 2. カスタムログイン通知 API 呼び出し
+      // 日本語のログイン通知 API を非同期実行
       fetch('/api/admin/login-notify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
