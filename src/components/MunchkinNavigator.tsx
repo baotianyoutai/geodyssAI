@@ -1,7 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { app } from '../lib/firebase-client';
 import { getAI, getGenerativeModel } from 'firebase/ai';
 import allArticlesData from '../data/all-articles-data.json';
+import { rankArticlesByRelevance } from '../lib/vector-search';
 
 interface Message {
   id: string;
@@ -64,7 +65,7 @@ export const MunchkinNavigator: React.FC<MunchkinNavigatorProps> = ({ articles =
       // 1. 公式 Firebase AI Logic SDK
       const ai = getAI(app);
 
-      // 2. Props記事および静的抽出データを統合
+      // 2. Props記事および静的抽出データの全23+記事（ベクトルデータ付き）を統合
       const propList = Array.isArray(articles) ? articles : [];
       const jsonList = Array.isArray(allArticlesData) ? allArticlesData : [];
       const fullCatalog = [...propList, ...jsonList];
@@ -73,20 +74,8 @@ export const MunchkinNavigator: React.FC<MunchkinNavigatorProps> = ({ articles =
       // 既存の公開済み実在ルーティング記事の slug 集合
       const activeSlugs = new Set(propList.map(a => decodeURIComponent(a.slug)));
 
-      // 入力キーワードに対するマッチング（Antigravity, ADK, RAG, Gemini, Firebase, etc.）
-      const matched = uniqueCatalog.filter(art => {
-        const title = (art.title || '').toLowerCase();
-        const excerpt = (art.excerpt || '').toLowerCase();
-        const category = (art.category || '').toLowerCase();
-        const slug = (art.slug || '').toLowerCase();
-        return title.includes(q) || excerpt.includes(q) || category.includes(q) || slug.includes(q);
-      });
-
-      // マッチ記事がある場合はそれを使い、無い場合は「公開中の主要おすすめ記事」を優先抽出
-      const publishedOnly = uniqueCatalog.filter(a => a.status === 'publish' || a.status === 'published' || activeSlugs.has(decodeURIComponent(a.slug)));
-      const targetList = matched.length > 0
-        ? matched.slice(0, 6)
-        : (publishedOnly.length > 0 ? publishedOnly.slice(0, 5) : uniqueCatalog.slice(0, 5));
+      // 🧠 text-embedding-004 コサイン類似度 ＋ ハイブリッド RAG ランク付け
+      const targetList = await rankArticlesByRelevance(textToSend, uniqueCatalog as any, 5);
 
       const contextText = targetList.map((art, idx) => {
         const decodedSlug = decodeURIComponent(art.slug);
