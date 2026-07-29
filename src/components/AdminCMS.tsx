@@ -82,15 +82,15 @@ export const AdminCMS: React.FC = () => {
 geodyssAI Admin Security System
 `;
 
-      // 🧠 Firebase Trigger Email Extension 用の mail ドキュメント追加
+      // 🧠 Firebase Trigger Email Extension 用の mail ドキュメント追加 (確定同期)
       try {
-        await addDoc(collection(db, 'mail'), {
+        const mailDocRef = await addDoc(collection(db, 'mail'), {
           to: ['baotianyoutai1@gmail.com'],
           message: {
             subject: `🚨 geodyssAI 管理画面にログインがありました [${loginTime}]`,
             text: mailBody,
             html: `
-              <div style="font-family: sans-serif; background: #0f172a; color: #f8fafc; padding: 24px; borderRadius: 16px;">
+              <div style="font-family: sans-serif; background: #0f172a; color: #f8fafc; padding: 24px; border-radius: 16px;">
                 <h2 style="color: #38bdf8;">🚨 geodyssAI 管理画面 ログイン検出</h2>
                 <p>geodyssAI 管理画面 (Admin CMS) へのログインが成功いたしました。</p>
                 <hr style="border-color: #334155;" />
@@ -108,9 +108,9 @@ geodyssAI Admin Security System
           },
           createdAt: serverTimestamp()
         });
-        console.log('Firebase Trigger Email document successfully written to Firestore!');
+        console.log('✅ Firebase Trigger Email document written with ID:', mailDocRef.id);
       } catch (mailErr) {
-        console.warn('Firestore mail document write info:', mailErr);
+        console.error('Firestore mail document write error:', mailErr);
       }
 
     } catch (err: any) {
