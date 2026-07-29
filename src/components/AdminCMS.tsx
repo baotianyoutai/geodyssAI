@@ -46,7 +46,20 @@ export const AdminCMS: React.FC = () => {
     if (!emailInput || !passwordInput) return;
 
     try {
-      await signInWithEmailAndPassword(auth, emailInput.trim(), passwordInput);
+      const userCred = await signInWithEmailAndPassword(auth, emailInput.trim(), passwordInput);
+      const loggedUser = userCred.user;
+
+      // ログイン成功時にセキュリティ通知 API を呼び出し
+      fetch('/api/admin/login-notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: loggedUser.email || emailInput.trim(),
+          userAgent: navigator.userAgent,
+          timestamp: new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })
+        })
+      }).catch(nErr => console.warn('Login notification API trigger warning:', nErr));
+
     } catch (err: any) {
       console.error('SignIn failed:', err);
       if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
