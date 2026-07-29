@@ -76,40 +76,78 @@ export function ArticleNavigator({ article }: { article: ArticleProps }) {
   ]
 }`;
 
-        const CANDIDATE_MODELS = ['gemini-flash-latest', 'gemini-2.5-flash-lite', 'gemini-2.0-flash'];
         let guideData: ArticleGuideData | null = null;
 
-        for (const modelName of CANDIDATE_MODELS) {
+        // 1. 主経路: XML実機実績コードである Firebase AI Logic SDK (window.myAiApp)
+        if (typeof window !== 'undefined' && (window as any).myAiApp) {
           try {
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-            const res = await fetch(apiUrl, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                contents: [{ parts: [{ text: prompt }] }]
-              })
-            });
-
-            if (res.ok) {
-              const data = await res.json();
-              const textRes = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-              const cleaned = textRes.replace(/```json|```/g, '').trim();
-              const json = JSON.parse(cleaned);
-
-              if (json.summary && Array.isArray(json.nextSteps)) {
-                guideData = {
-                  summary: json.summary,
-                  nextSteps: json.nextSteps,
-                  webLinks: [
-                    { title: "Firebase Console", url: "https://console.firebase.google.com", description: "プロジェクト設定・Firestore・Authの公式管理コンソール" },
-                    { title: "Google AI Studio", url: "https://aistudio.google.com", description: "Gemini API キーの発行・プロンプト試行公式環境" }
-                  ]
-                };
-                break;
+            const { ai, getGenerativeModel } = (window as any).myAiApp;
+            const modelNames = ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-1.5-flash"];
+            for (const mName of modelNames) {
+              try {
+                const model = getGenerativeModel(ai, { model: mName });
+                const result = await model.generateContent(prompt);
+                const response = await result.response;
+                if (response && response.text) {
+                  const textRes = response.text();
+                  const cleaned = textRes.replace(/```json|```/g, '').trim();
+                  const json = JSON.parse(cleaned);
+                  if (json.summary && Array.isArray(json.nextSteps)) {
+                    guideData = {
+                      summary: json.summary,
+                      nextSteps: json.nextSteps,
+                      webLinks: [
+                        { title: "Firebase Console", url: "https://console.firebase.google.com", description: "プロジェクト設定・Firestore・Authの公式管理コンソール" },
+                        { title: "Google AI Studio", url: "https://aistudio.google.com", description: "Gemini API キーの発行・プロンプト試行公式環境" }
+                      ]
+                    };
+                    break;
+                  }
+                }
+              } catch (errM) {
+                console.warn(`Firebase AI Logic guide model ${mName} attempt failed:`, errM);
               }
             }
-          } catch (mErr) {
-            console.warn(`Model ${modelName} guide fetch failed:`, mErr);
+          } catch (eSdk) {
+            console.warn('Firebase AI Logic SDK guide invocation warning:', eSdk);
+          }
+        }
+
+        // 2. 副経路: REST API
+        if (!guideData) {
+          const CANDIDATE_MODELS = ['gemini-flash-latest', 'gemini-2.5-flash-lite', 'gemini-2.0-flash'];
+          for (const modelName of CANDIDATE_MODELS) {
+            try {
+              const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+              const res = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  contents: [{ parts: [{ text: prompt }] }]
+                })
+              });
+
+              if (res.ok) {
+                const data = await res.json();
+                const textRes = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                const cleaned = textRes.replace(/```json|```/g, '').trim();
+                const json = JSON.parse(cleaned);
+
+                if (json.summary && Array.isArray(json.nextSteps)) {
+                  guideData = {
+                    summary: json.summary,
+                    nextSteps: json.nextSteps,
+                    webLinks: [
+                      { title: "Firebase Console", url: "https://console.firebase.google.com", description: "プロジェクト設定・Firestore・Authの公式管理コンソール" },
+                      { title: "Google AI Studio", url: "https://aistudio.google.com", description: "Gemini API キーの発行・プロンプト試行公式環境" }
+                    ]
+                  };
+                  break;
+                }
+              }
+            } catch (mErr) {
+              console.warn(`REST Model ${modelName} guide fetch failed:`, mErr);
+            }
           }
         }
 
@@ -156,46 +194,89 @@ export function ArticleNavigator({ article }: { article: ArticleProps }) {
       const sys = "あなたはデータサイエンティストのブログの猫アシスタント「マンチカン航海士」だニャ。語尾に「〜ニャ」「〜だニャ」を付け、論理的かつ丁寧に回答して。";
       const prompt = `${sys}\n\n【記事タイトル】: ${article.title}\n【記事本文】: ${truncatedContent}\n\n質問: ${userQ}`;
 
-      const CANDIDATE_MODELS = ['gemini-flash-latest', 'gemini-2.5-flash-lite', 'gemini-2.0-flash'];
       let answerText = '';
 
-      for (const modelName of CANDIDATE_MODELS) {
+      // 1. 主経路: XML実機実績コードである Firebase AI Logic SDK (window.myAiApp)
+      if (typeof window !== 'undefined' && (window as any).myAiApp) {
         try {
-          const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-          const res = await fetch(apiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: prompt }] }],
-              tools: [{ googleSearch: {} }]
-            })
-          });
-
-          if (res.ok) {
-            const data = await res.json();
-            const candidate = data?.candidates?.[0];
-            const partText = candidate?.content?.parts?.[0]?.text;
-
-            if (partText) {
-              answerText = partText;
-              const meta = candidate?.groundingMetadata;
-              if (meta && Array.isArray(meta.groundingChunks)) {
-                const links: string[] = [];
-                meta.groundingChunks.forEach((chunk: any) => {
-                  if (chunk.web?.uri) {
-                    const linkTitle = chunk.web.title || "参考技術記事";
-                    links.push(`- [${linkTitle}](${chunk.web.uri})`);
+          const { ai, getGenerativeModel } = (window as any).myAiApp;
+          const modelNames = ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-1.5-flash"];
+          for (const mName of modelNames) {
+            try {
+              const model = getGenerativeModel(ai, {
+                model: mName,
+                tools: [{ googleSearch: {} }]
+              });
+              const result = await model.generateContent(prompt);
+              const response = await result.response;
+              if (response && response.text) {
+                answerText = response.text();
+                const candidate = response.candidates?.[0];
+                const meta = candidate?.groundingMetadata;
+                if (meta && Array.isArray(meta.groundingChunks)) {
+                  const links: string[] = [];
+                  meta.groundingChunks.forEach((chunk: any) => {
+                    if (chunk.web?.uri) {
+                      const linkTitle = chunk.web.title || "参考技術記事";
+                      links.push(`- [${linkTitle}](${chunk.web.uri})`);
+                    }
+                  });
+                  if (links.length > 0) {
+                    answerText += `\n\n👉 **参考リンクだニャ** 🐾\n` + links.join('\n');
                   }
-                });
-                if (links.length > 0) {
-                  answerText += `\n\n👉 **参考リンクだニャ** 🐾\n` + links.join('\n');
                 }
+                break;
               }
-              break;
+            } catch (errM) {
+              console.warn(`Firebase AI Logic Q&A model ${mName} attempt failed:`, errM);
             }
           }
-        } catch (mErr) {
-          console.warn(`Model ${modelName} Q&A fetch failed:`, mErr);
+        } catch (eSdk) {
+          console.warn('Firebase AI Logic SDK Q&A invocation warning:', eSdk);
+        }
+      }
+
+      // 2. 副経路: REST API
+      if (!answerText) {
+        const CANDIDATE_MODELS = ['gemini-flash-latest', 'gemini-2.5-flash-lite', 'gemini-2.0-flash'];
+        for (const modelName of CANDIDATE_MODELS) {
+          try {
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+            const res = await fetch(apiUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }],
+                tools: [{ googleSearch: {} }]
+              })
+            });
+
+            if (res.ok) {
+              const data = await res.json();
+              const candidate = data?.candidates?.[0];
+              const partText = candidate?.content?.parts?.[0]?.text;
+
+              if (partText) {
+                answerText = partText;
+                const meta = candidate?.groundingMetadata;
+                if (meta && Array.isArray(meta.groundingChunks)) {
+                  const links: string[] = [];
+                  meta.groundingChunks.forEach((chunk: any) => {
+                    if (chunk.web?.uri) {
+                      const linkTitle = chunk.web.title || "参考技術記事";
+                      links.push(`- [${linkTitle}](${chunk.web.uri})`);
+                    }
+                  });
+                  if (links.length > 0) {
+                    answerText += `\n\n👉 **参考リンクだニャ** 🐾\n` + links.join('\n');
+                  }
+                }
+                break;
+              }
+            }
+          } catch (mErr) {
+            console.warn(`REST Model ${modelName} Q&A fetch failed:`, mErr);
+          }
         }
       }
 
