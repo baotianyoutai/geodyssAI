@@ -1,4 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { auth } from '../lib/firebase-client';
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  onAuthStateChanged,
+  signOut,
+  type User
+} from 'firebase/auth';
 import allArticlesData from '../data/all-articles-data.json';
 
 interface ArticleItem {
@@ -12,10 +20,48 @@ interface ArticleItem {
 }
 
 export const AdminCMS: React.FC = () => {
+  // Firebase Auth 状態管理
+  const [user, setUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [emailInput, setEmailInput] = useState('');
+  const [passwordInput, setPasswordInput] = useState('');
+  const [authError, setAuthError] = useState('');
+
   const [articles, setArticles] = useState<ArticleItem[]>(allArticlesData as any[]);
   const [search, setSearch] = useState('');
   const [selectedArticle, setSelectedArticle] = useState<ArticleItem | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setAuthLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError('');
+    if (!emailInput || !passwordInput) return;
+
+    try {
+      await signInWithEmailAndPassword(auth, emailInput.trim(), passwordInput);
+    } catch (err: any) {
+      console.warn('SignIn failed, attempting automatic admin account creation:', err);
+      // アカウントが存在しない場合は自動作成を試行
+      try {
+        await createUserWithEmailAndPassword(auth, emailInput.trim(), passwordInput);
+      } catch (createErr: any) {
+        setAuthError(createErr.message || 'ログイン/認証に失敗しました');
+      }
+    }
+  };
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    setUser(null);
+  };
 
   // 編集用フォーム状態
   const [formTitle, setFormTitle] = useState('');
@@ -93,6 +139,73 @@ export const AdminCMS: React.FC = () => {
     }));
   };
 
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400 text-xs font-mono">
+        認証状態の確認中... 🔐
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-slate-900/90 border border-slate-800 rounded-3xl p-8 shadow-2xl">
+          <div className="text-center mb-6">
+            <div className="w-16 h-16 rounded-2xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-3xl mx-auto mb-3">
+              🛡️
+            </div>
+            <h2 className="text-xl font-bold font-display text-white">geodyssAI Admin Auth</h2>
+            <p className="text-xs text-slate-400 mt-1 font-mono">Firebase Authentication 管理者ログイン</p>
+          </div>
+
+          {authError && (
+            <div className="mb-4 p-3 bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs rounded-xl font-mono">
+              ⚠️ {authError}
+            </div>
+          )}
+
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <label className="block text-xs font-mono text-slate-400 mb-1">管理者 Email</label>
+              <input
+                type="email"
+                required
+                placeholder="baotianyoutai1@gmail.com"
+                value={emailInput}
+                onChange={e => setEmailInput(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-600 focus:border-sky-500 focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-mono text-slate-400 mb-1">パスワード</label>
+              <input
+                type="password"
+                required
+                placeholder="••••••••"
+                value={passwordInput}
+                onChange={e => setPasswordInput(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-600 focus:border-sky-500 focus:outline-none"
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="w-full py-2.5 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs rounded-xl shadow-[0_0_15px_rgba(56,189,248,0.3)] transition-all cursor-pointer"
+            >
+              ログイン / 認証実行 🔐
+            </button>
+          </form>
+
+          <div className="mt-6 text-center border-t border-slate-800/80 pt-4">
+            <a href="/" className="text-xs text-slate-400 hover:text-slate-200">← メインサイトに戻る</a>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-body p-4 sm:p-8">
       {/* ヘッダー */}
@@ -102,13 +215,19 @@ export const AdminCMS: React.FC = () => {
             <span>🚀 geodyssAI Admin CMS</span>
             <span className="text-xs px-2 py-0.5 bg-sky-500/20 text-sky-300 border border-sky-500/30 rounded-full font-mono">SSOT Manager</span>
           </h1>
-          <p className="text-xs text-slate-400 mt-1">Firestore コレクション・記事データ・3Dベクトル管理ダッシュボード</p>
+          <p className="text-xs text-slate-400 mt-1">ログイン中: <span className="text-sky-300 font-mono">{user.email}</span></p>
         </div>
 
         <div className="flex items-center gap-3">
           <a href="/" className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 rounded-lg transition-colors">
             ← メインサイトへ
           </a>
+          <button
+            onClick={handleLogout}
+            className="px-3 py-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 text-xs rounded-lg transition-colors cursor-pointer"
+          >
+            ログアウト 🔓
+          </button>
           <button
             onClick={handleStartNew}
             className="px-4 py-2 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs rounded-xl shadow-[0_0_15px_rgba(56,189,248,0.3)] transition-all cursor-pointer"

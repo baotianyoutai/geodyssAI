@@ -1,0 +1,16 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // articles コレクション: 未認証の読み取りは許可、書き込み・更新・削除は認証済み管理者のみに厳密制限
+    match /articles/{articleId} {
+      allow read: if true;
+      allow write, update, delete: if request.auth != null && request.auth.token.email in ['baotianyoutai1@gmail.com'];
+    }
+    
+    // その他すべてのドキュメントへのセキュリティルール
+    match /{document=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+  }
+}
