@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { auth, onAuthStateChanged, toggleStardustBookmark, syncUserProfile } from '../lib/firebase-client';
+import { app, auth, onAuthStateChanged, toggleStardustBookmark, syncUserProfile } from '../lib/firebase-client';
+import { getAI, getGenerativeModel } from 'firebase/ai';
 
 interface WebLink {
   title: string;
@@ -58,8 +59,6 @@ export function ArticleNavigator({ article }: { article: ArticleProps }) {
   useEffect(() => {
     async function fetchGuide() {
       try {
-        const { app } = await import('../lib/firebase-client');
-        const { getAI, getGenerativeModel } = await import(/* @vite-ignore */ 'https://www.gstatic.com/firebasejs/11.0.0/firebase-ai-logic.js');
         const ai = getAI(app);
 
         const truncatedContent = (article.contentMd || article.excerpt || '').slice(0, 3000);
@@ -147,8 +146,6 @@ export function ArticleNavigator({ article }: { article: ArticleProps }) {
     setAnswering(true);
 
     try {
-      const { app } = await import('../lib/firebase-client');
-      const { getAI, getGenerativeModel } = await import(/* @vite-ignore */ 'https://www.gstatic.com/firebasejs/11.0.0/firebase-ai-logic.js');
       const ai = getAI(app);
 
       const truncatedContent = (article.contentMd || article.excerpt || '').slice(0, 3000);

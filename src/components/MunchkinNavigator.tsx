@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { app } from '../lib/firebase-client';
+import { getAI, getGenerativeModel } from 'firebase/ai';
 
 interface Message {
   id: string;
@@ -56,9 +58,7 @@ export const MunchkinNavigator: React.FC<MunchkinNavigatorProps> = ({ articles =
     try {
       const q = textToSend.toLowerCase();
 
-      // 1. 公式 Firebase AI Logic SDK の動的取得
-      const { app } = await import('../lib/firebase-client');
-      const { getAI, getGenerativeModel } = await import(/* @vite-ignore */ 'https://www.gstatic.com/firebasejs/11.0.0/firebase-ai-logic.js');
+      // 1. 公式 Firebase AI Logic SDK の取得 (npm モジュール使用)
       const ai = getAI(app);
 
       // 関連記事の検索・コンテキスト構築
