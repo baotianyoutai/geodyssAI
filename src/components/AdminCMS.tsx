@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { auth, db } from '../lib/firebase-client';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, doc, setDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import {
   signInWithEmailAndPassword,
   onAuthStateChanged,
@@ -29,16 +29,16 @@ export default function AdminCMS() {
   const [passwordInput, setPasswordInput] = useState('');
   const [authError, setAuthError] = useState('');
 
-  const [articles, setArticles] = useState<ArticleItem[]>(allArticlesData as any[]);
+  // Firestore リアルタイム同期状態 (SSOT)
+  const [articles, setArticles] = useState<ArticleItem[]>([]);
   const [search, setSearch] = useState('');
   const [selectedArticle, setSelectedArticle] = useState<ArticleItem | null>(null);
   const [isEditing, setIsEditing] = useState(false);
 
-  // カテゴリ動的管理状態 (既存のカテゴリをユニーク抽出)
-  const defaultCategories = Array.from(new Set(allArticlesData.map(a => a.category || 'GenAI'))).filter(Boolean);
-  const [categoryList, setCategoryList] = useState<string[]>(
-    defaultCategories.includes('Machine Learning') ? defaultCategories : [...defaultCategories, 'Machine Learning']
-  );
+  // カテゴリ動的管理状態
+  const [categoryList, setCategoryList] = useState<string[]>([
+    'GenAI', 'Cloud', 'DevOps', 'Machine Learning', 'AI Dojo', 'Python/RAG', 'Uncategorized'
+  ]);
   const [newCategoryInput, setNewCategoryInput] = useState('');
   const [showAddCategory, setShowAddCategory] = useState(false);
 
@@ -133,7 +133,40 @@ geodyssAI Admin Security System
       return;
     }
 
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+    // Firestore articles コレクションのリアルタイム同期 (SSOT)
+    const unsubscribeArticles = onSnapshot(collection(db, 'articles'), (snapshot) => {
+      if (!snapshot.empty) {
+        const fetchedArticles: ArticleItem[] = [];
+        const catsSet = new Set<string>(['GenAI', 'Cloud', 'DevOps', 'Machine Learning', 'AI Dojo', 'Python/RAG']);
+
+        snapshot.forEach(docSnap => {
+          const data = docSnap.data() as ArticleItem;
+          const artItem: ArticleItem = {
+            id: docSnap.id,
+            slug: data.slug || docSnap.id,
+            title: data.title || docSnap.id,
+            category: data.category || 'GenAI',
+            status: data.status || 'draft',
+            excerpt: data.excerpt || '',
+            contentMd: data.contentMd || '',
+            heroImage: data.heroImage || ''
+          };
+          fetchedArticles.push(artItem);
+          if (data.category) catsSet.add(data.category);
+        });
+
+        setArticles(fetchedArticles);
+        setCategoryList(Array.from(catsSet));
+      } else {
+        // 初回フォールバック
+        setArticles(allArticlesData as any[]);
+      }
+    }, (err) => {
+      console.warn('Firestore articles snapshot fallback info:', err);
+      setArticles(allArticlesData as any[]);
+    });
+
+    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       setAuthLoading(false);
 
@@ -145,7 +178,11 @@ geodyssAI Admin Security System
         }
       }
     });
-    return () => unsubscribe();
+
+    return () => {
+      unsubscribeArticles();
+      unsubscribeAuth();
+    };
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -262,15 +299,16 @@ geodyssAI Admin Security System
     }, 50);
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formTitle.trim() || !formSlug.trim()) {
       alert('タイトルとスラッグは必須です！');
       return;
     }
 
+    const cleanSlug = formSlug.trim();
     const newArt: ArticleItem = {
-      slug: formSlug.trim(),
+      slug: cleanSlug,
       title: formTitle.trim(),
       category: formCategory,
       status: formStatus,
@@ -279,29 +317,34 @@ geodyssAI Admin Security System
       heroImage: formHeroImage
     };
 
-    setArticles(prev => {
-      const idx = prev.findIndex(a => a.slug === newArt.slug);
-      if (idx >= 0) {
-        const updated = [...prev];
-        updated[idx] = newArt;
-        return updated;
-      } else {
-        return [newArt, ...prev];
-      }
-    });
+    try {
+      // SSOT: Firestore データベースへのダイレクト保存
+      await setDoc(doc(db, 'articles', cleanSlug), {
+        ...newArt,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
 
-    alert(`記事「${formTitle}」を保存・ステータス更新 (${formStatus.toUpperCase()}) しました！`);
-    setIsEditing(false);
+      alert(`✅ Firestore データベース (SSOT) に記事「${formTitle}」を正常保存いたしました！ (${formStatus.toUpperCase()})`);
+      setIsEditing(false);
+    } catch (err: any) {
+      console.error('Firestore save error:', err);
+      alert(`❌ Firestore への保存でエラーが発生しました: ${err.message}`);
+    }
   };
 
-  const toggleStatus = (slug: string) => {
-    setArticles(prev => prev.map(a => {
-      if (a.slug === slug) {
-        const nextStatus = (a.status === 'publish' || a.status === 'published') ? 'draft' : 'publish';
-        return { ...a, status: nextStatus };
-      }
-      return a;
-    }));
+  const toggleStatus = async (slug: string) => {
+    const art = articles.find(a => a.slug === slug);
+    if (!art) return;
+    const nextStatus = (art.status === 'publish' || art.status === 'published') ? 'draft' : 'publish';
+
+    try {
+      await setDoc(doc(db, 'articles', slug), {
+        status: nextStatus,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+    } catch (err: any) {
+      console.error('Firestore status toggle error:', err);
+    }
   };
 
   if (authLoading) {
