@@ -88,10 +88,10 @@ export const MunchkinNavigator: React.FC<MunchkinNavigatorProps> = ({ articles =
 2. もし DRAFT (下書き) 状態の記事を提案する場合は、「✦ DRAFT (下書き準備中の星)」である旨を優しく添えて提示してニャ！
 3. ブログ内の知識・記事案内を中心に回答し、旅行者が次にどの星（記事）を読むべきか提示してニャ！`;
 
-      const prompt = `${sys}\n\n【ブログ内公開記事リスト】\n${contextText}\n\n【ユーザーの入力】\n${textToSend}`;
+      const prompt = `${sys}\n\n【ブログ内記事リスト】\n${contextText}\n\n【ユーザーの入力】\n${textToSend}`;
 
-      // 高速・最安・軽量な gemini-3.5-flash-lite を主軸モデルとして利用
-      const CANDIDATE_MODELS = ['gemini-3.5-flash-lite', 'gemini-3.6-flash', 'gemini-2.5-flash'];
+      // ユーザー指示に基づき gemini-2.5-flash-lite を最優先モデルとして設定
+      const CANDIDATE_MODELS = ['gemini-2.5-flash-lite', 'gemini-3.5-flash-lite', 'gemini-2.5-flash'];
       let aiText = '';
       let lastErr = null;
 
@@ -111,6 +111,25 @@ export const MunchkinNavigator: React.FC<MunchkinNavigatorProps> = ({ articles =
       }
 
       if (aiText) {
+        // 🛡️ 実在記事・確定リンク保証 (Link Safety Grounding)
+        // targetList 内の実在記事の中から、AIテキスト内で言及されている、または検索にマッチした本物の記事リンクカードを添付
+        const validArticleLinks: string[] = [];
+        targetList.forEach(art => {
+          const linkUrl = `/articles/${encodeURIComponent(art.slug)}`;
+          const isMentioned = aiText.includes(art.title) || aiText.includes(art.slug) || aiText.includes(linkUrl);
+          const isDraft = art.status === 'draft';
+          const draftBadge = isDraft ? ' ✦ DRAFT (下書き準備中)' : '';
+          
+          if (isMentioned || targetList.length <= 3) {
+            validArticleLinks.push(`- [👉 ${art.title}${draftBadge}](${linkUrl})`);
+          }
+        });
+
+        // 提案記事カードブロックを生成して確実に本物のリンクを案内
+        if (validArticleLinks.length > 0 && !aiText.includes('/articles/')) {
+          aiText += `\n\n📌 **おすすめの星（ブログ実在記事）** 🐾\n` + validArticleLinks.join('\n');
+        }
+
         const botMsg: Message = {
           id: `bot-${Date.now()}`,
           sender: 'bot',
