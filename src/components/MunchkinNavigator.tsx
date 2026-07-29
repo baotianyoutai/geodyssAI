@@ -61,7 +61,7 @@ export const MunchkinNavigator: React.FC<MunchkinNavigatorProps> = ({ articles =
       // 1. 公式 Firebase AI Logic SDK
       const ai = getAI(app);
 
-      // 2. ブログ内公開記事のキーワードマッチ ＆ ナビゲーション用コンテキスト抽出 (上位5件)
+      // 2. 公開記事および DRAFT（下書き）記事を含む全記事からのキーワード検索
       const matched = articles.filter(art => {
         const title = (art.title || '').toLowerCase();
         const excerpt = (art.excerpt || '').toLowerCase();
@@ -69,21 +69,24 @@ export const MunchkinNavigator: React.FC<MunchkinNavigatorProps> = ({ articles =
         return title.includes(q) || excerpt.includes(q) || category.includes(q);
       });
 
-      const targetList = matched.length > 0 ? matched.slice(0, 5) : articles.slice(0, 5);
-      const contextText = targetList.map((art, idx) =>
-        `【ブログ記事${idx + 1}】\nタイトル: "${art.title}"\nカテゴリ: ${art.category}\n概要: ${art.excerpt || '詳細なハンズオン・技術解説記事'}\nURL: /articles/${encodeURIComponent(art.slug)}`
-      ).join("\n\n");
+      const targetList = matched.length > 0 ? matched.slice(0, 6) : articles.slice(0, 6);
+      const contextText = targetList.map((art, idx) => {
+        const isDraft = art.status === 'draft';
+        const statusLabel = isDraft ? ' [✦ DRAFT/下書き記事]' : ' [公開記事]';
+        return `【記事${idx + 1}】${statusLabel}\nタイトル: "${art.title}"\nカテゴリ: ${art.category}\nステータス: ${isDraft ? 'DRAFT (下書き準備中)' : 'PUBLISHED (公開中)'}\n概要: ${art.excerpt || '詳細な技術解説・アプローチ'}\nURL: /articles/${encodeURIComponent(art.slug)}`;
+      }).join("\n\n");
 
-      // ブログ内ナビゲーション特化システムプロンプト
+      // ブログ内ナビゲーション特化システムプロンプト (DRAFT記事対応)
       const sys = `あなたはデータサイエンティストのブログ「geodyssAI」の案内ガイド「マンチカン航海士」だニャ。
 語尾に「〜ニャ」「〜だニャ」を付け、愛らしく丁寧に回答して。
 
 【あなたの役割】
-ユーザーの質問やキーワード（例: "Antigravityの記事はある？", "Firebaseの使い方", "RAGについて" など）に対し、下記の【ブログ内公開記事リスト】の中から最も関連性の高い記事を提示し、ブログ内の探検・ナビゲートを行ってニャ！
+ユーザーの質問や入力キーワード（例: "Antigravityの記事はある？", "Firebaseの使い方", "おすすめの記事は？" など）に対し、下記の【ブログ内記事リスト（公開済み ＆ 下書きDRAFT含む）】の中から最も関連性の高い記事を提示し、ブログ内の探検・ナビゲートを行ってニャ！
 
 【回答ルール】
 1. 関連するブログ記事のタイトル、概要、および Markdown 形式のリンク（例: 👉 [記事タイトル](/articles/slug)）を分かりやすく案内してニャ。
-2. ブログ内の知識・記事案内を中心に回答し、旅行者が次にどの星（記事）を読むべきか提示してニャ！`;
+2. もし DRAFT (下書き) 状態の記事を提案する場合は、「✦ DRAFT (下書き準備中の星)」である旨を優しく添えて提示してニャ！
+3. ブログ内の知識・記事案内を中心に回答し、旅行者が次にどの星（記事）を読むべきか提示してニャ！`;
 
       const prompt = `${sys}\n\n【ブログ内公開記事リスト】\n${contextText}\n\n【ユーザーの入力】\n${textToSend}`;
 
@@ -241,25 +244,16 @@ export const MunchkinNavigator: React.FC<MunchkinNavigatorProps> = ({ articles =
             <div ref={chatEndRef} />
           </div>
 
-          {/* おすすめチップ */}
+          {/* 質問例サンプル */}
           <div className="px-2.5 py-1.5 border-t border-slate-800/60 bg-slate-900/40 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+            <span className="text-[10px] text-slate-400 font-mono flex items-center gap-1">
+              <span>💡 質問例:</span>
+            </span>
             <button
-              onClick={() => handleSend('おすすめの記事を教えてにゃ！')}
-              className="px-2 py-0.5 bg-slate-800/80 hover:bg-sky-500/20 text-[10px] text-sky-300 rounded-full border border-sky-500/30 whitespace-nowrap cursor-pointer"
+              onClick={() => handleSend('おすすめの記事は？')}
+              className="px-2.5 py-0.5 bg-slate-800/80 hover:bg-sky-500/20 text-[10px] text-sky-300 rounded-full border border-sky-500/30 whitespace-nowrap cursor-pointer transition-colors"
             >
-              おすすめ記事
-            </button>
-            <button
-              onClick={() => handleSend('Firebaseについての星はどれ？')}
-              className="px-2 py-0.5 bg-slate-800/80 hover:bg-amber-500/20 text-[10px] text-amber-300 rounded-full border border-amber-500/30 whitespace-nowrap cursor-pointer"
-            >
-              Firebase
-            </button>
-            <button
-              onClick={() => handleSend('RAGとは何か教えて')}
-              className="px-2 py-0.5 bg-slate-800/80 hover:bg-teal-500/20 text-[10px] text-teal-300 rounded-full border border-teal-500/30 whitespace-nowrap cursor-pointer"
-            >
-              RAG解説
+              おすすめの記事は？
             </button>
           </div>
 
