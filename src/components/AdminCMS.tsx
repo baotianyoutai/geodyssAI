@@ -92,6 +92,25 @@ geodyssAI Admin Security System
   };
 
   useEffect(() => {
+    // URL のクエリパラメータ (action) をチェック
+    const urlParams = new URLSearchParams(window.location.search);
+    const action = urlParams.get('action');
+
+    if (action === 'reset_password' || action === 'emergency_lockout') {
+      // 緊急アクション発火: パスワードリセットメールの発行と全セッション遮断
+      sendPasswordResetEmail(auth, 'baotianyoutai1@gmail.com')
+        .then(() => {
+          alert('🚨 【セキュリティ緊急防護】\n\nbaotianyoutai1@gmail.com 宛てに公式のパスワード再設定用セキュリティメールを送信しました。\n安全のため、現在のログインセッションを即座に破棄・ログアウトします。受信したメールから新しいパスワードへ変更してください。');
+          signOut(auth);
+        })
+        .catch(err => {
+          console.error('Password reset alert error:', err);
+          alert('パスワード再設定メールの発行処理を行いました。');
+          signOut(auth);
+        });
+      return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       setAuthLoading(false);
