@@ -59,9 +59,6 @@ export function ArticleNavigator({ article }: { article: ArticleProps }) {
     async function fetchGuide() {
       try {
         const apiKey = import.meta.env.PUBLIC_GEMINI_API_KEY || import.meta.env.PUBLIC_FIREBASE_API_KEY || 'AIzaSyBPQroXo69568ahiG1Zydzy1r9gTcb7Rxo';
-        const { GoogleGenAI } = await import('@google/genai');
-        const ai = new GoogleGenAI({ apiKey });
-
         const truncatedContent = (article.contentMd || article.excerpt || '').slice(0, 3000);
         const prompt = `あなたは「geodyssAI」のナビゲーターである愛らしい「マンチカン航海士」だニャ。
 以下の記事を読み終えた旅行者に向けて、要約とステップアップ学習のアドバイスを提示してください。
@@ -79,33 +76,40 @@ export function ArticleNavigator({ article }: { article: ArticleProps }) {
   ]
 }`;
 
-        const CANDIDATE_MODELS = ['gemini-flash-latest', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+        const CANDIDATE_MODELS = ['gemini-flash-latest', 'gemini-2.5-flash-lite', 'gemini-2.0-flash'];
         let guideData: ArticleGuideData | null = null;
 
         for (const modelName of CANDIDATE_MODELS) {
           try {
-            const response = await ai.models.generateContent({
-              model: modelName,
-              contents: prompt
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+            const res = await fetch(apiUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }]
+              })
             });
 
-            const textRes = response.text || '';
-            const cleaned = textRes.replace(/```json|```/g, '').trim();
-            const json = JSON.parse(cleaned);
+            if (res.ok) {
+              const data = await res.json();
+              const textRes = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+              const cleaned = textRes.replace(/```json|```/g, '').trim();
+              const json = JSON.parse(cleaned);
 
-            if (json.summary && Array.isArray(json.nextSteps)) {
-              guideData = {
-                summary: json.summary,
-                nextSteps: json.nextSteps,
-                webLinks: [
-                  { title: "Firebase Console", url: "https://console.firebase.google.com", description: "プロジェクト設定・Firestore・Authの公式管理コンソール" },
-                  { title: "Google AI Studio", url: "https://aistudio.google.com", description: "Gemini API キーの発行・プロンプト試行公式環境" }
-                ]
-              };
-              break;
+              if (json.summary && Array.isArray(json.nextSteps)) {
+                guideData = {
+                  summary: json.summary,
+                  nextSteps: json.nextSteps,
+                  webLinks: [
+                    { title: "Firebase Console", url: "https://console.firebase.google.com", description: "プロジェクト設定・Firestore・Authの公式管理コンソール" },
+                    { title: "Google AI Studio", url: "https://aistudio.google.com", description: "Gemini API キーの発行・プロンプト試行公式環境" }
+                  ]
+                };
+                break;
+              }
             }
           } catch (mErr) {
-            console.warn(`Model ${modelName} guide generation failed:`, mErr);
+            console.warn(`Model ${modelName} guide fetch failed:`, mErr);
           }
         }
 
@@ -148,46 +152,50 @@ export function ArticleNavigator({ article }: { article: ArticleProps }) {
 
     try {
       const apiKey = import.meta.env.PUBLIC_GEMINI_API_KEY || import.meta.env.PUBLIC_FIREBASE_API_KEY || 'AIzaSyBPQroXo69568ahiG1Zydzy1r9gTcb7Rxo';
-      const { GoogleGenAI } = await import('@google/genai');
-      const ai = new GoogleGenAI({ apiKey });
-
       const truncatedContent = (article.contentMd || article.excerpt || '').slice(0, 3000);
       const sys = "あなたはデータサイエンティストのブログの猫アシスタント「マンチカン航海士」だニャ。語尾に「〜ニャ」「〜だニャ」を付け、論理的かつ丁寧に回答して。";
       const prompt = `${sys}\n\n【記事タイトル】: ${article.title}\n【記事本文】: ${truncatedContent}\n\n質問: ${userQ}`;
 
-      const CANDIDATE_MODELS = ['gemini-flash-latest', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+      const CANDIDATE_MODELS = ['gemini-flash-latest', 'gemini-2.5-flash-lite', 'gemini-2.0-flash'];
       let answerText = '';
 
       for (const modelName of CANDIDATE_MODELS) {
         try {
-          const response = await ai.models.generateContent({
-            model: modelName,
-            contents: prompt,
-            config: {
+          const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+          const res = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
               tools: [{ googleSearch: {} }]
-            }
+            })
           });
 
-          if (response.text) {
-            answerText = response.text;
-            const candidate = (response as any)?.candidates?.[0];
-            const meta = candidate?.groundingMetadata;
-            if (meta && Array.isArray(meta.groundingChunks)) {
-              const links: string[] = [];
-              meta.groundingChunks.forEach((chunk: any) => {
-                if (chunk.web?.uri) {
-                  const linkTitle = chunk.web.title || "参考技術記事";
-                  links.push(`- [${linkTitle}](${chunk.web.uri})`);
+          if (res.ok) {
+            const data = await res.json();
+            const candidate = data?.candidates?.[0];
+            const partText = candidate?.content?.parts?.[0]?.text;
+
+            if (partText) {
+              answerText = partText;
+              const meta = candidate?.groundingMetadata;
+              if (meta && Array.isArray(meta.groundingChunks)) {
+                const links: string[] = [];
+                meta.groundingChunks.forEach((chunk: any) => {
+                  if (chunk.web?.uri) {
+                    const linkTitle = chunk.web.title || "参考技術記事";
+                    links.push(`- [${linkTitle}](${chunk.web.uri})`);
+                  }
+                });
+                if (links.length > 0) {
+                  answerText += `\n\n👉 **参考リンクだニャ** 🐾\n` + links.join('\n');
                 }
-              });
-              if (links.length > 0) {
-                answerText += `\n\n👉 **参考リンクだニャ** 🐾\n` + links.join('\n');
               }
+              break;
             }
-            break;
           }
         } catch (mErr) {
-          console.warn(`Model ${modelName} Q&A failed:`, mErr);
+          console.warn(`Model ${modelName} Q&A fetch failed:`, mErr);
         }
       }
 

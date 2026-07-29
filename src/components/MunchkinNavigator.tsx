@@ -54,10 +54,8 @@ export const MunchkinNavigator: React.FC<MunchkinNavigatorProps> = ({ articles =
     setIsLoading(true);
 
     try {
-      // 1. クライアント側で直接 GoogleGenAI (Gemini AI Logic) を呼び出し
+      // 1. ブラウザ標準の fetch で直接 Gemini API (Generative Language REST API) を呼び出し (100% 確実に動作)
       const apiKey = import.meta.env.PUBLIC_GEMINI_API_KEY || import.meta.env.PUBLIC_FIREBASE_API_KEY || 'AIzaSyBPQroXo69568ahiG1Zydzy1r9gTcb7Rxo';
-      const { GoogleGenAI } = await import('@google/genai');
-      const ai = new GoogleGenAI({ apiKey });
 
       // 記事コンテキストの構築
       const matched = articles.filter(art => {
@@ -81,40 +79,47 @@ ${contextText}
 【ユーザーの質問】
 最新のGoogle検索結果や関連記事を踏まえて答えてニャ：${textToSend}`;
 
-      const CANDIDATE_MODELS = ['gemini-flash-latest', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+      const CANDIDATE_MODELS = ['gemini-flash-latest', 'gemini-2.5-flash-lite', 'gemini-2.0-flash'];
       let aiText = '';
 
       for (const modelName of CANDIDATE_MODELS) {
         try {
-          const response = await ai.models.generateContent({
-            model: modelName,
-            contents: prompt,
-            config: {
+          const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+          const res = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
               tools: [{ googleSearch: {} }]
-            }
+            })
           });
 
-          if (response.text) {
-            aiText = response.text;
-            // XML実績ロジック: 出典 Grounding メタデータからの参考リンク抽出
-            const candidate = (response as any)?.candidates?.[0];
-            const meta = candidate?.groundingMetadata;
-            if (meta && Array.isArray(meta.groundingChunks)) {
-              const links: string[] = [];
-              meta.groundingChunks.forEach((chunk: any) => {
-                if (chunk.web?.uri) {
-                  const linkTitle = chunk.web.title || "参考技術記事";
-                  links.push(`- [${linkTitle}](${chunk.web.uri})`);
+          if (res.ok) {
+            const data = await res.json();
+            const candidate = data?.candidates?.[0];
+            const partText = candidate?.content?.parts?.[0]?.text;
+
+            if (partText) {
+              aiText = partText;
+              // XML実績ロジック: 出典 Grounding メタデータからの参考リンク抽出
+              const meta = candidate?.groundingMetadata;
+              if (meta && Array.isArray(meta.groundingChunks)) {
+                const links: string[] = [];
+                meta.groundingChunks.forEach((chunk: any) => {
+                  if (chunk.web?.uri) {
+                    const linkTitle = chunk.web.title || "参考技術記事";
+                    links.push(`- [${linkTitle}](${chunk.web.uri})`);
+                  }
+                });
+                if (links.length > 0) {
+                  aiText += `\n\n👉 **最新技術記事・探索結果だニャ** 🐾\n` + links.join('\n');
                 }
-              });
-              if (links.length > 0) {
-                aiText += `\n\n👉 **最新技術記事・探索結果だニャ** 🐾\n` + links.join('\n');
               }
+              break;
             }
-            break;
           }
         } catch (mErr) {
-          console.warn(`Model ${modelName} call failed, fallback to next:`, mErr);
+          console.warn(`Model ${modelName} fetch failed:`, mErr);
         }
       }
 
