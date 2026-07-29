@@ -48,18 +48,22 @@ export const db = getFirestore(app);
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 
-// Firebase App Check (reCAPTCHA Enterprise) の初期化
+// Firebase App Check (reCAPTCHA Enterprise) の安全な初期化
 if (typeof window !== 'undefined') {
   try {
-    (window as any).useEnterprise = true;
+    // 開発環境または本番環境での App Check 競合防止
     if (import.meta.env.DEV) {
       (self as any).FIREBASE_APPCHECK_DEBUG_TOKEN = true;
     }
-    initializeAppCheck(app, {
-      provider: new ReCaptchaEnterpriseProvider(recaptchaSiteKey),
-      isTokenAutoRefreshEnabled: true
-    });
-    console.log('Firebase App Check (reCAPTCHA Enterprise) successfully initialized.');
+    
+    // recaptchaSiteKey が有効な場合のみ初期化し、401 Token invalid エラーを防止
+    if (recaptchaSiteKey && recaptchaSiteKey !== 'your-recaptcha-site-key') {
+      initializeAppCheck(app, {
+        provider: new ReCaptchaEnterpriseProvider(recaptchaSiteKey),
+        isTokenAutoRefreshEnabled: true
+      });
+      console.log('Firebase App Check successfully initialized.');
+    }
   } catch (e) {
     console.warn('Firebase App Check initialization skipped:', e);
   }

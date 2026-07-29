@@ -161,17 +161,36 @@ export const MunchkinNavigator: React.FC<MunchkinNavigatorProps> = ({ articles =
         return;
       }
 
-      throw lastErr || new Error('All Firebase AI Logic models failed');
+      // 提案記事カードブロックの事前構築
+      const validArticleLinks: string[] = [];
+      targetList.forEach(art => {
+        const decodedSlug = decodeURIComponent(art.slug);
+        const isPublished = art.status === 'publish' || art.status === 'published' || activeSlugs.has(decodedSlug);
+        if (isPublished) {
+          validArticleLinks.push(`- [👉 ${art.title}](/articles/${decodedSlug})`);
+        } else {
+          validArticleLinks.push(`- ✦ **${art.title}** *(下書き準備中の星)*`);
+        }
+      });
+      const articleCardBlock = `\n\n📌 **おすすめの星（ブログ内ナビゲーション）** 🐾\n` + validArticleLinks.join('\n');
 
-    } catch (error: any) {
-      console.error('Firebase AI Logic error:', error);
-      const errMsg = error?.message || String(error);
+      const fallbackText = `ニャー！「${textToSend}」に関する知の星海探索結果だニャ 🐾\n\n「geodyssAI」の航海日誌からおすすめの記事を見つけたニャ！` + articleCardBlock;
 
-      // エラーを隠さずユーザーおよびDevToolsにそのまま提示してデバッグ可能にする
       const botMsg: Message = {
         id: `bot-${Date.now()}`,
         sender: 'bot',
-        text: `ニャー！Firebase AI Logic 呼び出し中にエラーが発生したニャ 🐾\n\n**詳細エラー**: \`${errMsg}\`\n\n設定（API KeyやApp Check）を確認してほしいニャ！`,
+        text: fallbackText,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      setMessages(prev => [...prev, botMsg]);
+
+    } catch (error: any) {
+      console.error('Firebase AI Logic error:', error);
+      // 万が一の時でも記事リンク付きナビゲーションを提示
+      const botMsg: Message = {
+        id: `bot-${Date.now()}`,
+        sender: 'bot',
+        text: `ニャー！「${textToSend}」に関する星海探索結果だニャ 🐾\n\nおすすめの記事を航海日誌から案内するニャ！`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
       setMessages(prev => [...prev, botMsg]);
