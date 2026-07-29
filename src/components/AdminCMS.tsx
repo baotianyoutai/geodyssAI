@@ -84,10 +84,10 @@ geodyssAI Admin Security System
         createdAt: serverTimestamp()
       });
       console.log('✅ Security email document added with ID:', docRef.id);
-      return true;
-    } catch (e) {
+      return { success: true, id: docRef.id };
+    } catch (e: any) {
       console.error('Failed to write security mail document:', e);
-      return false;
+      return { success: false, error: e.message || String(e) };
     }
   };
 
@@ -293,8 +293,11 @@ geodyssAI Admin Security System
             onClick={async () => {
               if (user && user.email) {
                 const res = await sendSecurityNotification(user.email);
-                if (res) alert('📧 セキュリティ通知メールの送信リクエストを発行しました！受信トレイをご確認ください。');
-                else alert('❌ メールの送信リクエストでエラーが発生しました。');
+                if (res.success) {
+                  alert(`📧 セキュリティ通知メールの送信リクエスト (ID: ${res.id}) を発行しました！\n数秒〜数分で baotianyoutai1@gmail.com に届きます。`);
+                } else {
+                  alert(`❌ 送信エラーが発生しました:\n${res.error}`);
+                }
               }
             }}
             className="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-xs rounded-lg transition-all cursor-pointer font-bold"

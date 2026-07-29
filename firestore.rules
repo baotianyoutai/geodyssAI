@@ -7,9 +7,9 @@ service cloud.firestore {
       allow write, update, delete: if request.auth != null && request.auth.token.email in ['baotianyoutai1@gmail.com'];
     }
 
-    // mail コレクション (Trigger Email Extension): 管理者のみ追加可能
+    // mail コレクション (Trigger Email Extension): 認証済みユーザーであれば追加可能
     match /mail/{mailId} {
-      allow create: if request.auth != null && request.auth.token.email in ['baotianyoutai1@gmail.com'];
+      allow create: if request.auth != null;
       allow read, update, delete: if false;
     }
     
