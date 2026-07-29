@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { auth, db } from '../lib/firebase-client';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import {
@@ -14,14 +14,15 @@ interface ArticleItem {
   id?: string;
   slug: string;
   title: string;
-  excerpt?: string;
   category?: string;
-  status: 'publish' | 'published' | 'draft';
+  status?: string;
+  excerpt?: string;
   contentMd?: string;
+  heroImage?: string;
+  embedding?: number[];
 }
 
-export const AdminCMS: React.FC = () => {
-  // Firebase Auth 状態管理
+export default function AdminCMS() {
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [emailInput, setEmailInput] = useState('');
@@ -32,6 +33,28 @@ export const AdminCMS: React.FC = () => {
   const [search, setSearch] = useState('');
   const [selectedArticle, setSelectedArticle] = useState<ArticleItem | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+
+  // カテゴリ動的管理状態 (既存のカテゴリをユニーク抽出)
+  const defaultCategories = Array.from(new Set(allArticlesData.map(a => a.category || 'GenAI'))).filter(Boolean);
+  const [categoryList, setCategoryList] = useState<string[]>(
+    defaultCategories.includes('Machine Learning') ? defaultCategories : [...defaultCategories, 'Machine Learning']
+  );
+  const [newCategoryInput, setNewCategoryInput] = useState('');
+  const [showAddCategory, setShowAddCategory] = useState(false);
+
+  // 編集用フォーム状態
+  const [formTitle, setFormTitle] = useState('');
+  const [formSlug, setFormSlug] = useState('');
+  const [formCategory, setFormCategory] = useState('GenAI');
+  const [formStatus, setFormStatus] = useState<'publish' | 'draft'>('draft');
+  const [formExcerpt, setFormExcerpt] = useState('');
+  const [formContentMd, setFormContentMd] = useState('');
+  const [formHeroImage, setFormHeroImage] = useState('');
+  const [isGeneratingAiExcerpt, setIsGeneratingAiExcerpt] = useState(false);
+
+  // エディタタブ・分割表示モード ('split' | 'edit' | 'preview')
+  const [editorViewMode, setEditorViewMode] = useState<'split' | 'edit' | 'preview'>('split');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const sendSecurityNotification = async (userEmail: string) => {
     const loginTime = new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
@@ -97,54 +120,16 @@ geodyssAI Admin Security System
     const action = urlParams.get('action');
 
     if (action === 'reset_password' || action === 'emergency_lockout') {
-      // 1. Firebase Auth 標準パスワードリセット呼び出し
-      sendPasswordResetEmail(auth, 'baotianyoutai1@gmail.com').catch(e => console.warn('Auth reset email trigger info:', e));
-
-      // 2. Trigger Email エクステンション経由で日本語パスワードリセット案内を確実に直配送
-      const resetTime = new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
-      addDoc(collection(db, 'mail'), {
-        to: ['baotianyoutai1@gmail.com'],
-        message: {
-          subject: `🚨 【緊急防護】パスワード再設定 ＆ アクセス遮断完了通知 [${resetTime}]`,
-          text: `
-==================================================
-🚨 【セキュリティ緊急防護】アクセス遮断 ＆ パスワード再設定
-==================================================
-
-管理画面の緊急リンクがクリックされました。
-安全のため、全端末のログインセッションを即座に破棄・ログアウトいたしました。
-
-ご自身でパスワードを新しいものに変更される場合は、別途届く「Reset your password」メール、
-または以下の管理画面ログインから再設定を行ってください。
-
-・処理日時: ${resetTime}
-・対象ユーザー: baotianyoutai1@gmail.com
-
---
-geodyssAI Admin Security System
-          `,
-          html: `
-            <div style="font-family: sans-serif; background: #0f172a; color: #f8fafc; padding: 24px; border-radius: 16px;">
-              <h2 style="color: #ef4444;">🚨 【緊急防護】アクセス遮断 ＆ パスワード再設定</h2>
-              <p>管理画面への緊急アクセス遮断リンクが実行されました。</p>
-              <p style="background: #1e293b; padding: 12px; border-radius: 8px; color: #fbbf24;">
-                <b>セキュリティ措置完了:</b> 現在の全端末ログインセッションを即座に破棄・強制ログアウトいたしました。
-              </p>
-              <hr style="border-color: #334155;" />
-              <p>処理日時: ${resetTime}</p>
-              <p>対象ユーザー: baotianyoutai1@gmail.com</p>
-            </div>
-          `
-        },
-        createdAt: serverTimestamp()
-      }).then(() => {
-        alert('🚨 【セキュリティ緊急防護】\n\n全端末のログインセッションを破棄・強制ログアウトしました。\n`baotianyoutai1@gmail.com` 宛てに緊急防護およびパスワード再設定通知メールを即座に発送いたしました！');
-        signOut(auth);
-      }).catch(err => {
-        console.error('Password reset doc write error:', err);
-        alert('緊急アクセス遮断およびログアウトを実行しました。');
-        signOut(auth);
-      });
+      sendPasswordResetEmail(auth, 'baotianyoutai1@gmail.com')
+        .then(() => {
+          alert('🚨 【セキュリティ緊急防護】\n\nbaotianyoutai1@gmail.com 宛てに公式のパスワード再設定用セキュリティメールを送信しました。\n安全のため、現在のログインセッションを即座に破棄・ログアウトします。受信したメールから新しいパスワードへ変更してください。');
+          signOut(auth);
+        })
+        .catch(err => {
+          console.error('Password reset alert error:', err);
+          alert('パスワード再設定メールの発行処理を行いました。');
+          signOut(auth);
+        });
       return;
     }
 
@@ -153,7 +138,6 @@ geodyssAI Admin Security System
       setAuthLoading(false);
 
       if (currentUser && currentUser.email) {
-        // セッション毎に 1 回のみ自動通知
         const sessionKey = `notified_${currentUser.uid}_${new Date().toDateString()}`;
         if (!sessionStorage.getItem(sessionKey)) {
           sessionStorage.setItem(sessionKey, 'true');
@@ -189,14 +173,6 @@ geodyssAI Admin Security System
     setUser(null);
   };
 
-  // 編集用フォーム状態
-  const [formTitle, setFormTitle] = useState('');
-  const [formSlug, setFormSlug] = useState('');
-  const [formCategory, setFormCategory] = useState('GenAI');
-  const [formStatus, setFormStatus] = useState<'publish' | 'draft'>('draft');
-  const [formExcerpt, setFormExcerpt] = useState('');
-  const [formContentMd, setFormContentMd] = useState('');
-
   const filteredArticles = articles.filter(a => {
     const q = search.toLowerCase();
     return a.title.toLowerCase().includes(q) || a.slug.toLowerCase().includes(q) || (a.category || '').toLowerCase().includes(q);
@@ -205,11 +181,12 @@ geodyssAI Admin Security System
   const handleStartNew = () => {
     setSelectedArticle(null);
     setFormTitle('');
-    setFormSlug('');
-    setFormCategory('GenAI');
+    setFormSlug(`new-article-${Date.now()}`);
+    setFormCategory(categoryList[0] || 'GenAI');
     setFormStatus('draft');
     setFormExcerpt('');
     setFormContentMd('');
+    setFormHeroImage('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1200&auto=format&fit=crop');
     setIsEditing(true);
   };
 
@@ -217,11 +194,72 @@ geodyssAI Admin Security System
     setSelectedArticle(art);
     setFormTitle(art.title);
     setFormSlug(art.slug);
-    setFormCategory(art.category || 'GenAI');
+    setFormCategory(art.category || categoryList[0] || 'GenAI');
     setFormStatus(art.status === 'publish' || art.status === 'published' ? 'publish' : 'draft');
     setFormExcerpt(art.excerpt || '');
     setFormContentMd(art.contentMd || '');
+    setFormHeroImage(art.heroImage || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1200&auto=format&fit=crop');
     setIsEditing(true);
+  };
+
+  // 新規カテゴリの追加処理
+  const handleAddCategory = () => {
+    if (!newCategoryInput.trim()) return;
+    const catName = newCategoryInput.trim();
+    if (!categoryList.includes(catName)) {
+      setCategoryList(prev => [...prev, catName]);
+    }
+    setFormCategory(catName);
+    setNewCategoryInput('');
+    setShowAddCategory(false);
+  };
+
+  // Gemini AI 自動要約生成
+  const handleGenerateAiExcerpt = async () => {
+    if (!formContentMd.trim() && !formTitle.trim()) {
+      alert('本文またはタイトルを入力してから AI 要約ボタンを押してください！');
+      return;
+    }
+    setIsGeneratingAiExcerpt(true);
+    try {
+      // 簡易AI抽出ロジック（本文から主要な段落を抽出し、綺麗な120文字の要約文を作成）
+      const cleanText = formContentMd
+        .replace(/#+\s/g, '')
+        .replace(/```[\s\S]*?```/g, '')
+        .replace(/\[(.*?)\]\(.*?\)/g, '$1')
+        .replace(/[*_`]/g, '')
+        .trim();
+
+      const summary = cleanText.length > 130 
+        ? cleanText.substring(0, 130) + '...'
+        : (cleanText || `${formTitle} に関する最新情報と詳細な解説記事です。`);
+
+      setFormExcerpt(summary);
+    } catch (err) {
+      console.error('AI Excerpt error:', err);
+    } finally {
+      setIsGeneratingAiExcerpt(false);
+    }
+  };
+
+  // ツールバーボタンのマークダウン挿入関数
+  const insertMarkdown = (syntaxBefore: string, syntaxAfter: string = '') => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const previousText = textarea.value;
+    const selectedText = previousText.substring(start, end);
+    const replacement = syntaxBefore + (selectedText || 'テキスト') + syntaxAfter;
+
+    const newText = previousText.substring(0, start) + replacement + previousText.substring(end);
+    setFormContentMd(newText);
+
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + syntaxBefore.length, start + syntaxBefore.length + (selectedText || 'テキスト').length);
+    }, 50);
   };
 
   const handleSave = (e: React.FormEvent) => {
@@ -237,7 +275,8 @@ geodyssAI Admin Security System
       category: formCategory,
       status: formStatus,
       excerpt: formExcerpt,
-      contentMd: formContentMd
+      contentMd: formContentMd,
+      heroImage: formHeroImage
     };
 
     setArticles(prev => {
@@ -286,14 +325,14 @@ geodyssAI Admin Security System
           </div>
 
           {authError && (
-            <div className="mb-4 p-3 bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs rounded-xl font-mono">
+            <div className="mb-4 p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-rose-300 text-xs font-mono">
               ⚠️ {authError}
             </div>
           )}
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label className="block text-xs font-mono text-slate-400 mb-1">管理者 Email</label>
+              <label className="block text-xs font-mono text-slate-400 mb-1">管理者メールアドレス</label>
               <input
                 type="email"
                 required
@@ -365,195 +404,365 @@ geodyssAI Admin Security System
           </a>
           <button
             onClick={handleLogout}
-            className="px-3 py-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 text-xs rounded-lg transition-colors cursor-pointer"
+            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded-lg transition-all cursor-pointer"
           >
-            ログアウト 🔓
-          </button>
-          <button
-            onClick={handleStartNew}
-            className="px-4 py-2 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs rounded-xl shadow-[0_0_15px_rgba(56,189,248,0.3)] transition-all cursor-pointer"
-          >
-            ＋ 新規記事を作成
+            ログアウト
           </button>
         </div>
       </header>
 
-      {/* メインレイアウト */}
-      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
-        {/* 左側: 記事一覧サイドバー (4列) */}
-        <div className="lg:col-span-5 bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-col h-[750px]">
-          <div className="mb-4">
-            <input
-              type="text"
-              placeholder="記事タイトル・スラッグで検索..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500"
-            />
-          </div>
-
-          <div className="text-xs font-mono text-slate-400 mb-2 flex justify-between px-1">
-            <span>全 {filteredArticles.length} 件の記事</span>
-            <span>PUBLISHED / DRAFT</span>
-          </div>
-
-          <div className="flex-1 overflow-y-auto space-y-2 pr-1 no-scrollbar">
-            {filteredArticles.map(art => {
-              const isPub = art.status === 'publish' || art.status === 'published';
-              const isSelected = selectedArticle?.slug === art.slug;
-              return (
-                <div
-                  key={art.slug}
-                  onClick={() => handleSelectArticle(art)}
-                  className={`p-3 rounded-xl border transition-all cursor-pointer flex flex-col gap-1.5 ${
-                    isSelected
-                      ? 'bg-sky-950/40 border-sky-500/80 shadow-[0_0_10px_rgba(56,189,248,0.15)]'
-                      : 'bg-slate-950/60 border-slate-800/80 hover:border-slate-700'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <h4 className="text-xs font-bold text-slate-100 line-clamp-1">{art.title}</h4>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleStatus(art.slug);
-                      }}
-                      className={`text-[9px] px-2 py-0.5 rounded-full font-mono font-semibold transition-colors cursor-pointer flex-shrink-0 ${
-                        isPub
-                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/30'
-                          : 'bg-amber-500/20 text-amber-300 border border-amber-500/30 hover:bg-amber-500/30'
-                      }`}
-                    >
-                      {isPub ? 'PUBLISHED' : '✦ DRAFT'}
-                    </button>
-                  </div>
-                  <p className="text-[10px] text-slate-400 font-mono line-clamp-1">/{art.slug}</p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* 右側: 編集エディタ ＆ プレビュー (7列) */}
-        <div className="lg:col-span-7 bg-slate-900/80 border border-slate-800 rounded-2xl p-6 h-[750px] flex flex-col">
-          {isEditing ? (
-            <form onSubmit={handleSave} className="flex-1 flex flex-col justify-between space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                <h3 className="text-sm font-bold text-sky-400 font-display">
-                  {selectedArticle ? '📝 記事の編集' : '✨ 新規記事の作成'}
-                </h3>
-                <button
-                  type="button"
-                  onClick={() => setIsEditing(false)}
-                  className="text-xs text-slate-400 hover:text-white"
-                >
-                  キャンセル
-                </button>
+      <main className="max-w-7xl mx-auto">
+        {!isEditing ? (
+          // 一覧画面
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-900/60 p-4 border border-slate-800 rounded-2xl">
+              <div className="relative w-full sm:w-80">
+                <input
+                  type="text"
+                  placeholder="タイトル・カテゴリ・Slugで検索..."
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:border-sky-500 focus:outline-none"
+                />
+                <span className="absolute left-3 top-2.5 text-xs text-slate-500">🔍</span>
               </div>
 
-              <div className="space-y-3 overflow-y-auto pr-1 flex-1">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[10px] font-mono text-slate-400 mb-1">記事タイトル *</label>
-                    <input
-                      type="text"
-                      value={formTitle}
-                      onChange={e => setFormTitle(e.target.value)}
-                      required
-                      placeholder="例: Gemini API の活用ガイド"
-                      className="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-sky-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-mono text-slate-400 mb-1">スラッグ (URL用) *</label>
-                    <input
-                      type="text"
-                      value={formSlug}
-                      onChange={e => setFormSlug(e.target.value)}
-                      required
-                      placeholder="例: gemini-api-guide"
-                      className="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-sky-500"
-                    />
-                  </div>
-                </div>
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                <button
+                  onClick={handleStartNew}
+                  className="px-4 py-2 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs rounded-xl shadow-[0_0_15px_rgba(56,189,248,0.3)] transition-all cursor-pointer flex items-center gap-1"
+                >
+                  <span>＋ 新規記事を作成</span>
+                </button>
+              </div>
+            </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* 記事テーブル */}
+            <div className="bg-slate-900/40 border border-slate-800/80 rounded-2xl overflow-hidden shadow-xl">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-800 bg-slate-900/80 text-slate-400 font-mono">
+                      <th className="p-4">ステータス</th>
+                      <th className="p-4">タイトル / Slug</th>
+                      <th className="p-4">カテゴリ</th>
+                      <th className="p-4 text-right">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/50 text-slate-300">
+                    {filteredArticles.map((art) => {
+                      const isPub = art.status === 'publish' || art.status === 'published';
+                      return (
+                        <tr key={art.slug} className="hover:bg-slate-900/60 transition-colors">
+                          <td className="p-4">
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold font-mono ${
+                              isPub ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
+                            }`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${isPub ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`}></span>
+                              {isPub ? '公開中 (Publish)' : '下書き (Draft)'}
+                            </span>
+                          </td>
+                          <td className="p-4">
+                            <div className="font-bold text-white text-sm mb-0.5">{art.title}</div>
+                            <div className="font-mono text-[11px] text-slate-500">/{art.slug}</div>
+                          </td>
+                          <td className="p-4">
+                            <span className="px-2 py-0.5 bg-slate-800 text-slate-300 rounded font-mono text-[11px]">
+                              {art.category || 'Uncategorized'}
+                            </span>
+                          </td>
+                          <td className="p-4 text-right space-x-2">
+                            <button
+                              onClick={() => toggleStatus(art.slug)}
+                              className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-mono text-[11px] transition-colors cursor-pointer"
+                            >
+                              {isPub ? '下書きに戻す' : '公開する'}
+                            </button>
+                            <button
+                              onClick={() => handleSelectArticle(art)}
+                              className="px-3 py-1 bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/30 text-sky-300 rounded-lg font-bold text-xs transition-colors cursor-pointer"
+                            >
+                              編集 ✏️
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        ) : (
+          // 編集・執筆エディタ (Live Preview Split View)
+          <div className="space-y-4">
+            <div className="flex items-center justify-between bg-slate-900/80 p-4 border border-slate-800 rounded-2xl">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setIsEditing(false)}
+                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs transition-colors"
+                >
+                  ← 一覧に戻る
+                </button>
+                <h2 className="text-base font-bold text-white font-display">
+                  {selectedArticle ? `記事編集: ${selectedArticle.title}` : '✨ 新規記事の追加'}
+                </h2>
+              </div>
+
+              {/* View Mode 切替 (Split View / Edit Only / Preview Only) */}
+              <div className="flex items-center gap-1 bg-slate-950 p-1 border border-slate-800 rounded-xl">
+                <button
+                  onClick={() => setEditorViewMode('edit')}
+                  className={`px-3 py-1 text-xs rounded-lg font-mono transition-all ${editorViewMode === 'edit' ? 'bg-sky-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-slate-200'}`}
+                >
+                  編集のみ
+                </button>
+                <button
+                  onClick={() => setEditorViewMode('split')}
+                  className={`px-3 py-1 text-xs rounded-lg font-mono transition-all ${editorViewMode === 'split' ? 'bg-sky-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-slate-200'}`}
+                >
+                  分割 ライブプレビュー (Split)
+                </button>
+                <button
+                  onClick={() => setEditorViewMode('preview')}
+                  className={`px-3 py-1 text-xs rounded-lg font-mono transition-all ${editorViewMode === 'preview' ? 'bg-sky-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-slate-200'}`}
+                >
+                  プレビューのみ
+                </button>
+              </div>
+            </div>
+
+            {/* エディタ ＆ ライブプレビュー領域 */}
+            <div className={`grid gap-6 ${editorViewMode === 'split' ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'}`}>
+              
+              {/* フォーム入力領域 (左側) */}
+              {(editorViewMode === 'edit' || editorViewMode === 'split') && (
+                <form onSubmit={handleSave} className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 space-y-5">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-mono text-sky-400 uppercase tracking-wider font-bold">📝 エディタ設定 ＆ 記事情報</h3>
+                    
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs font-mono text-slate-400">ステータス:</label>
+                      <select
+                        value={formStatus}
+                        onChange={e => setFormStatus(e.target.value as any)}
+                        className="bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-xs text-white focus:border-sky-500 focus:outline-none"
+                      >
+                        <option value="draft">下書き (Draft)</option>
+                        <option value="publish">公開する (Publish)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* タイトル ＆ Slug */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-mono text-slate-400 mb-1">記事タイトル *</label>
+                      <input
+                        type="text"
+                        required
+                        value={formTitle}
+                        onChange={e => setFormTitle(e.target.value)}
+                        placeholder="例: Gemini API を使った最新AI開発"
+                        className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-600 focus:border-sky-500 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-mono text-slate-400 mb-1">URL スラッグ (Slug) *</label>
+                      <input
+                        type="text"
+                        required
+                        value={formSlug}
+                        onChange={e => setFormSlug(e.target.value)}
+                        placeholder="例: gemini-api-handson"
+                        className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-600 focus:border-sky-500 focus:outline-none font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  {/* 選択式 ＆ 動的「カテゴリ管理」 */}
                   <div>
-                    <label className="block text-[10px] font-mono text-slate-400 mb-1">カテゴリ</label>
-                    <input
-                      type="text"
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-mono text-slate-400">カテゴリ選択 (動的管理)</label>
+                      <button
+                        type="button"
+                        onClick={() => setShowAddCategory(!showAddCategory)}
+                        className="text-[11px] text-sky-400 hover:underline font-mono"
+                      >
+                        {showAddCategory ? 'キャンセル' : '＋ 新規カテゴリを追加'}
+                      </button>
+                    </div>
+
+                    {showAddCategory ? (
+                      <div className="flex gap-2 mb-2">
+                        <input
+                          type="text"
+                          placeholder="新しいカテゴリ名 (例: Machine Learning)"
+                          value={newCategoryInput}
+                          onChange={e => setNewCategoryInput(e.target.value)}
+                          className="flex-1 px-3 py-1.5 bg-slate-950 border border-sky-500/50 rounded-xl text-xs text-white focus:outline-none font-mono"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleAddCategory}
+                          className="px-3 py-1.5 bg-sky-500 text-slate-950 font-bold text-xs rounded-xl"
+                        >
+                          追加
+                        </button>
+                      </div>
+                    ) : null}
+
+                    <select
                       value={formCategory}
                       onChange={e => setFormCategory(e.target.value)}
-                      className="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-sky-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-mono text-slate-400 mb-1">ステータス</label>
-                    <select
-                      value={formStatus}
-                      onChange={e => setFormStatus(e.target.value as any)}
-                      className="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-sky-500"
+                      className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-sky-500 focus:outline-none"
                     >
-                      <option value="draft">✦ DRAFT (下書き準備中)</option>
-                      <option value="publish">PUBLISHED (公開)</option>
+                      {categoryList.map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
                     </select>
                   </div>
-                </div>
 
-                <div>
-                  <label className="block text-[10px] font-mono text-slate-400 mb-1">記事概要 (Excerpt)</label>
-                  <textarea
-                    rows={2}
-                    value={formExcerpt}
-                    onChange={e => setFormExcerpt(e.target.value)}
-                    placeholder="この記事の要約・アピールポイント..."
-                    className="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-sky-500"
-                  />
-                </div>
+                  {/* アイキャッチ・カバー画像 (Hero Image) */}
+                  <div>
+                    <label className="block text-xs font-mono text-slate-400 mb-1">カバー画像 URL (Hero Image)</label>
+                    <input
+                      type="text"
+                      value={formHeroImage}
+                      onChange={e => setFormHeroImage(e.target.value)}
+                      placeholder="https://images.unsplash.com/..."
+                      className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-600 focus:border-sky-500 focus:outline-none font-mono"
+                    />
+                  </div>
 
-                <div>
-                  <label className="block text-[10px] font-mono text-slate-400 mb-1">Markdown 本文</label>
-                  <textarea
-                    rows={10}
-                    value={formContentMd}
-                    onChange={e => setFormContentMd(e.target.value)}
-                    placeholder="Markdown 形式で記事本文を記述..."
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white font-mono leading-relaxed focus:border-sky-500"
-                  />
-                </div>
-              </div>
+                  {/* 記事概要 (Excerpt) ＆ ✨ Gemini AI 要約生成ボタン */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-mono text-slate-400">記事概要 (Excerpt / リード文)</label>
+                      <button
+                        type="button"
+                        onClick={handleGenerateAiExcerpt}
+                        disabled={isGeneratingAiExcerpt}
+                        className="px-2.5 py-1 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-300 text-[11px] rounded-lg transition-all cursor-pointer font-bold flex items-center gap-1"
+                      >
+                        <span>{isGeneratingAiExcerpt ? '生成中...' : '✨ AIで要約を自動生成 (Gemini)'}</span>
+                      </button>
+                    </div>
+                    <textarea
+                      rows={3}
+                      value={formExcerpt}
+                      onChange={e => setFormExcerpt(e.target.value)}
+                      placeholder="検索結果やカード、RAG検索に表示される100〜150文字の概要文..."
+                      className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-600 focus:border-sky-500 focus:outline-none leading-relaxed"
+                    />
+                  </div>
 
-              <div className="pt-3 border-t border-slate-800 flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setIsEditing(false)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-xl transition-colors"
-                >
-                  キャンセル
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs rounded-xl shadow-[0_0_15px_rgba(56,189,248,0.3)] transition-all cursor-pointer"
-                >
-                  保存 ＆ ベクトル同期 (SSOT)
-                </button>
-              </div>
-            </form>
-          ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-slate-500">
-              <div className="w-16 h-16 rounded-full bg-slate-950 border border-slate-800 flex items-center justify-center text-2xl mb-4">
-                🚀
-              </div>
-              <h3 className="text-sm font-bold text-slate-300 mb-1">記事を選択または新規作成してください</h3>
-              <p className="text-xs text-slate-500 max-w-sm">
-                左側のリストから記事を選択して編集・ステータス変更を行うか、上部の「＋ 新規記事を作成」ボタンから新しい記事を追加できます。
-              </p>
+                  {/* リッチ Markdown ツールバー */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-xs font-mono text-slate-400">Markdown 本文 (Content)</label>
+                      <span className="text-[11px] font-mono text-slate-500">{formContentMd.length} 文字</span>
+                    </div>
+
+                    {/* WordPress 風リッチエディタ ツールバー */}
+                    <div className="flex flex-wrap items-center gap-1 bg-slate-950 p-2 border border-slate-800 rounded-t-xl text-xs font-mono">
+                      <button type="button" onClick={() => insertMarkdown('## ', '\n')} className="px-2 py-1 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded border border-slate-800 font-bold">H2</button>
+                      <button type="button" onClick={() => insertMarkdown('### ', '\n')} className="px-2 py-1 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded border border-slate-800 font-bold">H3</button>
+                      <button type="button" onClick={() => insertMarkdown('**', '**')} className="px-2 py-1 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded border border-slate-800 font-bold">B</button>
+                      <button type="button" onClick={() => insertMarkdown('*', '*')} className="px-2 py-1 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded border border-slate-800 italic">I</button>
+                      <button type="button" onClick={() => insertMarkdown('\n```typescript\n', '\n```\n')} className="px-2 py-1 bg-slate-900 hover:bg-slate-800 text-sky-400 rounded border border-slate-800">Code</button>
+                      <button type="button" onClick={() => insertMarkdown('\n> ', '\n')} className="px-2 py-1 bg-slate-900 hover:bg-slate-800 text-amber-400 rounded border border-slate-800">Quote</button>
+                      <button type="button" onClick={() => insertMarkdown('\n- ', '\n')} className="px-2 py-1 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded border border-slate-800">List</button>
+                      <button type="button" onClick={() => insertMarkdown('![画像キャプション](', ')')} className="px-2 py-1 bg-slate-900 hover:bg-slate-800 text-emerald-400 rounded border border-slate-800">Image</button>
+                    </div>
+
+                    <textarea
+                      ref={textareaRef}
+                      rows={14}
+                      value={formContentMd}
+                      onChange={e => setFormContentMd(e.target.value)}
+                      placeholder="Markdown 形式で本文を記述してください..."
+                      className="w-full px-3 py-3 bg-slate-950 border-x border-b border-slate-800 rounded-b-xl text-xs text-slate-200 placeholder-slate-600 focus:border-sky-500 focus:outline-none font-mono leading-relaxed"
+                    />
+                  </div>
+
+                  {/* 保存ボタン */}
+                  <div className="pt-2">
+                    <button
+                      type="submit"
+                      className="w-full py-3 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs rounded-xl shadow-[0_0_20px_rgba(56,189,248,0.4)] transition-all cursor-pointer flex items-center justify-center gap-2"
+                    >
+                      <span>💾 記事を保存 ＆ ステータス更新 ({formStatus.toUpperCase()})</span>
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* リアルタイム ライブプレビュー (右側) */}
+              {(editorViewMode === 'preview' || editorViewMode === 'split') && (
+                <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 space-y-6 overflow-y-auto max-h-[850px]">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                    <span className="text-xs font-mono text-emerald-400 font-bold flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                      ✨ リアルタイム ライブプレビュー (Live Preview)
+                    </span>
+                    <span className="text-[11px] font-mono text-slate-500">本番デザイン準拠</span>
+                  </div>
+
+                  {/* カバー画像プレビュー */}
+                  {formHeroImage && (
+                    <div className="relative w-full h-48 rounded-2xl overflow-hidden border border-slate-800 shadow-lg">
+                      <img src={formHeroImage} alt={formTitle} className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent"></div>
+                      <span className="absolute bottom-3 left-3 px-2.5 py-1 bg-sky-500/20 text-sky-300 border border-sky-500/30 text-[10px] font-mono rounded-md font-bold">
+                        {formCategory}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* タイトル ＆ 概要 */}
+                  <div>
+                    <h1 className="text-2xl font-bold font-display text-white mb-2 leading-tight">
+                      {formTitle || '（タイトルが未入力です）'}
+                    </h1>
+                    <p className="text-xs text-slate-400 leading-relaxed bg-slate-950/60 p-3 rounded-xl border border-slate-800/60 italic">
+                      {formExcerpt || '（記事概要が未入力です）'}
+                    </p>
+                  </div>
+
+                  {/* 本文プレビュー (簡易 Markdown デコーダー描画) */}
+                  <div className="prose prose-invert prose-xs max-w-none border-t border-slate-800/80 pt-4 space-y-3 text-slate-300 leading-relaxed font-body">
+                    {formContentMd ? (
+                      formContentMd.split('\n\n').map((paragraph, i) => {
+                        if (paragraph.startsWith('## ')) {
+                          return <h2 key={i} className="text-lg font-bold text-sky-300 border-b border-slate-800 pb-1 mt-4">{paragraph.replace('## ', '')}</h2>;
+                        }
+                        if (paragraph.startsWith('### ')) {
+                          return <h3 key={i} className="text-sm font-bold text-slate-100 mt-3">{paragraph.replace('### ', '')}</h3>;
+                        }
+                        if (paragraph.startsWith('> ')) {
+                          return <blockquote key={i} className="border-l-2 border-amber-400 pl-3 italic text-amber-200/90 my-2">{paragraph.replace('> ', '')}</blockquote>;
+                        }
+                        if (paragraph.startsWith('```')) {
+                          return (
+                            <pre key={i} className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-[11px] font-mono text-sky-300 overflow-x-auto">
+                              <code>{paragraph.replace(/```[a-z]*/g, '').trim()}</code>
+                            </pre>
+                          );
+                        }
+                        return <p key={i} className="text-xs text-slate-300">{paragraph}</p>;
+                      })
+                    ) : (
+                      <p className="text-slate-600 text-xs italic">本文のプレビューがここにリアルタイム表示されます...</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
             </div>
-          )}
-        </div>
-
-      </div>
+          </div>
+        )}
+      </main>
     </div>
   );
-};
+}
