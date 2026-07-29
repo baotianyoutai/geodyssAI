@@ -54,83 +54,34 @@ export const MunchkinNavigator: React.FC<MunchkinNavigatorProps> = ({ articles =
     setIsLoading(true);
 
     try {
-      // 1. クライアント側で直接 GoogleGenAI (Gemini AI Logic) を呼び出し
-      const apiKey = import.meta.env.PUBLIC_FIREBASE_API_KEY || import.meta.env.GEMINI_API_KEY || 'AIzaSyB-5jpp_4PmANU-9scNR0q-ahUJvFpBmUg';
-      const { GoogleGenAI } = await import('@google/genai');
-      const ai = new GoogleGenAI({ apiKey });
+      const history = [...messages, userMsg].map(m => ({
+        role: m.sender === 'user' ? 'user' : 'assistant',
+        sender: m.sender,
+        content: m.text,
+        text: m.text
+      }));
 
-      // 記事コンテキストの構築
-      const matched = articles.filter(art => {
-        const q = textToSend.toLowerCase();
-        return (art.title || '').toLowerCase().includes(q) ||
-               (art.excerpt || '').toLowerCase().includes(q) ||
-               (art.category || '').toLowerCase().includes(q);
-      }).slice(0, 3);
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: history })
+      });
 
-      const targetList = matched.length > 0 ? matched : articles.slice(0, 3);
-      const contextText = targetList.map((art, idx) =>
-        `【関連記事${idx + 1}】タイトル: "${art.title}" (カテゴリ: ${art.category})\n概要: ${art.excerpt}\nURL: /articles/${encodeURIComponent(art.slug)}`
-      ).join("\n\n");
-
-      const sys = "あなたはデータサイエンティストのブログの猫アシスタント「マンチカン航海士」だニャ。語尾に「〜ニャ」「〜だニャ」を付け、論理的かつ愛らしく回答して。";
-      const prompt = `${sys}
-
-【参照記事コンテキスト】
-${contextText}
-
-【ユーザーの質問】
-最新のGoogle検索結果や関連記事を踏まえて答えてニャ：${textToSend}`;
-
-      const CANDIDATE_MODELS = ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-1.5-flash'];
-      let aiText = '';
-
-      for (const modelName of CANDIDATE_MODELS) {
-        try {
-          const response = await ai.models.generateContent({
-            model: modelName,
-            contents: prompt,
-            config: {
-              tools: [{ googleSearch: {} }]
-            }
-          });
-
-          if (response.text) {
-            aiText = response.text;
-            // XML実績ロジック: 出典 Grounding メタデータからの参考リンク抽出
-            const candidate = (response as any)?.candidates?.[0];
-            const meta = candidate?.groundingMetadata;
-            if (meta && Array.isArray(meta.groundingChunks)) {
-              const links: string[] = [];
-              meta.groundingChunks.forEach((chunk: any) => {
-                if (chunk.web?.uri) {
-                  const linkTitle = chunk.web.title || "参考技術記事";
-                  links.push(`- [${linkTitle}](${chunk.web.uri})`);
-                }
-              });
-              if (links.length > 0) {
-                aiText += `\n\n👉 **最新技術記事・探索結果だニャ** 🐾\n` + links.join('\n');
-              }
-            }
-            break;
-          }
-        } catch (mErr) {
-          console.warn(`Model ${modelName} call failed, fallback to next:`, mErr);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.response) {
+          const botMsg: Message = {
+            id: `bot-${Date.now()}`,
+            sender: 'bot',
+            text: data.response,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          };
+          setMessages(prev => [...prev, botMsg]);
+          setIsLoading(false);
+          return;
         }
       }
-
-      if (aiText) {
-        const botMsg: Message = {
-          id: `bot-${Date.now()}`,
-          sender: 'bot',
-          text: aiText,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        };
-        setMessages(prev => [...prev, botMsg]);
-        setIsLoading(false);
-        return;
-      }
-
-      throw new Error('All AI models returned empty response');
+      throw new Error('API returned empty or invalid response');
 
     } catch (error) {
       console.warn('Fallback RAG search:', error);
