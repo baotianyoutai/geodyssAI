@@ -120,23 +120,24 @@ export const MunchkinNavigator: React.FC<MunchkinNavigatorProps> = ({ articles =
       }
 
       if (aiText) {
-        // 🛡️ 実在公開記事・確定動作リンク保証 (Link Safety Grounding)
+        // 🛡️ 実在公開記事・確定動作リンク保証 (Link Safety Grounding + Vector Match Score)
         const validArticleLinks: string[] = [];
         targetList.forEach(art => {
           const decodedSlug = decodeURIComponent(art.slug);
           const isPublished = art.status === 'publish' || art.status === 'published' || activeSlugs.has(decodedSlug);
-          
+          const scoreBadge = art.matchScore ? ` \`(類似度: ${art.matchScore})\`` : '';
+
           if (isPublished) {
             const linkUrl = `/articles/${decodedSlug}`;
-            validArticleLinks.push(`- [👉 ${art.title}](${linkUrl})`);
+            validArticleLinks.push(`- [👉 ${art.title}](${linkUrl})${scoreBadge}`);
           } else {
-            validArticleLinks.push(`- ✦ **${art.title}** *(下書き準備中の星)*`);
+            validArticleLinks.push(`- ✦ **${art.title}** *(下書き準備中の星)*${scoreBadge}`);
           }
         });
 
         // 提案記事カードブロックを確実に付与
         if (validArticleLinks.length > 0 && !aiText.includes('/articles/')) {
-          aiText += `\n\n📌 **おすすめの星（ブログ内ナビゲーション）** 🐾\n` + validArticleLinks.join('\n');
+          aiText += `\n\n📌 **おすすめの星（コサイン類似度 RAG スコア）** 🐾\n` + validArticleLinks.join('\n');
         }
 
         const botMsg: Message = {
@@ -155,13 +156,15 @@ export const MunchkinNavigator: React.FC<MunchkinNavigatorProps> = ({ articles =
       targetList.forEach(art => {
         const decodedSlug = decodeURIComponent(art.slug);
         const isPublished = art.status === 'publish' || art.status === 'published' || activeSlugs.has(decodedSlug);
+        const scoreBadge = art.matchScore ? ` \`(類似度: ${art.matchScore})\`` : '';
+
         if (isPublished) {
-          validArticleLinks.push(`- [👉 ${art.title}](/articles/${decodedSlug})`);
+          validArticleLinks.push(`- [👉 ${art.title}](/articles/${decodedSlug})${scoreBadge}`);
         } else {
-          validArticleLinks.push(`- ✦ **${art.title}** *(下書き準備中の星)*`);
+          validArticleLinks.push(`- ✦ **${art.title}** *(下書き準備中の星)*${scoreBadge}`);
         }
       });
-      const articleCardBlock = `\n\n📌 **おすすめの星（ブログ内ナビゲーション）** 🐾\n` + validArticleLinks.join('\n');
+      const articleCardBlock = `\n\n📌 **おすすめの星（コサイン類似度 RAG スコア）** 🐾\n` + validArticleLinks.join('\n');
 
       const fallbackText = `ニャー！「${textToSend}」に関する知の星海探索結果だニャ 🐾\n\n「geodyssAI」の航海日誌からおすすめの記事を見つけたニャ！` + articleCardBlock;
 

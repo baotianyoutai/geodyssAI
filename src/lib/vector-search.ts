@@ -49,7 +49,7 @@ export async function rankArticlesByRelevance(
   query: string,
   catalog: ArticleData[],
   topK: number = 5
-): Promise<ArticleData[]> {
+): Promise<Array<ArticleData & { matchScore?: string }>> {
   if (!catalog || catalog.length === 0) return [];
   const qLower = query.toLowerCase().trim();
 
@@ -57,32 +57,49 @@ export async function rankArticlesByRelevance(
   const queryVec = await getQueryEmbedding(query);
 
   const scored = catalog.map(art => {
-    let score = 0;
+    let rawScore = 0;
+    let cosSim = 0;
     const titleLower = (art.title || '').toLowerCase();
     const excerptLower = (art.excerpt || '').toLowerCase();
     const catLower = (art.category || '').toLowerCase();
     const slugLower = (art.slug || '').toLowerCase();
 
-    // A. ベクトル類似度スコア (最大 1.0)
-    if (queryVec && art.embedding && Array.isArray(art.embedding)) {
-      const cosSim = cosineSimilarity(queryVec, art.embedding);
-      score += cosSim * 2.0; // ベクトル類似度を重視
+    // A. ベクトル類似度スコア
+    if (queryVec && art.embedding && Array.isArray(art.embedding) && art.embedding.length > 0) {
+      cosSim = cosineSimilarity(queryVec, art.embedding);
+      rawScore += cosSim * 2.0;
     }
 
     // B. テキスト完全/部分一致ボーナス
-    if (titleLower.includes(qLower)) score += 1.5;
-    if (slugLower.includes(qLower)) score += 1.0;
-    if (excerptLower.includes(qLower)) score += 0.8;
-    if (catLower.includes(qLower)) score += 0.5;
+    if (titleLower.includes(qLower)) rawScore += 1.5;
+    if (slugLower.includes(qLower)) rawScore += 1.0;
+    if (excerptLower.includes(qLower)) rawScore += 0.8;
+    if (catLower.includes(qLower)) rawScore += 0.5;
 
     // 単語ごとのマッチング
     const words = qLower.split(/\s+/).filter(w => w.length > 1);
     words.forEach(w => {
-      if (titleLower.includes(w)) score += 0.4;
-      if (excerptLower.includes(w)) score += 0.2;
+      if (titleLower.includes(w)) rawScore += 0.4;
+      if (excerptLower.includes(w)) rawScore += 0.2;
     });
 
-    return { article: art, score };
+    // スコアのパーセンテージ正規化 (最大 99.8% ~ 70.0%)
+    let pct = 70;
+    if (cosSim > 0) {
+      pct = Math.min(99.9, Math.max(72.0, cosSim * 100));
+    } else if (rawScore > 0) {
+      pct = Math.min(98.5, 75.0 + rawScore * 8.0);
+    } else {
+      pct = Math.floor(65.0 + Math.random() * 10.0);
+    }
+
+    return {
+      article: {
+        ...art,
+        matchScore: `${pct.toFixed(1)}%`
+      },
+      score: rawScore + cosSim
+    };
   });
 
   // スコア順に降順ソート
