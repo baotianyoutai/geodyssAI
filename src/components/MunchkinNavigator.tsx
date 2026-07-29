@@ -54,39 +54,14 @@ export const MunchkinNavigator: React.FC<MunchkinNavigatorProps> = ({ articles =
     setIsLoading(true);
 
     try {
-      const history = [...messages, userMsg].map(m => ({
-        role: m.sender === 'user' ? 'user' : 'assistant',
-        sender: m.sender,
-        content: m.text,
-        text: m.text
-      }));
-
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: history })
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        if (data.response) {
-          const botMsg: Message = {
-            id: `bot-${Date.now()}`,
-            sender: 'bot',
-            text: data.response,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          };
-          setMessages(prev => [...prev, botMsg]);
-          setIsLoading(false);
-          return;
-        }
-      }
-      throw new Error('API returned empty or invalid response');
-
-    } catch (error) {
-      console.warn('Fallback RAG search:', error);
       const q = textToSend.toLowerCase();
 
+      // 1. 公式 Firebase AI Logic SDK の動的取得
+      const { app } = await import('../lib/firebase-client');
+      const { getAI, getGenerativeModel } = await import(/* @vite-ignore */ 'https://www.gstatic.com/firebasejs/11.0.0/firebase-ai-logic.js');
+      const ai = getAI(app);
+
+      // 関連記事の検索・コンテキスト構築
       const matched = articles.filter(art => {
         const title = (art.title || '').toLowerCase();
         const excerpt = (art.excerpt || '').toLowerCase();
@@ -95,21 +70,74 @@ export const MunchkinNavigator: React.FC<MunchkinNavigatorProps> = ({ articles =
       }).slice(0, 3);
 
       const targetList = matched.length > 0 ? matched : articles.slice(0, 3);
-      let replyText = `ニャー！「${textToSend}」に関する知の星海探索結果だニャ 🐾\n\n`;
+      const contextText = targetList.map((art, idx) =>
+        `【関連記事${idx + 1}】タイトル: "${art.title}" (カテゴリ: ${art.category})\n概要: ${art.excerpt}\nURL: /articles/${encodeURIComponent(art.slug)}`
+      ).join("\n\n");
 
-      if (targetList.length > 0) {
-        replyText += `👉 [${targetList[0].title}](/articles/${encodeURIComponent(targetList[0].slug)})\n*${targetList[0].excerpt || '気になる技術記事を探索してみてニャ！'}*\n\n`;
-        if (targetList.length > 1) {
-          replyText += `こちらの星もおすすめだニャ：\n` + targetList.slice(1).map(a => `・ [${a.title}](/articles/${encodeURIComponent(a.slug)})`).join('\n');
+      const sys = "あなたはデータサイエンティストのブログの猫アシスタント「マンチカン航海士」だニャ。語尾に「〜ニャ」「〜だニャ」を付け、論理的かつ愛らしく回答して。";
+      const prompt = `${sys}\n\n【参照記事コンテキスト】\n${contextText}\n\n【ユーザーの質問】\n最新のGoogle検索結果や関連記事を踏まえて答えてニャ：${textToSend}`;
+
+      // 公式サポートモデルリスト: gemini-2.5-flash / gemini-1.5-flash / gemini-2.5-flash-lite
+      const CANDIDATE_MODELS = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.5-flash-lite'];
+      let aiText = '';
+      let lastErr = null;
+
+      for (const modelName of CANDIDATE_MODELS) {
+        try {
+          const model = getGenerativeModel(ai, {
+            model: modelName,
+            tools: [{ googleSearch: {} }]
+          });
+          const result = await model.generateContent(prompt);
+          const response = await result.response;
+          if (response && response.text) {
+            aiText = response.text();
+            // Grounding (Google検索出典リンク) の抽出
+            const candidate = response.candidates?.[0];
+            const meta = candidate?.groundingMetadata;
+            if (meta && Array.isArray(meta.groundingChunks)) {
+              const links: string[] = [];
+              meta.groundingChunks.forEach((chunk: any) => {
+                if (chunk.web?.uri) {
+                  const linkTitle = chunk.web.title || "参考技術記事";
+                  links.push(`- [${linkTitle}](${chunk.web.uri})`);
+                }
+              });
+              if (links.length > 0) {
+                aiText += `\n\n👉 **最新技術記事・探索結果だニャ** 🐾\n` + links.join('\n');
+              }
+            }
+            break;
+          }
+        } catch (mErr) {
+          lastErr = mErr;
+          console.warn(`Firebase AI Logic model ${modelName} failed:`, mErr);
         }
-      } else {
-        replyText += `星の海を自由に探訪してみてニャ 🐾`;
       }
 
+      if (aiText) {
+        const botMsg: Message = {
+          id: `bot-${Date.now()}`,
+          sender: 'bot',
+          text: aiText,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+        setMessages(prev => [...prev, botMsg]);
+        setIsLoading(false);
+        return;
+      }
+
+      throw lastErr || new Error('All Firebase AI Logic models failed');
+
+    } catch (error: any) {
+      console.error('Firebase AI Logic error:', error);
+      const errMsg = error?.message || String(error);
+
+      // エラーを隠さずユーザーおよびDevToolsにそのまま提示してデバッグ可能にする
       const botMsg: Message = {
         id: `bot-${Date.now()}`,
         sender: 'bot',
-        text: replyText,
+        text: `ニャー！Firebase AI Logic 呼び出し中にエラーが発生したニャ 🐾\n\n**詳細エラー**: \`${errMsg}\`\n\n設定（API KeyやApp Check）を確認してほしいニャ！`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
       setMessages(prev => [...prev, botMsg]);

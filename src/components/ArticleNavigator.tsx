@@ -58,31 +58,73 @@ export function ArticleNavigator({ article }: { article: ArticleProps }) {
   useEffect(() => {
     async function fetchGuide() {
       try {
-        const res = await fetch('/api/article-guide', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            title: article.title,
-            slug: article.slug,
-            excerpt: article.excerpt || '',
-            contentMd: article.contentMd || '',
-            category: article.category || 'dl'
-          })
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setGuide(data);
-        } else {
-          throw new Error('Guide fetch non-ok');
+        const { app } = await import('../lib/firebase-client');
+        const { getAI, getGenerativeModel } = await import(/* @vite-ignore */ 'https://www.gstatic.com/firebasejs/11.0.0/firebase-ai-logic.js');
+        const ai = getAI(app);
+
+        const truncatedContent = (article.contentMd || article.excerpt || '').slice(0, 3000);
+        const prompt = `あなたは「geodyssAI」のナビゲーターである愛らしい「マンチカン航海士」だニャ。
+以下の記事を読み終えた旅行者に向けて、要約とステップアップ学習のアドバイスを提示してください。
+
+【記事タイトル】: ${article.title}
+【記事本文】: ${truncatedContent}
+
+以下の JSON フォーマットのみで返答してください（余計なテキストは含めないでください）:
+{
+  "summary": "この記事の核心を2文で表現した要約（語尾は〜だニャ）",
+  "nextSteps": [
+    "ステップ1 (ハンズオン): この記事のサンプルコードや概念を手元で実行・検証してみるニャ",
+    "ステップ2 (ドキュメント): 関連する公式リファレンスを参照し仕様の理解を深めるニャ",
+    "ステップ3 (発展応用): 自分のアイデアを組み込んで応用プロダクトを作ってみるニャ"
+  ]
+}`;
+
+        const CANDIDATE_MODELS = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.5-flash-lite'];
+        let guideData: ArticleGuideData | null = null;
+
+        for (const modelName of CANDIDATE_MODELS) {
+          try {
+            const model = getGenerativeModel(ai, { model: modelName });
+            const result = await model.generateContent(prompt);
+            const response = await result.response;
+            if (response && response.text) {
+              const textRes = response.text();
+              const cleaned = textRes.replace(/```json|```/g, '').trim();
+              const json = JSON.parse(cleaned);
+
+              if (json.summary && Array.isArray(json.nextSteps)) {
+                guideData = {
+                  summary: json.summary,
+                  nextSteps: json.nextSteps,
+                  webLinks: [
+                    { title: "Firebase Console", url: "https://console.firebase.google.com", description: "プロジェクト設定・Firestore・Authの公式管理コンソール" },
+                    { title: "Google AI Studio", url: "https://aistudio.google.com", description: "Gemini API キーの発行・プロンプト試行公式環境" }
+                  ]
+                };
+                break;
+              }
+            }
+          } catch (mErr) {
+            console.warn(`Firebase AI Logic guide model ${modelName} failed:`, mErr);
+          }
         }
-      } catch (e) {
-        console.warn('Using fallback article guide:', e);
+
+        if (guideData) {
+          setGuide(guideData);
+          setLoading(false);
+          return;
+        }
+
+        throw new Error('Guide generation returned empty or invalid JSON');
+
+      } catch (e: any) {
+        console.warn('Firebase AI Logic article guide warning:', e);
         setGuide({
-          summary: `ニャー！「${article.title}」の読了おめでとうだにゃ 🐾 ${article.excerpt || '知の星海がまた一つ明るく照らされたにゃ！'}`,
+          summary: `ニャー！「${article.title}」の要約分析中だニャ 🐾 （詳細: ${e?.message || '自動導き'}）`,
           nextSteps: [
-            "ステップ1 (ハンズオン): 記事内のサンプルコードを手元で実行・検証してみるにゃ",
-            "ステップ2 (ドキュメント): 関連する公式開発リファレンスを参照してみるにゃ",
-            "ステップ3 (発展応用): 自分のアイデアを組み込んで応用プロダクトを作ってみるにゃ"
+            "ステップ1 (ハンズオン): 記事内のサンプルコードを手元で実行・検証してみるニャ",
+            "ステップ2 (ドキュメント): 関連する公式開発リファレンスを参照してみるニャ",
+            "ステップ3 (発展応用): 自分のアイデアを組み込んで応用プロダクトを作ってみるニャ"
           ],
           webLinks: [
             { title: "Firebase Console", url: "https://console.firebase.google.com", description: "プロジェクト設定・Firestore・Authの公式管理コンソール" },
@@ -105,23 +147,53 @@ export function ArticleNavigator({ article }: { article: ArticleProps }) {
     setAnswering(true);
 
     try {
-      const res = await fetch('/api/article-guide', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: article.title,
-          excerpt: article.excerpt || '',
-          contentMd: article.contentMd || '',
-          category: article.category || 'dl',
-          question: userQ
-        })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setAnswers(prev => [...prev, { q: userQ, a: data.answer || 'ニャー！うまく回答を取得できなかったにゃ。' }]);
+      const { app } = await import('../lib/firebase-client');
+      const { getAI, getGenerativeModel } = await import(/* @vite-ignore */ 'https://www.gstatic.com/firebasejs/11.0.0/firebase-ai-logic.js');
+      const ai = getAI(app);
+
+      const truncatedContent = (article.contentMd || article.excerpt || '').slice(0, 3000);
+      const sys = "あなたはデータサイエンティストのブログの猫アシスタント「マンチカン航海士」だニャ。語尾に「〜ニャ」「〜だニャ」を付け、論理的かつ丁寧に回答して。";
+      const prompt = `${sys}\n\n【記事タイトル】: ${article.title}\n【記事本文】: ${truncatedContent}\n\n質問: ${userQ}`;
+
+      const CANDIDATE_MODELS = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.5-flash-lite'];
+      let answerText = '';
+
+      for (const modelName of CANDIDATE_MODELS) {
+        try {
+          const model = getGenerativeModel(ai, {
+            model: modelName,
+            tools: [{ googleSearch: {} }]
+          });
+          const result = await model.generateContent(prompt);
+          const response = await result.response;
+          if (response && response.text) {
+            answerText = response.text();
+            const candidate = response.candidates?.[0];
+            const meta = candidate?.groundingMetadata;
+            if (meta && Array.isArray(meta.groundingChunks)) {
+              const links: string[] = [];
+              meta.groundingChunks.forEach((chunk: any) => {
+                if (chunk.web?.uri) {
+                  const linkTitle = chunk.web.title || "参考技術記事";
+                  links.push(`- [${linkTitle}](${chunk.web.uri})`);
+                }
+              });
+              if (links.length > 0) {
+                answerText += `\n\n👉 **参考リンクだニャ** 🐾\n` + links.join('\n');
+              }
+            }
+            break;
+          }
+        } catch (mErr) {
+          console.warn(`Firebase AI Logic Q&A model ${modelName} failed:`, mErr);
+        }
       }
-    } catch (e) {
+
+      setAnswers(prev => [...prev, { q: userQ, a: answerText || 'ニャー！質問の回答を取得できなかったニャ。' }]);
+
+    } catch (e: any) {
       console.error('Question submission error:', e);
+      setAnswers(prev => [...prev, { q: userQ, a: `ニャー！AI呼び出しエラーだニャ: ${e?.message || 'エラー発生'}` }]);
     } finally {
       setAnswering(false);
     }
