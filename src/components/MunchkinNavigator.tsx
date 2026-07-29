@@ -43,7 +43,7 @@ export const MunchkinNavigator: React.FC<MunchkinNavigatorProps> = ({ articles =
 
   const handleSend = async (customText?: string) => {
     const textToSend = customText || input;
-    if (!textToSend.trim() || isLoading) return;
+    if (!textToSend.trim()) return;
 
     const userMsg: Message = {
       id: `user-${Date.now()}`,
@@ -59,14 +59,16 @@ export const MunchkinNavigator: React.FC<MunchkinNavigatorProps> = ({ articles =
     try {
       const q = textToSend.toLowerCase();
 
-      // 1. 公式 Firebase AI Logic SDK
-      const ai = getAI(app);
-
-      // 2. Props記事および静的WordPress抽出データの全23+記事を統合
-      const fullCatalog = [...articles, ...allArticlesData];
+      // 1. 全 23+ 記事カタログの検索・統合
+      const propList = Array.isArray(articles) ? articles : [];
+      const jsonList = Array.isArray(allArticlesData) ? allArticlesData : [];
+      const fullCatalog = [...propList, ...jsonList];
       const uniqueCatalog = Array.from(new Map(fullCatalog.map(item => [item.slug, item])).values());
 
-      // 入力キーワードに対するマッチング（Antigravity, ADK, RAG, Firebase, etc.）
+      // 既存の公開済み実在ルーティング記事の slug 集合
+      const activeSlugs = new Set(propList.map(a => decodeURIComponent(a.slug)));
+
+      // キーワードマッチング
       const matched = uniqueCatalog.filter(art => {
         const title = (art.title || '').toLowerCase();
         const excerpt = (art.excerpt || '').toLowerCase();
@@ -75,94 +77,86 @@ export const MunchkinNavigator: React.FC<MunchkinNavigatorProps> = ({ articles =
         return title.includes(q) || excerpt.includes(q) || category.includes(q) || slug.includes(q);
       });
 
-      // 既存の公開済み実在ルーティング記事の slug 集合を取得
-      const activeSlugs = new Set(articles.map(a => decodeURIComponent(a.slug)));
+      const targetList = matched.length > 0 ? matched.slice(0, 5) : uniqueCatalog.slice(0, 5);
 
-      const targetList = matched.length > 0 ? matched.slice(0, 6) : uniqueCatalog.slice(0, 6);
-      const contextText = targetList.map((art, idx) => {
+      // 2. 確定提案記事カードブロックをあらかじめ構築
+      const validArticleLinks: string[] = [];
+      targetList.forEach(art => {
         const decodedSlug = decodeURIComponent(art.slug);
         const isPublished = activeSlugs.has(decodedSlug) && art.status !== 'draft';
-        const statusLabel = isPublished ? ' [公開中の星 - 閲覧可能]' : ' [✦ DRAFT/下書き準備中]';
-        const urlPath = isPublished ? `/articles/${decodedSlug}` : `(準備中)`;
-        return `【記事${idx + 1}】${statusLabel}\nタイトル: "${art.title}"\nカテゴリ: ${art.category}\nステータス: ${isPublished ? 'PUBLISHED (公開中・閲覧可能)' : 'DRAFT (下書き準備中)'}\n概要: ${art.excerpt || '詳細な技術解説・アプローチ'}\nURL: ${urlPath}`;
-      }).join("\n\n");
-
-      // ブログ内ナビゲーション特化システムプロンプト (DRAFT記事対応)
-      const sys = `あなたはデータサイエンティストのブログ「geodyssAI」の案内ガイド「マンチカン航海士」だニャ。
-語尾に「〜ニャ」「〜だニャ」を付け、愛らしく丁寧に回答して。
-
-【あなたの役割】
-ユーザーの質問や入力キーワード（例: "Antigravityの記事はある？", "Firebaseの使い方", "おすすめの記事は？" など）に対し、下記の【ブログ内記事リスト】の中から最も関連性の高い記事を提示し、ブログ内の探検・ナビゲートを行ってニャ！
-
-【回答ルール】
-1. 公開中の記事（PUBLISHED）を提案する場合は、案内リンク（例: 👉 [記事タイトル](/articles/slug)）を掲載してニャ。
-2. 下書き準備中（DRAFT）の記事（例: Antigravity記事など）を提案する場合は、URLリンクの代わりに「✦ DRAFT (下書き準備中・まもなく着陸予定の星)」である旨を優しく添えて説明してニャ！
-3. 旅行者が次にどの星（記事）を読むべきか提示してニャ！`;
-
-      const prompt = `${sys}\n\n【ブログ内記事リスト】\n${contextText}\n\n【ユーザーの入力】\n${textToSend}`;
-
-      // ユーザー指示に基づき gemini-2.5-flash-lite を最優先モデルとして設定
-      const CANDIDATE_MODELS = ['gemini-2.5-flash-lite', 'gemini-3.5-flash-lite', 'gemini-2.5-flash'];
-      let aiText = '';
-      let lastErr = null;
-
-      for (const modelName of CANDIDATE_MODELS) {
-        try {
-          const model = getGenerativeModel(ai, { model: modelName });
-          const result = await model.generateContent(prompt);
-          const response = await result.response;
-          if (response && response.text) {
-            aiText = response.text();
-            break;
-          }
-        } catch (mErr) {
-          lastErr = mErr;
-          console.warn(`Firebase AI Logic model ${modelName} failed:`, mErr);
+        if (isPublished) {
+          validArticleLinks.push(`- [👉 ${art.title}](/articles/${decodedSlug})`);
+        } else {
+          validArticleLinks.push(`- ✦ **${art.title}** *(下書き準備中の星)*`);
         }
-      }
+      });
 
-      if (aiText) {
-        // 🛡️ 実在公開記事・確定動作リンク保証 (Link Safety Grounding)
-        const validArticleLinks: string[] = [];
-        targetList.forEach(art => {
+      const articleCardBlock = `\n\n📌 **おすすめの星（ブログ内ナビゲーション）** 🐾\n` + validArticleLinks.join('\n');
+
+      let aiText = '';
+
+      // 3. Firebase AI Logic SDK による AI レスポンス試行 (タイムアウト保護付き)
+      try {
+        const ai = getAI(app);
+        const contextText = targetList.map((art, idx) => {
           const decodedSlug = decodeURIComponent(art.slug);
           const isPublished = activeSlugs.has(decodedSlug) && art.status !== 'draft';
-          
-          if (isPublished) {
-            const linkUrl = `/articles/${decodedSlug}`;
-            validArticleLinks.push(`- [👉 ${art.title}](${linkUrl})`);
-          } else {
-            validArticleLinks.push(`- ✦ **${art.title}** *(下書き準備中の星)*`);
+          return `【記事${idx + 1}】\nタイトル: "${art.title}"\nカテゴリ: ${art.category}\nステータス: ${isPublished ? 'PUBLISHED (公開中)' : 'DRAFT (下書き準備中)'}\n概要: ${art.excerpt || '技術解説記事'}`;
+        }).join("\n\n");
+
+        const sys = `あなたはブログ「geodyssAI」の案内ガイド「マンチカン航海士」だニャ。
+語尾に「〜ニャ」「〜だニャ」を付け、愛らしく丁寧に回答して。
+ユーザーの質問に対し、下記【ブログ内記事リスト】を参考に、関連する記事について分かりやすく案内してニャ！`;
+
+        const prompt = `${sys}\n\n【ブログ内記事リスト】\n${contextText}\n\n【ユーザーの入力】\n${textToSend}`;
+
+        const CANDIDATE_MODELS = ['gemini-2.5-flash-lite', 'gemini-3.5-flash-lite', 'gemini-2.5-flash'];
+        
+        // 4秒タイムアウト約束
+        const aiPromise = (async () => {
+          for (const modelName of CANDIDATE_MODELS) {
+            try {
+              const model = getGenerativeModel(ai, { model: modelName });
+              const result = await model.generateContent(prompt);
+              const response = await result.response;
+              if (response && response.text) return response.text();
+            } catch (mErr) {
+              console.warn(`Model ${modelName} call warning:`, mErr);
+            }
           }
-        });
+          return '';
+        })();
 
-        // 提案記事カードブロックを確実に付与
-        if (validArticleLinks.length > 0 && !aiText.includes('/articles/')) {
-          aiText += `\n\n📌 **おすすめの星（ブログ内ナビゲーション）** 🐾\n` + validArticleLinks.join('\n');
-        }
+        const timeoutPromise = new Promise<string>((resolve) => setTimeout(() => resolve(''), 4500));
+        aiText = await Promise.race([aiPromise, timeoutPromise]);
 
-        const botMsg: Message = {
-          id: `bot-${Date.now()}`,
-          sender: 'bot',
-          text: aiText,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        };
-        setMessages(prev => [...prev, botMsg]);
-        setIsLoading(false);
-        return;
+      } catch (aiErr) {
+        console.warn('Firebase AI Logic call skipped, falling back to local navigator:', aiErr);
       }
 
-      throw lastErr || new Error('All Firebase AI Logic models failed');
+      // 4. AI 応答がある場合は AI 応答 ＋ 記事カード、失敗・遅延時はローカル高速ナビゲーション返答を即座に出力！
+      let finalText = '';
+      if (aiText) {
+        finalText = aiText + (aiText.includes('/articles/') ? '' : articleCardBlock);
+      } else {
+        finalText = `ニャー！「${textToSend}」に関する知の星海探索結果だニャ 🐾\n\n探したいテーマにぴったりの記事を航海日誌から見つけたニャ！` + articleCardBlock;
+      }
 
-    } catch (error: any) {
-      console.error('Firebase AI Logic error:', error);
-      const errMsg = error?.message || String(error);
-
-      // エラーを隠さずユーザーおよびDevToolsにそのまま提示してデバッグ可能にする
       const botMsg: Message = {
         id: `bot-${Date.now()}`,
         sender: 'bot',
-        text: `ニャー！Firebase AI Logic 呼び出し中にエラーが発生したニャ 🐾\n\n**詳細エラー**: \`${errMsg}\`\n\n設定（API KeyやApp Check）を確認してほしいニャ！`,
+        text: finalText,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+
+      setMessages(prev => [...prev, botMsg]);
+
+    } catch (error: any) {
+      console.error('Munchkin Navigator error:', error);
+      const botMsg: Message = {
+        id: `bot-${Date.now()}`,
+        sender: 'bot',
+        text: `ニャー！入力の受け取り中にエラーが発生したニャ 🐾\nもう一度送信してみてほしいニャ！`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
       setMessages(prev => [...prev, botMsg]);
