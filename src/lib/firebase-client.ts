@@ -6,7 +6,7 @@ import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'firebase/app-ch
 // Astro (PUBLIC_) および Next.js (NEXT_PUBLIC_) の両方の環境変数命名規則に対応
 const apiKey = import.meta.env.PUBLIC_FIREBASE_API_KEY ||
   import.meta.env.NEXT_PUBLIC_FIREBASE_API_KEY ||
-  "AIzaSyD7zwkwv4juqt3v7ueDRXoK1M6Xpcv9NpI";
+  "AIzaSyBPQroXo69568ahiG1Zydzy1r9gTcb7Rxo";
 
 const authDomain = import.meta.env.PUBLIC_FIREBASE_AUTH_DOMAIN ||
   import.meta.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ||
