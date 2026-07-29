@@ -77,8 +77,8 @@ export const MunchkinNavigator: React.FC<MunchkinNavigatorProps> = ({ articles =
       const sys = "あなたはデータサイエンティストのブログの猫アシスタント「マンチカン航海士」だニャ。語尾に「〜ニャ」「〜だニャ」を付け、論理的かつ愛らしく回答して。";
       const prompt = `${sys}\n\n【参照記事コンテキスト】\n${contextText}\n\n【ユーザーの質問】\n最新のGoogle検索結果や関連記事を踏まえて答えてニャ：${textToSend}`;
 
-      // 公式サポートアクティブモデルリスト: gemini-2.5-flash / gemini-1.5-flash
-      const CANDIDATE_MODELS = ['gemini-2.5-flash', 'gemini-1.5-flash'];
+      // 公式サポート最新アクティブモデル: gemini-3.6-flash / gemini-3.5-flash / gemini-3.5-flash-lite / gemini-2.5-flash
+      const CANDIDATE_MODELS = ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-2.5-flash'];
       let aiText = '';
       let lastErr = null;
 
