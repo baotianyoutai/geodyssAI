@@ -47,7 +47,7 @@ export const db = getFirestore(app);
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 
-// Firebase App Check (reCAPTCHA Enterprise) の初期化 ＆ Firebase AI Logic のバインド
+// Firebase App Check (reCAPTCHA Enterprise) の初期化
 if (typeof window !== 'undefined') {
   try {
     (window as any).useEnterprise = true;
@@ -62,19 +62,6 @@ if (typeof window !== 'undefined') {
   } catch (e) {
     console.warn('Firebase App Check initialization skipped:', e);
   }
-
-  // XML実績コード準拠: Firebase AI Logic SDK を動的にロードし window.myAiApp へバインド
-  (async () => {
-    try {
-      const aiLogicModule = await import(/* @vite-ignore */ 'https://www.gstatic.com/firebasejs/11.0.0/firebase-ai-logic.js');
-      const { getAI, getGenerativeModel } = aiLogicModule;
-      const ai = getAI(app);
-      (window as any).myAiApp = { ai, getGenerativeModel, app };
-      console.log('Firebase AI Logic SDK (getAI, getGenerativeModel) successfully bound to window.myAiApp.');
-    } catch (err) {
-      console.warn('Firebase AI Logic SDK dynamic import fallback:', err);
-    }
-  })();
 }
 
 export interface UserProfile {

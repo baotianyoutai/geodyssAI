@@ -54,8 +54,10 @@ export const MunchkinNavigator: React.FC<MunchkinNavigatorProps> = ({ articles =
     setIsLoading(true);
 
     try {
-      // XML実績コード準拠: Firebase AI Logic SDK (window.myAiApp) による Gemini 呼び出し
+      // 1. クライアント側で直接 GoogleGenAI (Gemini AI Logic) を呼び出し
       const apiKey = import.meta.env.PUBLIC_GEMINI_API_KEY || import.meta.env.PUBLIC_FIREBASE_API_KEY || 'AIzaSyBPQroXo69568ahiG1Zydzy1r9gTcb7Rxo';
+      const { GoogleGenAI } = await import('@google/genai');
+      const ai = new GoogleGenAI({ apiKey });
 
       // 記事コンテキストの構築
       const matched = articles.filter(art => {
@@ -79,90 +81,40 @@ ${contextText}
 【ユーザーの質問】
 最新のGoogle検索結果や関連記事を踏まえて答えてニャ：${textToSend}`;
 
+      const CANDIDATE_MODELS = ['gemini-flash-latest', 'gemini-2.0-flash', 'gemini-1.5-flash'];
       let aiText = '';
 
-      // 1. 主経路: XML実機実績コードである Firebase AI Logic SDK (window.myAiApp)
-      if (typeof window !== 'undefined' && (window as any).myAiApp) {
+      for (const modelName of CANDIDATE_MODELS) {
         try {
-          const { ai, getGenerativeModel } = (window as any).myAiApp;
-          const modelNames = ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-1.5-flash"];
-          for (const mName of modelNames) {
-            try {
-              const model = getGenerativeModel(ai, {
-                model: mName,
-                tools: [{ googleSearch: {} }]
+          const response = await ai.models.generateContent({
+            model: modelName,
+            contents: prompt,
+            config: {
+              tools: [{ googleSearch: {} }]
+            }
+          });
+
+          if (response.text) {
+            aiText = response.text;
+            // XML実績ロジック: 出典 Grounding メタデータからの参考リンク抽出
+            const candidate = (response as any)?.candidates?.[0];
+            const meta = candidate?.groundingMetadata;
+            if (meta && Array.isArray(meta.groundingChunks)) {
+              const links: string[] = [];
+              meta.groundingChunks.forEach((chunk: any) => {
+                if (chunk.web?.uri) {
+                  const linkTitle = chunk.web.title || "参考技術記事";
+                  links.push(`- [${linkTitle}](${chunk.web.uri})`);
+                }
               });
-              const result = await model.generateContent(prompt);
-              const response = await result.response;
-              if (response && response.text) {
-                aiText = response.text();
-                // Grounding 参照リンクの抽出
-                const candidate = response.candidates?.[0];
-                const meta = candidate?.groundingMetadata;
-                if (meta && Array.isArray(meta.groundingChunks)) {
-                  const links: string[] = [];
-                  meta.groundingChunks.forEach((chunk: any) => {
-                    if (chunk.web?.uri) {
-                      const linkTitle = chunk.web.title || "参考技術記事";
-                      links.push(`- [${linkTitle}](${chunk.web.uri})`);
-                    }
-                  });
-                  if (links.length > 0) {
-                    aiText += `\n\n👉 **最新技術記事・探索結果だニャ** 🐾\n` + links.join('\n');
-                  }
-                }
-                break;
-              }
-            } catch (errM) {
-              console.warn(`Firebase AI Logic model ${mName} attempt failed:`, errM);
-            }
-          }
-        } catch (eSdk) {
-          console.warn('Firebase AI Logic SDK invocation warning:', eSdk);
-        }
-      }
-
-      // 2. 副経路: REST API 呼び出し (fallback)
-      if (!aiText) {
-        const CANDIDATE_MODELS = ['gemini-flash-latest', 'gemini-2.5-flash-lite', 'gemini-2.0-flash'];
-        for (const modelName of CANDIDATE_MODELS) {
-          try {
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-            const res = await fetch(apiUrl, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                contents: [{ parts: [{ text: prompt }] }],
-                tools: [{ googleSearch: {} }]
-              })
-            });
-
-            if (res.ok) {
-              const data = await res.json();
-              const candidate = data?.candidates?.[0];
-              const partText = candidate?.content?.parts?.[0]?.text;
-
-              if (partText) {
-                aiText = partText;
-                const meta = candidate?.groundingMetadata;
-                if (meta && Array.isArray(meta.groundingChunks)) {
-                  const links: string[] = [];
-                  meta.groundingChunks.forEach((chunk: any) => {
-                    if (chunk.web?.uri) {
-                      const linkTitle = chunk.web.title || "参考技術記事";
-                      links.push(`- [${linkTitle}](${chunk.web.uri})`);
-                    }
-                  });
-                  if (links.length > 0) {
-                    aiText += `\n\n👉 **最新技術記事・探索結果だニャ** 🐾\n` + links.join('\n');
-                  }
-                }
-                break;
+              if (links.length > 0) {
+                aiText += `\n\n👉 **最新技術記事・探索結果だニャ** 🐾\n` + links.join('\n');
               }
             }
-          } catch (mErr) {
-            console.warn(`REST Model ${modelName} fetch failed:`, mErr);
+            break;
           }
+        } catch (mErr) {
+          console.warn(`Model ${modelName} call failed, fallback to next:`, mErr);
         }
       }
 
