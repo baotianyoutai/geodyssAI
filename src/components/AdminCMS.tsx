@@ -515,6 +515,14 @@ geodyssAI Admin Security System
                             </span>
                           </td>
                           <td className="p-4 text-right space-x-2">
+                            <a
+                              href={`/articles/${encodeURIComponent(art.slug)}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-sky-300 border border-sky-500/30 rounded-lg font-mono text-[11px] transition-colors inline-flex items-center gap-1"
+                            >
+                              🔗 本番ページを開く
+                            </a>
                             <button
                               onClick={() => toggleStatus(art.slug)}
                               className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-mono text-[11px] transition-colors cursor-pointer"
@@ -543,12 +551,22 @@ geodyssAI Admin Security System
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setIsEditing(false)}
-                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs transition-colors"
+                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs transition-colors cursor-pointer"
                 >
                   ← 一覧に戻る
                 </button>
-                <h2 className="text-base font-bold text-white font-display">
-                  {selectedArticle ? `記事編集: ${selectedArticle.title}` : '✨ 新規記事の追加'}
+                <h2 className="text-base font-bold text-white font-display flex items-center gap-2">
+                  <span>{selectedArticle ? `記事編集: ${selectedArticle.title}` : '✨ 新規記事の追加'}</span>
+                  {formSlug && (
+                    <a
+                      href={`/articles/${encodeURIComponent(formSlug)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs font-mono text-sky-400 hover:underline bg-sky-500/10 px-2 py-0.5 border border-sky-500/30 rounded-md"
+                    >
+                      🔗 記事ページを開く
+                    </a>
+                  )}
                 </h2>
               </div>
 
