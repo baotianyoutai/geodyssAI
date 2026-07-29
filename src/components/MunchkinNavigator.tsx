@@ -58,73 +58,52 @@ export const MunchkinNavigator: React.FC<MunchkinNavigatorProps> = ({ articles =
     try {
       const q = textToSend.toLowerCase();
 
-      // 1. 公式 Firebase AI Logic SDK の取得 (npm モジュール使用)
+      // 1. 公式 Firebase AI Logic SDK
       const ai = getAI(app);
 
-      // 関連記事の検索・コンテキスト構築
+      // 2. ブログ内公開記事のキーワードマッチ ＆ ナビゲーション用コンテキスト抽出 (上位5件)
       const matched = articles.filter(art => {
         const title = (art.title || '').toLowerCase();
         const excerpt = (art.excerpt || '').toLowerCase();
         const category = (art.category || '').toLowerCase();
         return title.includes(q) || excerpt.includes(q) || category.includes(q);
-      }).slice(0, 3);
+      });
 
-      const targetList = matched.length > 0 ? matched : articles.slice(0, 3);
+      const targetList = matched.length > 0 ? matched.slice(0, 5) : articles.slice(0, 5);
       const contextText = targetList.map((art, idx) =>
-        `【関連記事${idx + 1}】タイトル: "${art.title}" (カテゴリ: ${art.category})\n概要: ${art.excerpt}\nURL: /articles/${encodeURIComponent(art.slug)}`
+        `【ブログ記事${idx + 1}】\nタイトル: "${art.title}"\nカテゴリ: ${art.category}\n概要: ${art.excerpt || '詳細なハンズオン・技術解説記事'}\nURL: /articles/${encodeURIComponent(art.slug)}`
       ).join("\n\n");
 
-      const sys = "あなたはデータサイエンティストのブログの猫アシスタント「マンチカン航海士」だニャ。語尾に「〜ニャ」「〜だニャ」を付け、論理的かつ愛らしく回答して。";
-      const prompt = `${sys}\n\n【参照記事コンテキスト】\n${contextText}\n\n【ユーザーの質問】\n最新のGoogle検索結果や関連記事を踏まえて答えてニャ：${textToSend}`;
+      // ブログ内ナビゲーション特化システムプロンプト
+      const sys = `あなたはデータサイエンティストのブログ「geodyssAI」の案内ガイド「マンチカン航海士」だニャ。
+語尾に「〜ニャ」「〜だニャ」を付け、愛らしく丁寧に回答して。
 
-      // 公式サポート最新アクティブモデル: gemini-3.6-flash / gemini-3.5-flash / gemini-3.5-flash-lite / gemini-2.5-flash
+【あなたの役割】
+ユーザーの質問やキーワード（例: "Antigravityの記事はある？", "Firebaseの使い方", "RAGについて" など）に対し、下記の【ブログ内公開記事リスト】の中から最も関連性の高い記事を提示し、ブログ内の探検・ナビゲートを行ってニャ！
+
+【回答ルール】
+1. 関連するブログ記事のタイトル、概要、および Markdown 形式のリンク（例: 👉 [記事タイトル](/articles/slug)）を分かりやすく案内してニャ。
+2. ブログ内の知識・記事案内を中心に回答し、旅行者が次にどの星（記事）を読むべきか提示してニャ！`;
+
+      const prompt = `${sys}\n\n【ブログ内公開記事リスト】\n${contextText}\n\n【ユーザーの入力】\n${textToSend}`;
+
+      // 公式サポートアクティブモデルリスト
       const CANDIDATE_MODELS = ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-2.5-flash'];
       let aiText = '';
       let lastErr = null;
 
       for (const modelName of CANDIDATE_MODELS) {
-        // 1. Google Search Grounding 付きでトライ
         try {
-          const model = getGenerativeModel(ai, {
-            model: modelName,
-            tools: [{ googleSearch: {} }]
-          });
+          const model = getGenerativeModel(ai, { model: modelName });
           const result = await model.generateContent(prompt);
           const response = await result.response;
           if (response && response.text) {
             aiText = response.text();
-            const candidate = response.candidates?.[0];
-            const meta = candidate?.groundingMetadata;
-            if (meta && Array.isArray(meta.groundingChunks)) {
-              const links: string[] = [];
-              meta.groundingChunks.forEach((chunk: any) => {
-                if (chunk.web?.uri) {
-                  const linkTitle = chunk.web.title || "参考技術記事";
-                  links.push(`- [${linkTitle}](${chunk.web.uri})`);
-                }
-              });
-              if (links.length > 0) {
-                aiText += `\n\n👉 **最新技術記事・探索結果だニャ** 🐾\n` + links.join('\n');
-              }
-            }
             break;
           }
         } catch (mErr) {
-          console.warn(`Firebase AI Logic model ${modelName} (with tools) failed, trying standard:`, mErr);
           lastErr = mErr;
-          // 2. tools なしの標準モードでセーフティトライ
-          try {
-            const stdModel = getGenerativeModel(ai, { model: modelName });
-            const result = await stdModel.generateContent(prompt);
-            const response = await result.response;
-            if (response && response.text) {
-              aiText = response.text();
-              break;
-            }
-          } catch (stdErr) {
-            lastErr = stdErr;
-            console.warn(`Firebase AI Logic model ${modelName} standard mode failed:`, stdErr);
-          }
+          console.warn(`Firebase AI Logic model ${modelName} failed:`, mErr);
         }
       }
 
