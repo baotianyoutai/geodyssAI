@@ -75,11 +75,16 @@ export const MunchkinNavigator: React.FC<MunchkinNavigatorProps> = ({ articles =
         return title.includes(q) || excerpt.includes(q) || category.includes(q) || slug.includes(q);
       });
 
+      // 既存の公開済み実在ルーティング記事の slug 集合を取得
+      const activeSlugs = new Set(articles.map(a => decodeURIComponent(a.slug)));
+
       const targetList = matched.length > 0 ? matched.slice(0, 6) : uniqueCatalog.slice(0, 6);
       const contextText = targetList.map((art, idx) => {
-        const isDraft = art.status === 'draft';
-        const statusLabel = isDraft ? ' [✦ DRAFT/下書き記事]' : ' [公開記事]';
-        return `【記事${idx + 1}】${statusLabel}\nタイトル: "${art.title}"\nカテゴリ: ${art.category}\nステータス: ${isDraft ? 'DRAFT (下書き準備中)' : 'PUBLISHED (公開中)'}\n概要: ${art.excerpt || '詳細な技術解説・アプローチ'}\nURL: /articles/${encodeURIComponent(art.slug)}`;
+        const decodedSlug = decodeURIComponent(art.slug);
+        const isPublished = activeSlugs.has(decodedSlug) && art.status !== 'draft';
+        const statusLabel = isPublished ? ' [公開中の星 - 閲覧可能]' : ' [✦ DRAFT/下書き準備中]';
+        const urlPath = isPublished ? `/articles/${decodedSlug}` : `(準備中)`;
+        return `【記事${idx + 1}】${statusLabel}\nタイトル: "${art.title}"\nカテゴリ: ${art.category}\nステータス: ${isPublished ? 'PUBLISHED (公開中・閲覧可能)' : 'DRAFT (下書き準備中)'}\n概要: ${art.excerpt || '詳細な技術解説・アプローチ'}\nURL: ${urlPath}`;
       }).join("\n\n");
 
       // ブログ内ナビゲーション特化システムプロンプト (DRAFT記事対応)
@@ -87,12 +92,12 @@ export const MunchkinNavigator: React.FC<MunchkinNavigatorProps> = ({ articles =
 語尾に「〜ニャ」「〜だニャ」を付け、愛らしく丁寧に回答して。
 
 【あなたの役割】
-ユーザーの質問や入力キーワード（例: "Antigravityの記事はある？", "Firebaseの使い方", "おすすめの記事は？" など）に対し、下記の【ブログ内記事リスト（公開済み ＆ 下書きDRAFT含む）】の中から最も関連性の高い記事を提示し、ブログ内の探検・ナビゲートを行ってニャ！
+ユーザーの質問や入力キーワード（例: "Antigravityの記事はある？", "Firebaseの使い方", "おすすめの記事は？" など）に対し、下記の【ブログ内記事リスト】の中から最も関連性の高い記事を提示し、ブログ内の探検・ナビゲートを行ってニャ！
 
 【回答ルール】
-1. 関連するブログ記事のタイトル、概要、および Markdown 形式のリンク（例: 👉 [記事タイトル](/articles/slug)）を分かりやすく案内してニャ。
-2. もし DRAFT (下書き) 状態の記事を提案する場合は、「✦ DRAFT (下書き準備中の星)」である旨を優しく添えて提示してニャ！
-3. ブログ内の知識・記事案内を中心に回答し、旅行者が次にどの星（記事）を読むべきか提示してニャ！`;
+1. 公開中の記事（PUBLISHED）を提案する場合は、案内リンク（例: 👉 [記事タイトル](/articles/slug)）を掲載してニャ。
+2. 下書き準備中（DRAFT）の記事（例: Antigravity記事など）を提案する場合は、URLリンクの代わりに「✦ DRAFT (下書き準備中・まもなく着陸予定の星)」である旨を優しく添えて説明してニャ！
+3. 旅行者が次にどの星（記事）を読むべきか提示してニャ！`;
 
       const prompt = `${sys}\n\n【ブログ内記事リスト】\n${contextText}\n\n【ユーザーの入力】\n${textToSend}`;
 
@@ -117,23 +122,23 @@ export const MunchkinNavigator: React.FC<MunchkinNavigatorProps> = ({ articles =
       }
 
       if (aiText) {
-        // 🛡️ 実在記事・確定リンク保証 (Link Safety Grounding)
-        // targetList 内の実在記事の中から、AIテキスト内で言及されている、または検索にマッチした本物の記事リンクカードを添付
+        // 🛡️ 実在公開記事・確定動作リンク保証 (Link Safety Grounding)
         const validArticleLinks: string[] = [];
         targetList.forEach(art => {
-          const linkUrl = `/articles/${encodeURIComponent(art.slug)}`;
-          const isMentioned = aiText.includes(art.title) || aiText.includes(art.slug) || aiText.includes(linkUrl);
-          const isDraft = art.status === 'draft';
-          const draftBadge = isDraft ? ' ✦ DRAFT (下書き準備中)' : '';
+          const decodedSlug = decodeURIComponent(art.slug);
+          const isPublished = activeSlugs.has(decodedSlug) && art.status !== 'draft';
           
-          if (isMentioned || targetList.length <= 3) {
-            validArticleLinks.push(`- [👉 ${art.title}${draftBadge}](${linkUrl})`);
+          if (isPublished) {
+            const linkUrl = `/articles/${decodedSlug}`;
+            validArticleLinks.push(`- [👉 ${art.title}](${linkUrl})`);
+          } else {
+            validArticleLinks.push(`- ✦ **${art.title}** *(下書き準備中の星)*`);
           }
         });
 
-        // 提案記事カードブロックを生成して確実に本物のリンクを案内
+        // 提案記事カードブロックを確実に付与
         if (validArticleLinks.length > 0 && !aiText.includes('/articles/')) {
-          aiText += `\n\n📌 **おすすめの星（ブログ実在記事）** 🐾\n` + validArticleLinks.join('\n');
+          aiText += `\n\n📌 **おすすめの星（ブログ内ナビゲーション）** 🐾\n` + validArticleLinks.join('\n');
         }
 
         const botMsg: Message = {
