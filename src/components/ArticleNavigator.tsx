@@ -78,7 +78,7 @@ export function ArticleNavigator({ article }: { article: ArticleProps }) {
   ]
 }`;
 
-        const CANDIDATE_MODELS = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.5-flash-lite'];
+        const CANDIDATE_MODELS = ['gemini-2.5-flash', 'gemini-1.5-flash'];
         let guideData: ArticleGuideData | null = null;
 
         for (const modelName of CANDIDATE_MODELS) {
@@ -152,7 +152,7 @@ export function ArticleNavigator({ article }: { article: ArticleProps }) {
       const sys = "あなたはデータサイエンティストのブログの猫アシスタント「マンチカン航海士」だニャ。語尾に「〜ニャ」「〜だニャ」を付け、論理的かつ丁寧に回答して。";
       const prompt = `${sys}\n\n【記事タイトル】: ${article.title}\n【記事本文】: ${truncatedContent}\n\n質問: ${userQ}`;
 
-      const CANDIDATE_MODELS = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.5-flash-lite'];
+      const CANDIDATE_MODELS = ['gemini-2.5-flash', 'gemini-1.5-flash'];
       let answerText = '';
 
       for (const modelName of CANDIDATE_MODELS) {
@@ -182,7 +182,18 @@ export function ArticleNavigator({ article }: { article: ArticleProps }) {
             break;
           }
         } catch (mErr) {
-          console.warn(`Firebase AI Logic Q&A model ${modelName} failed:`, mErr);
+          console.warn(`Firebase AI Logic Q&A model ${modelName} (with tools) failed, trying standard:`, mErr);
+          try {
+            const stdModel = getGenerativeModel(ai, { model: modelName });
+            const result = await stdModel.generateContent(prompt);
+            const response = await result.response;
+            if (response && response.text) {
+              answerText = response.text();
+              break;
+            }
+          } catch (stdErr) {
+            console.warn(`Firebase AI Logic Q&A model ${modelName} standard failed:`, stdErr);
+          }
         }
       }
 

@@ -77,12 +77,13 @@ export const MunchkinNavigator: React.FC<MunchkinNavigatorProps> = ({ articles =
       const sys = "あなたはデータサイエンティストのブログの猫アシスタント「マンチカン航海士」だニャ。語尾に「〜ニャ」「〜だニャ」を付け、論理的かつ愛らしく回答して。";
       const prompt = `${sys}\n\n【参照記事コンテキスト】\n${contextText}\n\n【ユーザーの質問】\n最新のGoogle検索結果や関連記事を踏まえて答えてニャ：${textToSend}`;
 
-      // 公式サポートモデルリスト: gemini-2.5-flash / gemini-1.5-flash / gemini-2.5-flash-lite
-      const CANDIDATE_MODELS = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.5-flash-lite'];
+      // 公式サポートアクティブモデルリスト: gemini-2.5-flash / gemini-1.5-flash
+      const CANDIDATE_MODELS = ['gemini-2.5-flash', 'gemini-1.5-flash'];
       let aiText = '';
       let lastErr = null;
 
       for (const modelName of CANDIDATE_MODELS) {
+        // 1. Google Search Grounding 付きでトライ
         try {
           const model = getGenerativeModel(ai, {
             model: modelName,
@@ -92,7 +93,6 @@ export const MunchkinNavigator: React.FC<MunchkinNavigatorProps> = ({ articles =
           const response = await result.response;
           if (response && response.text) {
             aiText = response.text();
-            // Grounding (Google検索出典リンク) の抽出
             const candidate = response.candidates?.[0];
             const meta = candidate?.groundingMetadata;
             if (meta && Array.isArray(meta.groundingChunks)) {
@@ -110,8 +110,21 @@ export const MunchkinNavigator: React.FC<MunchkinNavigatorProps> = ({ articles =
             break;
           }
         } catch (mErr) {
+          console.warn(`Firebase AI Logic model ${modelName} (with tools) failed, trying standard:`, mErr);
           lastErr = mErr;
-          console.warn(`Firebase AI Logic model ${modelName} failed:`, mErr);
+          // 2. tools なしの標準モードでセーフティトライ
+          try {
+            const stdModel = getGenerativeModel(ai, { model: modelName });
+            const result = await stdModel.generateContent(prompt);
+            const response = await result.response;
+            if (response && response.text) {
+              aiText = response.text();
+              break;
+            }
+          } catch (stdErr) {
+            lastErr = stdErr;
+            console.warn(`Firebase AI Logic model ${modelName} standard mode failed:`, stdErr);
+          }
         }
       }
 
