@@ -6,6 +6,12 @@ service cloud.firestore {
       allow read: if true;
       allow write, update, delete: if request.auth != null && request.auth.token.email in ['baotianyoutai1@gmail.com'];
     }
+
+    // mail コレクション (Trigger Email Extension): 管理者のみ追加可能
+    match /mail/{mailId} {
+      allow create: if request.auth != null && request.auth.token.email in ['baotianyoutai1@gmail.com'];
+      allow read, update, delete: if false;
+    }
     
     // その他すべてのドキュメントへのセキュリティルール
     match /{document=**} {

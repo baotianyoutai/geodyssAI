@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { auth } from '../lib/firebase-client';
+import { auth, db } from '../lib/firebase-client';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import {
   signInWithEmailAndPassword,
   onAuthStateChanged,
@@ -81,20 +82,35 @@ export const AdminCMS: React.FC = () => {
 geodyssAI Admin Security System
 `;
 
-      // クライアントから 100% 確実に直配送
+      // 🧠 Firebase Trigger Email Extension 用の mail ドキュメント追加
       try {
-        await fetch('https://formspree.io/f/xanyqpyb', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: 'baotianyoutai1@gmail.com',
-            message: mailBody,
-            subject: `🚨 geodyssAI 管理画面にログインがありました [${loginTime}]`
-          })
+        await addDoc(collection(db, 'mail'), {
+          to: ['baotianyoutai1@gmail.com'],
+          message: {
+            subject: `🚨 geodyssAI 管理画面にログインがありました [${loginTime}]`,
+            text: mailBody,
+            html: `
+              <div style="font-family: sans-serif; background: #0f172a; color: #f8fafc; padding: 24px; borderRadius: 16px;">
+                <h2 style="color: #38bdf8;">🚨 geodyssAI 管理画面 ログイン検出</h2>
+                <p>geodyssAI 管理画面 (Admin CMS) へのログインが成功いたしました。</p>
+                <hr style="border-color: #334155;" />
+                <h3>【ログイン詳細情報】</h3>
+                <ul>
+                  <li><b>ログイン日時:</b> ${loginTime}</li>
+                  <li><b>対象ユーザー:</b> ${userEmail}</li>
+                  <li><b>ユーザーエージェント:</b> ${userAgent}</li>
+                </ul>
+                <hr style="border-color: #334155;" />
+                <h4 style="color: #fbbf24;">⚠️ 身に覚えのない不審なログインの場合</h4>
+                <p><a href="${passwordResetUrl}" style="color: #38bdf8; text-decoration: underline;">👉 パスワードを緊急リセットする</a></p>
+              </div>
+            `
+          },
+          createdAt: serverTimestamp()
         });
-        console.log('Direct client security notification email sent successfully!');
-      } catch (sendErr) {
-        console.warn('Direct notification email warning:', sendErr);
+        console.log('Firebase Trigger Email document successfully written to Firestore!');
+      } catch (mailErr) {
+        console.warn('Firestore mail document write info:', mailErr);
       }
 
     } catch (err: any) {
