@@ -43,7 +43,7 @@ export const MunchkinNavigator: React.FC<MunchkinNavigatorProps> = ({ articles =
 
   const handleSend = async (customText?: string) => {
     const textToSend = customText || input;
-    if (!textToSend.trim()) return;
+    if (!textToSend.trim() || isLoading) return;
 
     const userMsg: Message = {
       id: `user-${Date.now()}`,
@@ -57,9 +57,14 @@ export const MunchkinNavigator: React.FC<MunchkinNavigatorProps> = ({ articles =
     setIsLoading(true);
 
     try {
-      const q = textToSend.toLowerCase();
+      // 表記揺れ（gemiini ➔ gemini 等）の自動補正
+      const rawQ = textToSend.toLowerCase();
+      const q = rawQ.replace(/gemi+ni/g, 'gemini').trim();
 
-      // 1. 全 23+ 記事カタログの検索・統合
+      // 1. 公式 Firebase AI Logic SDK
+      const ai = getAI(app);
+
+      // 2. Props記事および静的抽出データを統合
       const propList = Array.isArray(articles) ? articles : [];
       const jsonList = Array.isArray(allArticlesData) ? allArticlesData : [];
       const fullCatalog = [...propList, ...jsonList];
@@ -68,7 +73,7 @@ export const MunchkinNavigator: React.FC<MunchkinNavigatorProps> = ({ articles =
       // 既存の公開済み実在ルーティング記事の slug 集合
       const activeSlugs = new Set(propList.map(a => decodeURIComponent(a.slug)));
 
-      // キーワードマッチング
+      // 入力キーワードに対するマッチング（Antigravity, ADK, RAG, Gemini, Firebase, etc.）
       const matched = uniqueCatalog.filter(art => {
         const title = (art.title || '').toLowerCase();
         const excerpt = (art.excerpt || '').toLowerCase();
@@ -77,82 +82,96 @@ export const MunchkinNavigator: React.FC<MunchkinNavigatorProps> = ({ articles =
         return title.includes(q) || excerpt.includes(q) || category.includes(q) || slug.includes(q);
       });
 
-      const targetList = matched.length > 0 ? matched.slice(0, 5) : uniqueCatalog.slice(0, 5);
+      // マッチ記事がある場合はそれを使い、無い場合は「公開中の主要おすすめ記事」を優先抽出
+      const publishedOnly = uniqueCatalog.filter(a => a.status === 'publish' || a.status === 'published' || activeSlugs.has(decodeURIComponent(a.slug)));
+      const targetList = matched.length > 0
+        ? matched.slice(0, 6)
+        : (publishedOnly.length > 0 ? publishedOnly.slice(0, 5) : uniqueCatalog.slice(0, 5));
 
-      // 2. 確定提案記事カードブロックをあらかじめ構築
-      const validArticleLinks: string[] = [];
-      targetList.forEach(art => {
+      const contextText = targetList.map((art, idx) => {
         const decodedSlug = decodeURIComponent(art.slug);
-        const isPublished = activeSlugs.has(decodedSlug) && art.status !== 'draft';
-        if (isPublished) {
-          validArticleLinks.push(`- [👉 ${art.title}](/articles/${decodedSlug})`);
-        } else {
-          validArticleLinks.push(`- ✦ **${art.title}** *(下書き準備中の星)*`);
-        }
-      });
+        const isPublished = art.status === 'publish' || art.status === 'published' || activeSlugs.has(decodedSlug);
+        const statusLabel = isPublished ? ' [公開中の星 - 閲覧可能]' : ' [✦ DRAFT/下書き準備中]';
+        const urlPath = isPublished ? `/articles/${decodedSlug}` : `(準備中)`;
+        return `【記事${idx + 1}】${statusLabel}\nタイトル: "${art.title}"\nカテゴリ: ${art.category}\nステータス: ${isPublished ? 'PUBLISHED (公開中・閲覧可能)' : 'DRAFT (下書き準備中)'}\n概要: ${art.excerpt || '詳細な技術解説・アプローチ'}\nURL: ${urlPath}`;
+      }).join("\n\n");
 
-      const articleCardBlock = `\n\n📌 **おすすめの星（ブログ内ナビゲーション）** 🐾\n` + validArticleLinks.join('\n');
-
-      let aiText = '';
-
-      // 3. Firebase AI Logic SDK による AI レスポンス試行 (タイムアウト保護付き)
-      try {
-        const ai = getAI(app);
-        const contextText = targetList.map((art, idx) => {
-          const decodedSlug = decodeURIComponent(art.slug);
-          const isPublished = activeSlugs.has(decodedSlug) && art.status !== 'draft';
-          return `【記事${idx + 1}】\nタイトル: "${art.title}"\nカテゴリ: ${art.category}\nステータス: ${isPublished ? 'PUBLISHED (公開中・閲覧可能)' : 'DRAFT (下書き準備中)'}\n概要: ${art.excerpt || '技術解説記事'}`;
-        }).join("\n\n");
-
-        const sys = `あなたはブログ「geodyssAI」の案内ガイド「マンチカン航海士」だニャ。
+      // ブログ内ナビゲーション特化システムプロンプト (DRAFT記事対応)
+      const sys = `あなたはデータサイエンティストのブログ「geodyssAI」の案内ガイド「マンチカン航海士」だニャ。
 語尾に「〜ニャ」「〜だニャ」を付け、愛らしく丁寧に回答して。
-ユーザーの質問に対し、下記【ブログ内記事リスト】を参考に、関連する記事について分かりやすく案内してニャ！`;
 
-        const prompt = `${sys}\n\n【ブログ内記事リスト】\n${contextText}\n\n【ユーザーの入力】\n${textToSend}`;
+【あなたの役割】
+ユーザーの質問や入力キーワード（例: "Antigravityの記事はある？", "Geminiの使い方", "おすすめの記事は？" など）に対し、下記の【ブログ内記事リスト】の中から最も関連性の高い記事を提示し、ブログ内の探検・ナビゲートを行ってニャ！
 
-        const CANDIDATE_MODELS = ['gemini-2.5-flash-lite', 'gemini-3.5-flash-lite', 'gemini-2.5-flash'];
-        
-        // Gemini API が完了するまでじっくり待機
-        for (const modelName of CANDIDATE_MODELS) {
-          try {
-            const model = getGenerativeModel(ai, { model: modelName });
-            const result = await model.generateContent(prompt);
-            const response = await result.response;
-            if (response && response.text) {
-              aiText = response.text();
-              break;
-            }
-          } catch (mErr) {
-            console.warn(`Model ${modelName} call warning:`, mErr);
+【回答ルール】
+1. 公開中の記事（PUBLISHED）を提案する場合は、必ず案内リンク（例: 👉 [記事タイトル](/articles/slug)）を掲載してニャ。
+2. 下書き準備中（DRAFT）の記事（例: Antigravity記事など）を提案する場合は、URLリンクの代わりに「✦ DRAFT (下書き準備中・まもなく着陸予定の星)」である旨を優しく添えて説明してニャ！
+3. 旅行者が次にどの星（記事）を読むべきか提示してニャ！`;
+
+      const prompt = `${sys}\n\n【ブログ内記事リスト】\n${contextText}\n\n【ユーザーの入力】\n${textToSend}`;
+
+      // ユーザー指示に基づき gemini-2.5-flash-lite を最優先モデルとして設定
+      const CANDIDATE_MODELS = ['gemini-2.5-flash-lite', 'gemini-3.5-flash-lite', 'gemini-2.5-flash'];
+      let aiText = '';
+      let lastErr = null;
+
+      for (const modelName of CANDIDATE_MODELS) {
+        try {
+          const model = getGenerativeModel(ai, { model: modelName });
+          const result = await model.generateContent(prompt);
+          const response = await result.response;
+          if (response && response.text) {
+            aiText = response.text();
+            break;
           }
+        } catch (mErr) {
+          lastErr = mErr;
+          console.warn(`Firebase AI Logic model ${modelName} failed:`, mErr);
         }
-      } catch (aiErr) {
-        console.warn('Firebase AI Logic call error:', aiErr);
       }
 
-      // Gemini AI からの回答が得られた場合は AI の回答 ＋ 確定動作記事カード、未取得時のみフォールバック案内
-      let finalText = '';
       if (aiText) {
-        finalText = aiText + (aiText.includes('/articles/') ? '' : articleCardBlock);
-      } else {
-        finalText = `ニャー！「${textToSend}」に関する知の星海探索結果だニャ 🐾\n\n航海日誌からおすすめの記事を見つけたニャ！` + articleCardBlock;
+        // 🛡️ 実在公開記事・確定動作リンク保証 (Link Safety Grounding)
+        const validArticleLinks: string[] = [];
+        targetList.forEach(art => {
+          const decodedSlug = decodeURIComponent(art.slug);
+          const isPublished = art.status === 'publish' || art.status === 'published' || activeSlugs.has(decodedSlug);
+          
+          if (isPublished) {
+            const linkUrl = `/articles/${decodedSlug}`;
+            validArticleLinks.push(`- [👉 ${art.title}](${linkUrl})`);
+          } else {
+            validArticleLinks.push(`- ✦ **${art.title}** *(下書き準備中の星)*`);
+          }
+        });
+
+        // 提案記事カードブロックを確実に付与
+        if (validArticleLinks.length > 0 && !aiText.includes('/articles/')) {
+          aiText += `\n\n📌 **おすすめの星（ブログ内ナビゲーション）** 🐾\n` + validArticleLinks.join('\n');
+        }
+
+        const botMsg: Message = {
+          id: `bot-${Date.now()}`,
+          sender: 'bot',
+          text: aiText,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+        setMessages(prev => [...prev, botMsg]);
+        setIsLoading(false);
+        return;
       }
 
-      const botMsg: Message = {
-        id: `bot-${Date.now()}`,
-        sender: 'bot',
-        text: finalText,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-
-      setMessages(prev => [...prev, botMsg]);
+      throw lastErr || new Error('All Firebase AI Logic models failed');
 
     } catch (error: any) {
-      console.error('Munchkin Navigator error:', error);
+      console.error('Firebase AI Logic error:', error);
+      const errMsg = error?.message || String(error);
+
+      // エラーを隠さずユーザーおよびDevToolsにそのまま提示してデバッグ可能にする
       const botMsg: Message = {
         id: `bot-${Date.now()}`,
         sender: 'bot',
-        text: `ニャー！入力の受け取り中にエラーが発生したニャ 🐾\nもう一度送信してみてほしいニャ！`,
+        text: `ニャー！Firebase AI Logic 呼び出し中にエラーが発生したニャ 🐾\n\n**詳細エラー**: \`${errMsg}\`\n\n設定（API KeyやApp Check）を確認してほしいニャ！`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
       setMessages(prev => [...prev, botMsg]);
@@ -237,8 +256,8 @@ export const MunchkinNavigator: React.FC<MunchkinNavigatorProps> = ({ articles =
 
                 <div
                   className={`max-w-[85%] px-3 py-2 rounded-2xl ${msg.sender === 'user'
-                      ? 'bg-sky-600 text-white rounded-br-none shadow-[0_0_15px_rgba(56,189,248,0.2)]'
-                      : 'bg-slate-900/90 text-slate-200 border border-slate-800/80 rounded-bl-none shadow-sm'
+                    ? 'bg-sky-600 text-white rounded-br-none shadow-[0_0_15px_rgba(56,189,248,0.2)]'
+                    : 'bg-slate-900/90 text-slate-200 border border-slate-800/80 rounded-bl-none shadow-sm'
                     }`}
                 >
                   <p className="whitespace-pre-wrap">{renderFormattedText(msg.text)}</p>
