@@ -58,7 +58,7 @@ export function ArticleNavigator({ article }: { article: ArticleProps }) {
   useEffect(() => {
     async function fetchGuide() {
       try {
-        const apiKey = import.meta.env.PUBLIC_GEMINI_API_KEY || import.meta.env.PUBLIC_FIREBASE_API_KEY || 'AIzaSyBPQroXo69568ahiG1Zydzy1r9gTcb7Rxo';
+        const apiKey = import.meta.env.PUBLIC_FIREBASE_API_KEY || import.meta.env.GEMINI_API_KEY || 'AIzaSyB-5jpp_4PmANU-9scNR0q-ahUJvFpBmUg';
         const { GoogleGenAI } = await import('@google/genai');
         const ai = new GoogleGenAI({ apiKey });
 
@@ -79,7 +79,7 @@ export function ArticleNavigator({ article }: { article: ArticleProps }) {
   ]
 }`;
 
-        const CANDIDATE_MODELS = ['gemini-flash-latest', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+        const CANDIDATE_MODELS = ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-1.5-flash'];
         let guideData: ArticleGuideData | null = null;
 
         for (const modelName of CANDIDATE_MODELS) {
@@ -147,7 +147,7 @@ export function ArticleNavigator({ article }: { article: ArticleProps }) {
     setAnswering(true);
 
     try {
-      const apiKey = import.meta.env.PUBLIC_GEMINI_API_KEY || import.meta.env.PUBLIC_FIREBASE_API_KEY || 'AIzaSyBPQroXo69568ahiG1Zydzy1r9gTcb7Rxo';
+      const apiKey = import.meta.env.PUBLIC_FIREBASE_API_KEY || import.meta.env.GEMINI_API_KEY || 'AIzaSyB-5jpp_4PmANU-9scNR0q-ahUJvFpBmUg';
       const { GoogleGenAI } = await import('@google/genai');
       const ai = new GoogleGenAI({ apiKey });
 
@@ -155,7 +155,7 @@ export function ArticleNavigator({ article }: { article: ArticleProps }) {
       const sys = "あなたはデータサイエンティストのブログの猫アシスタント「マンチカン航海士」だニャ。語尾に「〜ニャ」「〜だニャ」を付け、論理的かつ丁寧に回答して。";
       const prompt = `${sys}\n\n【記事タイトル】: ${article.title}\n【記事本文】: ${truncatedContent}\n\n質問: ${userQ}`;
 
-      const CANDIDATE_MODELS = ['gemini-flash-latest', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+      const CANDIDATE_MODELS = ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-1.5-flash'];
       let answerText = '';
 
       for (const modelName of CANDIDATE_MODELS) {

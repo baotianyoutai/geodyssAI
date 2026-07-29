@@ -1,6 +1,6 @@
 // src/lib/ai-logic.ts
-// Vertex AI (serviceAccount.json 認証) ＋ Google Gen AI SDK (@google/genai) 統合モジュール
-// 100% 確実な本物の Gemini 応答 ＋ 猫アシスタント（〜ニャ）＋ 出典 Grounding 抽出
+// XML実績ロジック準拠: Firebase AI Logic / Google Gen AI SDK (@google/genai) 統合モジュール
+// Google 検索 Grounding + 出典リンク自動抽出 + 猫アシスタント（〜ニャ）レスポンス
 
 import { GoogleGenAI } from '@google/genai';
 import fs from 'fs';
@@ -36,28 +36,31 @@ const OFFICIAL_WEB_LINKS: Record<string, WebLink[]> = {
   ]
 };
 
-// サービスアカウント鍵のロードと Vertex AI SDK の初期化
-function getVertexAIClient(): GoogleGenAI {
-  const saPath = path.resolve(process.cwd(), 'serviceAccount.json');
-  if (fs.existsSync(saPath)) {
-    process.env.GOOGLE_APPLICATION_CREDENTIALS = saPath;
-  }
+function getGeminiApiKey(): string {
+  if (process.env.GEMINI_API_KEY) return process.env.GEMINI_API_KEY;
+  if (import.meta.env?.GEMINI_API_KEY) return import.meta.env.GEMINI_API_KEY;
+  if (process.env.PUBLIC_FIREBASE_API_KEY) return process.env.PUBLIC_FIREBASE_API_KEY;
+  if (import.meta.env?.PUBLIC_FIREBASE_API_KEY) return import.meta.env.PUBLIC_FIREBASE_API_KEY;
 
-  const projectId = process.env.VERTEX_AI_PROJECT || 'my-geodyssai-pro-1744456051163';
-  const location = process.env.VERTEX_AI_LOCATION || 'us-central1';
+  try {
+    const envPath = path.resolve(process.cwd(), '.env');
+    if (fs.existsSync(envPath)) {
+      const envContent = fs.readFileSync(envPath, 'utf8');
+      const match = envContent.match(/^(?:GEMINI_API_KEY|PUBLIC_FIREBASE_API_KEY|FIREBASE_API_KEY)\s*=\s*(.+)$/m);
+      if (match && match[1]) {
+        return match[1].trim().replace(/^["']|["']$/g, '');
+      }
+    }
+  } catch (e) {}
 
-  return new GoogleGenAI({
-    vertexai: true,
-    project: projectId,
-    location: location
-  });
+  return 'AIzaSyB-5jpp_4PmANU-9scNR0q-ahUJvFpBmUg';
 }
 
-// 動作検証済み Vertex AI Gemini モデル
-const CANDIDATE_MODELS = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.5-pro'];
+// 試行する Gemini モデル優先順リスト (安定高速な gemini-2.5-flash-lite / gemini-2.5-flash 優先)
+const CANDIDATE_MODELS = ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-1.5-flash'];
 
 /**
- * 1. 記事末尾用: 要点ノート ＆ 3ステップ学習ガイドの自動生成 (Vertex AI)
+ * 1. 記事末尾用: 要点ノート ＆ 3ステップ学習ガイドの自動生成
  */
 export async function generateArticleStepUpGuide(
   title: string,
@@ -67,6 +70,7 @@ export async function generateArticleStepUpGuide(
 ): Promise<StepUpGuideResult> {
   const catKey = (category || 'dl').toLowerCase();
   const webLinks = OFFICIAL_WEB_LINKS[catKey] || OFFICIAL_WEB_LINKS['dl'];
+  const apiKey = getGeminiApiKey();
 
   const truncatedContent = (contentMd || excerpt || '').slice(0, 3000);
   const prompt = `あなたは「geodyssAI」のナビゲーターである愛らしい「マンチカン航海士」だニャ。
@@ -85,33 +89,29 @@ export async function generateArticleStepUpGuide(
   ]
 }`;
 
-  try {
-    const ai = getVertexAIClient();
+  const ai = new GoogleGenAI({ apiKey });
 
-    for (const modelName of CANDIDATE_MODELS) {
-      try {
-        const response = await ai.models.generateContent({
-          model: modelName,
-          contents: prompt
-        });
+  for (const modelName of CANDIDATE_MODELS) {
+    try {
+      const response = await ai.models.generateContent({
+        model: modelName,
+        contents: prompt
+      });
 
-        const textRes = response.text || '';
-        const cleaned = textRes.replace(/```json|```/g, '').trim();
-        const json = JSON.parse(cleaned);
+      const textRes = response.text || '';
+      const cleaned = textRes.replace(/```json|```/g, '').trim();
+      const json = JSON.parse(cleaned);
 
-        if (json.summary && Array.isArray(json.nextSteps)) {
-          return {
-            summary: json.summary,
-            nextSteps: json.nextSteps,
-            webLinks
-          };
-        }
-      } catch (mErr) {
-        console.warn(`Vertex AI Model ${modelName} guide generation failed:`, mErr);
+      if (json.summary && Array.isArray(json.nextSteps)) {
+        return {
+          summary: json.summary,
+          nextSteps: json.nextSteps,
+          webLinks
+        };
       }
+    } catch (e) {
+      console.warn(`Model ${modelName} guide generation failed:`, e);
     }
-  } catch (e) {
-    console.error('Vertex AI SDK initialization failed:', e);
   }
 
   return {
@@ -126,48 +126,66 @@ export async function generateArticleStepUpGuide(
 }
 
 /**
- * 2. 記事質問用: 単一記事に関する Q&A チャット応答 (Vertex AI)
+ * 2. 記事質問用: 単一記事に関する Q&A チャット応答
  */
 export async function askArticleAI(
   title: string,
   contentMd: string,
   question: string
 ): Promise<string> {
+  const apiKey = getGeminiApiKey();
   const truncatedContent = (contentMd || '').slice(0, 3000);
-  const sys = "あなたはデータサイエンティストのブログの猫アシスタント「マンチカン航海士」だニャ。語尾に「〜ニャ」「〜だニャ」を付け、論理的かつ丁寧に回答して。";
-  const prompt = `${sys}\n\n【記事タイトル】: ${title}\n【記事本文】: ${truncatedContent}\n\n【ユーザーの質問】: ${question}`;
+  const sys = "あなたはデータサイエンティストのブログの猫アシスタントです。語尾に「〜ニャ」を付け、論理的に回答して。";
+  const prompt = `${sys}\n\n【記事タイトル】: ${title}\n【記事本文】: ${truncatedContent}\n\n質問: ${question}`;
 
-  try {
-    const ai = getVertexAIClient();
+  const ai = new GoogleGenAI({ apiKey });
 
-    for (const modelName of CANDIDATE_MODELS) {
-      try {
-        const response = await ai.models.generateContent({
-          model: modelName,
-          contents: prompt
-        });
-
-        if (response.text) {
-          return response.text;
+  for (const modelName of CANDIDATE_MODELS) {
+    try {
+      const response = await ai.models.generateContent({
+        model: modelName,
+        contents: prompt,
+        config: {
+          tools: [{ googleSearch: {} }]
         }
-      } catch (mErr) {
-        console.warn(`Vertex AI Model ${modelName} Q&A failed:`, mErr);
+      });
+
+      let text = response.text || '';
+      if (text) {
+        // グラウンディング（出典リンク）の付与
+        const candidate = (response as any)?.candidates?.[0];
+        const meta = candidate?.groundingMetadata;
+        if (meta && Array.isArray(meta.groundingChunks)) {
+          const links: string[] = [];
+          meta.groundingChunks.forEach((chunk: any) => {
+            if (chunk.web?.uri) {
+              const linkTitle = chunk.web.title || "参考リンク";
+              links.push(`- [${linkTitle}](${chunk.web.uri})`);
+            }
+          });
+          if (links.length > 0) {
+            text += `\n\n👉 **最新技術記事・参考リンクだニャ** 🐾\n` + links.join('\n');
+          }
+        }
+        return text;
       }
+    } catch (e) {
+      console.warn(`Model ${modelName} Q&A failed, trying next:`, e);
     }
-  } catch (e) {
-    console.error('Vertex AI Q&A error:', e);
   }
 
   return `ニャー！ご質問「${question}」ありがとうございますニャ 🐾\n記事「${title}」の解説を踏まえて、コードの挙動や実装方法について深掘りしてみてニャ！`;
 }
 
 /**
- * 3. 3D 星海図用: 全域 RAG ナビゲーション対話 (Vertex AI ＋ 本物の Gemini AI 応答)
+ * 3. 3D 星海図用: 全域 RAG ナビゲーション対話 (XML実績プロンプト & Grounding 準拠)
  */
 export async function generateStellarChatAI(
   userQuery: string,
   targetArticles: Array<{ title: string; slug: string; excerpt: string; category: string }>
 ): Promise<string> {
+  const apiKey = getGeminiApiKey();
+
   const contextText = targetArticles.map((art, idx) =>
     `【関連記事${idx + 1}】タイトル: "${art.title}" (カテゴリ: ${art.category})\n概要: ${art.excerpt}\nURL: /articles/${encodeURIComponent(art.slug)}`
   ).join("\n\n");
@@ -179,29 +197,45 @@ export async function generateStellarChatAI(
 ${contextText}
 
 【ユーザーの質問】
-最新の知見や関連記事を踏まえて詳しく答えてニャ：${userQuery}`;
+最新のGoogle検索結果や関連記事を踏まえて答えてニャ：${userQuery}`;
 
-  try {
-    const ai = getVertexAIClient();
+  const ai = new GoogleGenAI({ apiKey });
 
-    for (const modelName of CANDIDATE_MODELS) {
-      try {
-        const response = await ai.models.generateContent({
-          model: modelName,
-          contents: prompt
-        });
-
-        if (response.text) {
-          return response.text;
+  for (const modelName of CANDIDATE_MODELS) {
+    try {
+      const response = await ai.models.generateContent({
+        model: modelName,
+        contents: prompt,
+        config: {
+          tools: [{ googleSearch: {} }]
         }
-      } catch (mErr) {
-        console.warn(`Vertex AI Model ${modelName} StellarChat failed:`, mErr);
+      });
+
+      let text = response.text || '';
+      if (text) {
+        // XML実績ロジック: 出典 Grounding メタデータからの参考リンク抽出
+        const candidate = (response as any)?.candidates?.[0];
+        const meta = candidate?.groundingMetadata;
+        if (meta && Array.isArray(meta.groundingChunks)) {
+          const links: string[] = [];
+          meta.groundingChunks.forEach((chunk: any) => {
+            if (chunk.web?.uri) {
+              const linkTitle = chunk.web.title || "参考技術記事";
+              links.push(`- [${linkTitle}](${chunk.web.uri})`);
+            }
+          });
+          if (links.length > 0) {
+            text += `\n\n👉 **最新技術記事・探索結果だニャ** 🐾\n` + links.join('\n');
+          }
+        }
+        return text;
       }
+    } catch (e) {
+      console.warn(`Model ${modelName} StellarChat failed, trying fallback model:`, e);
     }
-  } catch (e) {
-    console.error('Vertex AI StellarChat error:', e);
   }
 
+  // 万が一全 AI API がエラーの場合の安全な RAG レスポンス
   if (targetArticles.length > 0) {
     const top = targetArticles[0];
     const rest = targetArticles.slice(1);
