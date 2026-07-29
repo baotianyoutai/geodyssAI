@@ -49,17 +49,53 @@ export const AdminCMS: React.FC = () => {
       const userCred = await signInWithEmailAndPassword(auth, emailInput.trim(), passwordInput);
       const loggedUser = userCred.user;
       const userEmail = loggedUser.email || emailInput.trim();
+      const loginTime = new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
+      const userAgent = navigator.userAgent;
 
-      // 日本語のログイン通知 API を非同期実行
-      fetch('/api/admin/login-notify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: userEmail,
-          userAgent: navigator.userAgent,
-          timestamp: new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })
-        })
-      }).catch(nErr => console.warn('Login notification API trigger warning:', nErr));
+      const emergencyActionUrl = `https://geodyssai.com/admin?action=emergency_lockout`;
+      const passwordResetUrl = `https://geodyssai.com/admin?action=reset_password`;
+
+      const mailBody = `
+==================================================
+🚨 geodyssAI 管理画面へのログインが検出されました
+==================================================
+
+【ログイン詳細情報】
+・ログイン日時: ${loginTime}
+・対象ユーザー: ${userEmail}
+・ユーザーエージェント: ${userAgent}
+・アクセス URL: https://geodyssai.com/admin
+
+--------------------------------------------------
+⚠️ 【身に覚えのない不審なログインの場合のアクション】
+--------------------------------------------------
+万が一、ご自身でのログインでない場合は、以下のいずれかのアクションを実行してください：
+
+1. パスワードの緊急リセット（攻撃者のアクセスを遮断）:
+   👉 ${passwordResetUrl}
+
+2. 全端末からの強制ログアウト:
+   👉 ${emergencyActionUrl}
+
+--
+geodyssAI Admin Security System
+`;
+
+      // クライアントから 100% 確実に直配送
+      try {
+        await fetch('https://formspree.io/f/xanyqpyb', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: 'baotianyoutai1@gmail.com',
+            message: mailBody,
+            subject: `🚨 geodyssAI 管理画面にログインがありました [${loginTime}]`
+          })
+        });
+        console.log('Direct client security notification email sent successfully!');
+      } catch (sendErr) {
+        console.warn('Direct notification email warning:', sendErr);
+      }
 
     } catch (err: any) {
       console.error('SignIn failed:', err);
