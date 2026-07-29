@@ -766,3 +766,5 @@ geodyssAI Admin Security System
     </div>
   );
 }
+
+export { AdminCMS };
