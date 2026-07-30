@@ -74,30 +74,30 @@ export default function AdminCMS() {
   const [editorViewMode, setEditorViewMode] = useState<'split' | 'edit' | 'preview'>('split');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Firebase Storage からアップロード済み画像一覧のロード
+  // 🖼️ Firestore DB (SSOT) メディアアセット一覧のリアルタイム監視・ロード
   const loadStorageMedia = async () => {
     try {
-      const listRef = ref(storage, 'media');
-      const res = await listAll(listRef);
-      const items = await Promise.all(
-        res.items.map(async (itemRef) => {
-          const url = await getDownloadURL(itemRef);
-          return { name: itemRef.name, url };
-        })
-      );
-      setMediaItems(items.reverse());
+      const snap = await getDocs(collection(db, 'media'));
+      if (!snap.empty) {
+        const items = snap.docs.map(d => ({
+          name: d.data().name || d.id,
+          url: d.data().url || '',
+          alt: d.data().alt || ''
+        }));
+        setMediaItems(items.reverse());
+      }
     } catch (e) {
-      console.warn('Storage listAll warning:', e);
+      console.warn('Firestore media collection fetch info:', e);
     }
   };
 
-  // ブラウザ側自動 WebP 圧縮 ＆ 超堅牢 Firebase Storage / Data URL アップロード
+  // ブラウザ側自動 WebP 圧縮 ＆ Firestore データベース (SSOT) リアルタイム保存
   const handleUploadImageFile = async (file: File) => {
     if (!file) return;
     setIsUploadingMedia(true);
 
     try {
-      // 1. 画像の Base64 / WebP データ生成 (どんな環境でも1秒以内に完了する確実処理)
+      // 1. 超高画質 ＆ 超軽量 WebP データ生成 (1秒未満で即完了)
       const dataUrl: string = await new Promise((resolve) => {
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -124,7 +124,7 @@ export default function AdminCMS() {
               const ctx = canvas.getContext('2d');
               ctx?.drawImage(img, 0, 0, width, height);
 
-              const webpDataUrl = canvas.toDataURL('image/webp', 0.82);
+              const webpDataUrl = canvas.toDataURL('image/webp', 0.80);
               resolve(webpDataUrl || (e.target?.result as string));
             } catch (err) {
               resolve(e.target?.result as string);
@@ -141,41 +141,24 @@ export default function AdminCMS() {
         throw new Error('画像の読み込みに失敗しました');
       }
 
-      let finalUrl = dataUrl;
+      const generatedAlt = `[AIO/LLMO] ${formTitle || '図解イラスト'}: 視覚的アーキテクチャ概念構造`;
+      const cleanName = file.name.replace(/\.[^/.]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '_');
+      const docId = `${Date.now()}_${cleanName}`;
 
-      // 2. Firebase Storage への非同期保存 (5秒タイムアウト付き)
-      try {
-        const cleanName = file.name.replace(/\.[^/.]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '_');
-        const storageRef = ref(storage, `media/${Date.now()}_${cleanName}.webp`);
+      // 2. SSOT: Firestore の media コレクションへ直接リアルタイム保存
+      await setDoc(doc(db, 'media', docId), {
+        name: file.name,
+        url: dataUrl,
+        alt: generatedAlt,
+        createdAt: serverTimestamp()
+      }, { merge: true });
 
-        // Base64 DataURL を Blob に変換して保存
-        const fetchRes = await fetch(dataUrl);
-        const blob = await fetchRes.blob();
-
-        const uploadPromise = (async () => {
-          await uploadBytes(storageRef, blob, { contentType: 'image/webp' });
-          return await getDownloadURL(storageRef);
-        })();
-
-        // 5秒以内に Storage 保存が完了しない場合は高速 DataURL を採用
-        const timeoutPromise = new Promise<string>((_, reject) =>
-          setTimeout(() => reject(new Error('Storage timeout')), 5000)
-        );
-
-        finalUrl = await Promise.race([uploadPromise, timeoutPromise]);
-      } catch (storageErr) {
-        console.warn('Firebase Storage upload timed out or failed; falling back to Data URL:', storageErr);
-        finalUrl = dataUrl;
-      }
-
-      setSelectedMediaUrl(finalUrl);
-      setMediaItems(prev => [{ name: file.name, url: finalUrl }, ...prev]);
-
-      // AIO / LLMO Alt を自動生成
-      setMediaAioAlt(`[AIO/LLMO] ${formTitle || '図解イラスト'}: 視覚的アーキテクチャ概念構造`);
+      setSelectedMediaUrl(dataUrl);
+      setMediaAioAlt(generatedAlt);
+      setMediaItems(prev => [{ name: file.name, url: dataUrl, alt: generatedAlt }, ...prev]);
     } catch (err: any) {
-      console.error('Image upload error:', err);
-      alert(`⚠️ 画像の読み込み処理でエラーが発生しました: ${err.message}`);
+      console.error('Firestore media save error:', err);
+      alert(`⚠️ 画像の保存でエラーが発生しました: ${err.message}`);
     } finally {
       setIsUploadingMedia(false);
     }
@@ -305,6 +288,20 @@ geodyssAI Admin Security System
       setArticles([]);
     });
 
+    // Firestore media コレクションのリアルタイム同期 (アセットライブラリ SSOT)
+    const unsubscribeMedia = onSnapshot(collection(db, 'media'), (snapshot) => {
+      if (!snapshot.empty) {
+        const items = snapshot.docs.map(d => ({
+          name: d.data().name || d.id,
+          url: d.data().url || '',
+          alt: d.data().alt || ''
+        }));
+        setMediaItems(items.reverse());
+      }
+    }, (err) => {
+      console.warn('Firestore media snapshot info:', err);
+    });
+
     const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       setAuthLoading(false);
@@ -320,6 +317,7 @@ geodyssAI Admin Security System
 
     return () => {
       unsubscribeArticles();
+      unsubscribeMedia();
       unsubscribeAuth();
     };
   }, []);
