@@ -46,6 +46,7 @@ export async function getArticles() {
         status: data.status || (data.draft ? 'draft' : 'publish') || 'draft',
         excerpt: data.excerpt || '',
         category: data.category || '',
+        heroImage: data.heroImage || data.hero_image || '',
         tags: data.tags || [],
         publishedAt: data.publishedAt || '',
         updatedAt: data.updatedAt || '',

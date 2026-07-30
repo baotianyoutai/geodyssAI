@@ -42,7 +42,7 @@ export function ObservatoryView({ articles: initialArticles = [] }: { articles: 
             category: data.category || 'GenAI',
             difficulty: data.difficulty || 3,
             excerpt: data.excerpt || '',
-            heroImage: data.heroImage || '',
+            heroImage: data.heroImage || (data as any).hero_image || (data as any).image || '',
             status: data.status || 'draft'
           };
         });
