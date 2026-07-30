@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { db } from '../lib/firebase-client';
+import { onSnapshot, collection } from 'firebase/firestore';
 
 interface ArticleItem {
   id: string;
@@ -11,29 +13,54 @@ interface ArticleItem {
 }
 
 const CONSTELLATIONS = [
-  { id: 'genai-foundations', label: 'GenAI 基礎座', color: '#3B82F6', categoryKey: 'dl' },
-  { id: 'ai-agents', label: 'AI Agents 座', color: '#8B5CF6', categoryKey: 'claude' },
-  { id: 'firebase-cloud', label: 'Firebase & Cloud 座', color: '#F59E0B', categoryKey: 'firebase' },
+  { id: 'all', label: '全アセット (All)', color: '#38BDF8', categoryKey: 'all' },
+  { id: 'genai-foundations', label: 'GenAI 基礎座', color: '#3B82F6', categoryKey: 'genai' },
+  { id: 'ai-agents', label: 'AI Agents 座', color: '#8B5CF6', categoryKey: 'agent' },
+  { id: 'firebase-cloud', label: 'Firebase & Cloud 座', color: '#F59E0B', categoryKey: 'cloud' },
   { id: 'claude', label: 'Claude 座', color: '#E07B54', categoryKey: 'claude' },
   { id: 'deep-learning', label: 'Deep Learning 座', color: '#2DD4BF', categoryKey: 'dl' },
-  { id: 'logical-thinking', label: 'Logical Thinking 座', color: '#F2B8CC', categoryKey: 'logical-thinking' },
-  { id: 'design-tools', label: 'Design & Tools 座', color: '#7DD3C0', categoryKey: 'design-tools' }
+  { id: 'logical-thinking', label: 'Logical Thinking 座', color: '#F2B8CC', categoryKey: 'logical' },
+  { id: 'ml-python', label: 'Machine Learning / Python 座', color: '#10B981', categoryKey: 'machine' }
 ];
 
-export function ObservatoryView({ articles = [] }: { articles: ArticleItem[] }) {
+export function ObservatoryView({ articles: initialArticles = [] }: { articles: ArticleItem[] }) {
+  const [articles, setArticles] = useState<ArticleItem[]>(initialArticles);
   const [selectedConstellation, setSelectedConstellation] = useState(CONSTELLATIONS[0].id);
   const [filterMode, setFilterMode] = useState<'all' | 'unread'>('all');
 
+  // Firestore db.collection('articles') リアルタイム同期 (SSOT)
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'articles'), (snapshot) => {
+      if (!snapshot.empty) {
+        const list: ArticleItem[] = snapshot.docs.map(docSnap => {
+          const data = docSnap.data() as ArticleItem;
+          return {
+            id: docSnap.id,
+            slug: data.slug || docSnap.id,
+            title: data.title || docSnap.id,
+            category: data.category || 'GenAI',
+            difficulty: data.difficulty || 3,
+            excerpt: data.excerpt || '',
+            status: data.status || 'draft'
+          };
+        });
+        setArticles(list);
+      }
+    }, (err) => {
+      console.warn('Observatory Firestore live sync fallback info:', err);
+    });
+
+    return () => unsub();
+  }, []);
+
   const activeConstellation = CONSTELLATIONS.find(c => c.id === selectedConstellation) || CONSTELLATIONS[0];
 
-  // カテゴリ該当記事の抽出
+  // カテゴリ該当記事の抽出 (全アセット(all) または動的カテゴリ柔軟マッチング)
   const filteredArticles = articles.filter(art => {
+    if (activeConstellation.id === 'all') return true;
     const cat = (art.category || '').toLowerCase();
-    const matchCat = cat === activeConstellation.categoryKey ||
-                     (activeConstellation.id === 'firebase-cloud' && cat.includes('firebase')) ||
-                     (activeConstellation.id === 'ai-agents' && (cat.includes('agent') || cat.includes('claude'))) ||
-                     (activeConstellation.id === 'genai-foundations' && (cat.includes('dl') || cat.includes('rag')));
-    return matchCat;
+    const key = activeConstellation.categoryKey.toLowerCase();
+    return cat.includes(key) || key.includes(cat);
   });
 
   const displayArticles = filterMode === 'unread' 
