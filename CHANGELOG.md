@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-07-30
+
+### Added & Refactored
+- **Admin CMS Live Preview Split View & Dynamic Category Management (`AdminCMS.tsx`)**:
+  - Reimagined Admin CMS editor with a 50:50 Live Preview Split View featuring real-time hero image render and markdown toolbars.
+  - Added dynamic category management with interactive `<select>` dropdown and `＋ 新規カテゴリを追加` capability (e.g. `Machine Learning`).
+  - Added Gemini AI-powered 1-click excerpt generator (`✨ AIで要約を自動生成`).
+- **Firestore SSOT Real-time Architecture (`AdminCMS.tsx`, `MunchkinNavigator.tsx`, `AGENT.md`)**:
+  - Completely removed legacy `all-articles-data.json` imports across all frontend components and RAG chat modules.
+  - Connected `onSnapshot` and `getDocs` directly to Google Cloud Firestore (`db.collection('articles')`) as the Single Source of Truth (SSOT).
+  - Documented strict SSOT Firestore database rules in `AGENT.md` (§ 2.1.1).
+- **100% Article Direct Link Jumping & URL Encoding Safety (`[slug].astro`, `AdminCMS.tsx`)**:
+  - Resolved double URL encoding bugs (`getSafeArticleUrl`) and expanded Astro static/dynamic routing for seamless 100% link navigation across all 46 published/draft articles.
+
 ## [1.2.2] - 2026-07-25
 
 ### Added & Fixed
