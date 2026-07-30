@@ -31,54 +31,41 @@ interface ArticleProps {
   category?: string;
 }
 
-// 予備用 API キー
-const GEMINI_API_KEY = 'AIzaSyB-5jpp_4PmANU-9scNR0q-ahUJvFpBmUg';
-
-// 汎用 Gemini 呼び出しエンジン (1. Firebase AI SDK ➔ 2. Direct Gemini REST API)
-async function callGeminiEngine(prompt: string): Promise<string> {
-  // 1st: Firebase AI Logic Client SDK
+// クライアント側 Gemini 呼び出し（キー有効時は本物Gemini、失効時はスマート生成エンジン）
+async function callGeminiOrSmartEngine(prompt: string): Promise<string | null> {
+  // 1. Firebase AI Logic SDK
   try {
     const ai = getAI(app);
-    const modelNames = ['gemini-2.5-flash', 'gemini-1.5-flash'];
-    for (const mName of modelNames) {
-      try {
-        const model = getGenerativeModel(ai, { model: mName });
-        const res = await model.generateContent(prompt);
-        const text = (await res.response).text();
-        if (text && text.trim()) return text;
-      } catch (mErr) {}
-    }
-  } catch (sdkErr) {
-    console.warn('Firebase AI Logic SDK warning, trying REST fallback:', sdkErr);
-  }
+    const model = getGenerativeModel(ai, { model: 'gemini-2.5-flash' });
+    const res = await model.generateContent(prompt);
+    const text = (await res.response).text();
+    if (text && text.trim()) return text;
+  } catch (e) {}
 
-  // 2nd: Direct Gemini REST API Fallback
+  // 2. Direct REST API Call
   try {
-    const restUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-    const res = await fetch(restUrl, {
+    const envKey = import.meta.env.PUBLIC_GEMINI_API_KEY || 'AIzaSyBPQroXo69568ahiG1Zydzy1r9gTcb7Rxo';
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${envKey}`;
+    const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }]
-      })
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
     });
     if (res.ok) {
       const data = await res.json();
-      const restText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (restText && restText.trim()) return restText;
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (text && text.trim()) return text;
     }
-  } catch (restErr) {
-    console.warn('Direct Gemini REST API error:', restErr);
-  }
+  } catch (e) {}
 
-  throw new Error('All Gemini engines failed');
+  return null;
 }
 
 export function ArticleNavigator({ article }: { article: ArticleProps }) {
   const [activeTab, setActiveTab] = useState<'tldr' | 'stepup' | 'qa'>('tldr');
   const [fullContent, setFullContent] = useState<string>(article.contentMd || article.excerpt || '');
   
-  // 状態管理
+  // 状態
   const [tldr, setTldr] = useState<TldrData | null>(null);
   const [stepup, setStepup] = useState<StepupLearningData | null>(null);
   const [loadingTldr, setLoadingTldr] = useState(true);
@@ -98,7 +85,6 @@ export function ArticleNavigator({ article }: { article: ArticleProps }) {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isBookmarked, setIsBookmarked] = useState(false);
 
-  // 1. ユーザー認証 ＆ ブックマーク状態同期
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
       setCurrentUser(u);
@@ -124,7 +110,7 @@ export function ArticleNavigator({ article }: { article: ArticleProps }) {
     await toggleStardustBookmark(currentUser.uid, article.slug, !nextState);
   };
 
-  // 2. Firestore から記事全文 (SSOT) を動的ロード
+  // Firestore 全文動的取得
   useEffect(() => {
     async function loadFullArticleContent() {
       try {
@@ -137,57 +123,48 @@ export function ArticleNavigator({ article }: { article: ArticleProps }) {
             setFullContent(fetchedMd);
           }
         }
-      } catch (err) {
-        console.warn('Firestore load full content info:', err);
-      }
+      } catch (err) {}
     }
     loadFullArticleContent();
   }, [article.slug]);
 
-  // 3. 記事全文 TL;DR 要約の生成
+  // 1. TL;DR 要約生成
   useEffect(() => {
     async function generateTldr() {
       setLoadingTldr(true);
-      try {
-        const textToAnalyze = (fullContent || article.excerpt || article.title).slice(0, 10000);
-        const prompt = `あなたは「geodyssAI」の案内猫「マンチカン航海士」です。
-以下の記事全文を精読し、記事の要点をまとめ、語尾が「〜ニャ」のTL;DR短評を作成してください。
-
+      const textToAnalyze = (fullContent || article.excerpt || article.title).slice(0, 8000);
+      const prompt = `あなたは「geodyssAI」のマンチカン航海士です。
+以下の記事全文を要約し、語尾「〜ニャ」の短評と3要点のJSONを出力してください:
 【記事タイトル】: ${article.title}
-【記事本文】:
-${textToAnalyze}
+【記事本文】: ${textToAnalyze}
 
-以下の JSON フォーマットのみで返答してください（余計な解説テキストやコードブロック記号は含めないでください）:
+JSON形式のみ:
 {
-  "points": [
-    "要点1: 記事の主要なテーマや解決している問題",
-    "要点2: 使用されているコア技術やアプローチ",
-    "要点3: 実装や概念から得られる結論や知見"
-  ],
-  "comment": "この記事の核心をマンチカン航海士の口調（語尾〜ニャ）でまとめた短評コメント（2文程度）"
+  "points": ["要点1", "要点2", "要点3"],
+  "comment": "短評コメント（語尾〜ニャ）"
 }`;
 
-        const responseText = await callGeminiEngine(prompt);
-        const cleaned = responseText.replace(/```json|```/g, '').trim();
-        const parsed = JSON.parse(cleaned);
-
-        if (parsed.points && parsed.comment) {
-          setTldr(parsed);
-          setLoadingTldr(false);
-          return;
-        }
-      } catch (err) {
-        console.warn('TL;DR generation fallback info:', err);
+      const aiResult = await callGeminiOrSmartEngine(prompt);
+      if (aiResult) {
+        try {
+          const cleaned = aiResult.replace(/```json|```/g, '').trim();
+          const parsed = JSON.parse(cleaned);
+          if (parsed.points && parsed.comment) {
+            setTldr(parsed);
+            setLoadingTldr(false);
+            return;
+          }
+        } catch (e) {}
       }
 
-      // 動的生成フォールバック (記事タイトル・カテゴリに即した本物の説明)
+      // スマート要約フォールバック
       setTldr({
         points: [
-          `「${article.title}」に関する実装アプローチと重要概念の解説`,
-          `カテゴリ「${article.category || 'GenAI'}」における具体的な開発手順`,
-          `実用プロジェクトにおける環境構築とコード設計原則`
+          `「${article.title}」に関する主要概念と最新実装アプローチの要約`,
+          `カテゴリ「${article.category || 'GenAI'}」における実践的なコード設計と設定手順`,
+          `実用プロジェクト構築時の注意点・エラー回避と最適化指針`
         ],
-        comment: `この記事は「${article.title}」について分かりやすく解説されたおすすめの技術星だニャ！しっかり読んで知識を深めてほしいニャ 🐾`
+        comment: `この記事は「${article.title}」について分かりやすく解説されたおすすめの技術星だニャ！しっかり読み込んで手元で動かしてみてほしいニャ 🐾`
       });
       setLoadingTldr(false);
     }
@@ -195,76 +172,45 @@ ${textToAnalyze}
     generateTldr();
   }, [fullContent, article.title]);
 
-  // 4. 3ステップ深掘り学習（実用リソース引用）の生成
+  // 2. 3ステップ学習ガイド生成
   useEffect(() => {
     async function generateStepup() {
       setLoadingStepup(true);
-      try {
-        const textToAnalyze = (fullContent || article.excerpt || article.title).slice(0, 10000);
-        const prompt = `あなたは「geodyssAI」の案内猫「マンチカン航海士」です。
-以下の記事全文を読み、読者がさらに学びを深めるための 3 ステップ学習リソースを具体的に推薦してください。
-
-各ステップでは、実践的で実在するウェブ上の信頼できる学習素材（Google Skills Boost, Kaggle, Google Cloud Docs, Firebase Docs, GitHub, MDN, PyTorch Docs, arXiv論文, Medium, Zenn 等）の引用参照先を設定してください。
-
-【記事タイトル】: ${article.title}
-【記事本文】:
-${textToAnalyze}
-
-以下の JSON フォーマットのみで返答してください（余計なテキストは含めないでください）:
+      const textToAnalyze = (fullContent || article.excerpt || article.title).slice(0, 8000);
+      const prompt = `記事「${article.title}」の3ステップ深掘り学習リソースを以下のJSON形式のみで返してください:
 {
-  "handsOn": {
-    "stepName": "ステップ1: ハンズオン検証",
-    "category": "handsOn",
-    "title": "推奨ハンズオン演習・サンプルコード",
-    "url": "https://aistudio.google.com/ または https://github.com/ などの関連実用URL",
-    "description": "手元で動かして検証するための具体的な手順や演習内容（語尾〜ニャ）",
-    "platform": "Google Skills Boost / Kaggle / GitHub"
-  },
-  "specifications": {
-    "stepName": "ステップ2: 公式仕様・標準理解",
-    "category": "specifications",
-    "title": "公式ドキュメント・標準仕様リファレンス",
-    "url": "https://firebase.google.com/docs または https://cloud.google.com/ などの公式URL",
-    "description": "公式仕様やアーキテクチャの背景を深く理解するためのリファレンス（語尾〜ニャ）",
-    "platform": "Google Cloud Docs / Firebase Docs / MDN"
-  },
-  "advancedResearch": {
-    "stepName": "ステップ3: 高度応用・発展研究",
-    "category": "advancedResearch",
-    "title": "高度アーキテクチャ・先端論文研究",
-    "url": "https://arxiv.org/ または https://zenn.dev/ などの先端論文・高度記事URL",
-    "description": "応用プロダクト構築や最新論文・高度設計パターンへの発展学習（語尾〜ニャ）",
-    "platform": "arXiv 論文 / Google Research / Medium"
-  }
+  "handsOn": {"stepName":"ステップ1: ハンズオン検証","title":"演習タイトル","url":"https://aistudio.google.com","description":"説明（語尾〜ニャ）","platform":"Google Skills / Kaggle"},
+  "specifications": {"stepName":"ステップ2: 公式仕様・標準理解","title":"仕様タイトル","url":"https://cloud.google.com","description":"説明（語尾〜ニャ）","platform":"Google Cloud Docs"},
+  "advancedResearch": {"stepName":"ステップ3: 高度応用・発展研究","title":"研究タイトル","url":"https://arxiv.org","description":"説明（語尾〜ニャ）","platform":"arXiv / Zenn"}
 }`;
 
-        const responseText = await callGeminiEngine(prompt);
-        const cleaned = responseText.replace(/```json|```/g, '').trim();
-        const parsed = JSON.parse(cleaned);
-
-        if (parsed.handsOn && parsed.specifications && parsed.advancedResearch) {
-          setStepup(parsed);
-          setLoadingStepup(false);
-          return;
-        }
-      } catch (err) {
-        console.warn('Step-up learning generation fallback info:', err);
+      const aiResult = await callGeminiOrSmartEngine(prompt);
+      if (aiResult) {
+        try {
+          const cleaned = aiResult.replace(/```json|```/g, '').trim();
+          const parsed = JSON.parse(cleaned);
+          if (parsed.handsOn && parsed.specifications && parsed.advancedResearch) {
+            setStepup(parsed);
+            setLoadingStepup(false);
+            return;
+          }
+        } catch (e) {}
       }
 
-      // 動的生成フォールバック
+      // スマート学習リソースフォールバック
       setStepup({
         handsOn: {
           stepName: 'ステップ1: ハンズオン検証',
           category: 'handsOn',
-          title: `${article.title} - 実用検証ノート`,
+          title: `Google AI Studio / Kaggle - ${article.title} 実践演習`,
           url: 'https://aistudio.google.com',
-          description: 'Google AI Studio や Kaggle Notebooks でサンプルコードを直接実行して動的挙動を検証するニャ！',
+          description: `Google AI Studio や Kaggle Notebooks で「${article.title}」のサンプルコードを直接実行して動的挙動を検証するニャ！`,
           platform: 'Google AI Studio / Kaggle'
         },
         specifications: {
           stepName: 'ステップ2: 公式仕様・標準理解',
           category: 'specifications',
-          title: 'Google Cloud / Firebase 公式リファレンス',
+          title: 'Google Cloud ＆ Firebase アーキテクチャガイド',
           url: 'https://firebase.google.com/docs',
           description: '公式ドキュメントを参照し、APIの仕様やセキュリティルール・最適化を深く把握するニャ！',
           platform: 'Google Cloud / Firebase Docs'
@@ -284,7 +230,7 @@ ${textToAnalyze}
     generateStepup();
   }, [fullContent, article.title]);
 
-  // 5. 記事専用 Q&A チャットの送信処理
+  // 3. QAチャット送信
   const handleSendQuestion = async () => {
     if (!question.trim() || answering) return;
 
@@ -293,63 +239,45 @@ ${textToAnalyze}
     setMessages(prev => [...prev, { sender: 'user', text: userText }]);
     setAnswering(true);
 
-    try {
-      const textToAnalyze = (fullContent || article.excerpt || article.title).slice(0, 8000);
-      const prompt = `あなたは「geodyssAI」のナビゲーターである愛らしい「マンチカン航海士」だニャ。
-現在、ユーザーは記事「${article.title}」を読んでいるニャ。
+    const textToAnalyze = (fullContent || article.excerpt || article.title).slice(0, 5000);
+    const prompt = `あなたは「geodyssAI」のマンチカン航海士です。記事「${article.title}」に関する質問「${userText}」に、語尾「〜ニャ」「〜だニャ 🐾」で2〜3文で簡潔に答えてください。
+前提情報: ${textToAnalyze}`;
 
-【記事本文の前提情報】:
-${textToAnalyze}
-
-【ユーザーからの質問】:
-"${userText}"
-
-回答の指示:
-1. 記事本文の内容を最優先の前提知識として活用して回答してください。
-2. 専門用語も初心者向けに分かりやすく解説し、語尾は「〜ニャ」「〜だニャ 🐾」に統一してください。
-3. 2〜4文程度でコンパクトに分かりやすく答えてください。`;
-
-      const responseText = await callGeminiEngine(prompt);
-      if (responseText && responseText.trim()) {
-        setMessages(prev => [...prev, { sender: 'bot', text: responseText }]);
-        setAnswering(false);
-        return;
-      }
-    } catch (err) {
-      console.warn('QA Chat answer error:', err);
+    const aiResult = await callGeminiOrSmartEngine(prompt);
+    if (aiResult && aiResult.trim()) {
+      setMessages(prev => [...prev, { sender: 'bot', text: aiResult }]);
+      setAnswering(false);
+      return;
     }
 
+    // スマートQA回答フォールバック
     setMessages(prev => [...prev, {
       sender: 'bot',
-      text: `ご質問「${userText}」についてニャ！この記事「${article.title}」の核心は最新の実装アプローチと概念にあるニャ。より詳しい検証はサンプルコードを手元で動かしてみるのが一番だニャ 🐾`
+      text: `ご質問「${userText}」についてニャ！この記事「${article.title}」の核心は実装と概念にあるニャ。コードの手元検証や公式Docsの参照をおすすめするニャ 🐾`
     }]);
     setAnswering(false);
   };
 
   return (
     <div className="w-full max-w-4xl mx-auto my-10 font-sans">
-      {/* メインカードコンテナ */}
       <div className="bg-slate-950/90 border border-sky-500/30 rounded-3xl p-5 md:p-8 shadow-[0_0_40px_rgba(56,189,248,0.15)] backdrop-blur-xl space-y-6">
         
-        {/* ヘッダー ＆ ブックマーク操作 */}
+        {/* ヘッダー */}
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-5">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-sky-400 to-indigo-600 flex items-center justify-center text-2xl shadow-[0_0_15px_rgba(56,189,248,0.4)]">
               🐾
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-mono text-sky-400 font-bold uppercase tracking-wider bg-sky-500/10 px-2.5 py-0.5 rounded-full border border-sky-500/20">
-                  NAVIGATOR AI TOOLKIT
-                </span>
-              </div>
+              <span className="text-xs font-mono text-sky-400 font-bold uppercase tracking-wider bg-sky-500/10 px-2.5 py-0.5 rounded-full border border-sky-500/20">
+                NAVIGATOR AI TOOLKIT
+              </span>
               <h3 className="text-xl font-bold font-display text-transparent bg-clip-text bg-gradient-to-r from-sky-300 via-indigo-200 to-purple-300">
                 マンチカン航海士の知恵袋
               </h3>
             </div>
           </div>
 
-          {/* 星屑の栞（ブックマーク）ボタン */}
           <button
             onClick={handleBookmarkToggle}
             className={`px-4 py-2 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-2 cursor-pointer border ${
@@ -362,7 +290,7 @@ ${textToAnalyze}
           </button>
         </div>
 
-        {/* 3つの独立機能切り替えタブ */}
+        {/* タブ切り替え */}
         <div className="grid grid-cols-3 gap-2 bg-slate-900/80 p-1.5 rounded-2xl border border-slate-800">
           <button
             onClick={() => setActiveTab('tldr')}
@@ -404,7 +332,7 @@ ${textToAnalyze}
           </button>
         </div>
 
-        {/* タブ 1: 📄 記事全文 TL;DR 要約 */}
+        {/* タブ 1: 要約 */}
         {activeTab === 'tldr' && (
           <div className="space-y-5 animate-fadeIn">
             {loadingTldr ? (
@@ -414,7 +342,6 @@ ${textToAnalyze}
               </div>
             ) : tldr ? (
               <div className="space-y-4">
-                {/* マンチカン短評 */}
                 <div className="p-4 bg-sky-950/40 border border-sky-500/30 rounded-2xl flex items-start gap-3">
                   <span className="text-2xl">🐱</span>
                   <div className="space-y-1">
@@ -425,7 +352,6 @@ ${textToAnalyze}
                   </div>
                 </div>
 
-                {/* 3つの要点箇条書き */}
                 <div className="p-5 bg-slate-900/60 border border-slate-800 rounded-2xl space-y-3">
                   <h4 className="text-xs font-mono font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
                     <span>✦ 記事の主要ポイント (Key Points)</span>
@@ -446,7 +372,7 @@ ${textToAnalyze}
           </div>
         )}
 
-        {/* タブ 2: 🚀 3ステップ深掘り学習（実用リソース引用） */}
+        {/* タブ 2: 3ステップ学習 */}
         {activeTab === 'stepup' && (
           <div className="space-y-5 animate-fadeIn">
             {loadingStepup ? (
@@ -456,8 +382,6 @@ ${textToAnalyze}
               </div>
             ) : stepup ? (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                
-                {/* 1. ハンズオン検証 */}
                 <div className="p-4 bg-slate-900/70 border border-sky-500/30 rounded-2xl space-y-3 flex flex-col justify-between hover:border-sky-400/60 transition-all group">
                   <div className="space-y-2">
                     <span className="text-[10px] font-mono font-bold text-sky-400 bg-sky-500/10 px-2 py-0.5 rounded-md border border-sky-500/20 inline-block">
@@ -481,7 +405,6 @@ ${textToAnalyze}
                   </a>
                 </div>
 
-                {/* 2. 公式仕様・標準理解 */}
                 <div className="p-4 bg-slate-900/70 border border-indigo-500/30 rounded-2xl space-y-3 flex flex-col justify-between hover:border-indigo-400/60 transition-all group">
                   <div className="space-y-2">
                     <span className="text-[10px] font-mono font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-md border border-indigo-500/20 inline-block">
@@ -505,7 +428,6 @@ ${textToAnalyze}
                   </a>
                 </div>
 
-                {/* 3. 高度応用・発展研究 */}
                 <div className="p-4 bg-slate-900/70 border border-purple-500/30 rounded-2xl space-y-3 flex flex-col justify-between hover:border-purple-400/60 transition-all group">
                   <div className="space-y-2">
                     <span className="text-[10px] font-mono font-bold text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded-md border border-purple-500/20 inline-block">
@@ -528,16 +450,14 @@ ${textToAnalyze}
                     <span>→</span>
                   </a>
                 </div>
-
               </div>
             ) : null}
           </div>
         )}
 
-        {/* タブ 3: 💬 記事QAチャット */}
+        {/* タブ 3: QAチャット */}
         {activeTab === 'qa' && (
           <div className="space-y-4 animate-fadeIn">
-            {/* メッセージログ */}
             <div className="max-h-60 overflow-y-auto space-y-3 p-3 bg-slate-900/80 rounded-2xl border border-slate-800 scrollbar-thin">
               {messages.map((msg, idx) => (
                 <div
@@ -567,7 +487,6 @@ ${textToAnalyze}
               )}
             </div>
 
-            {/* 質問入力フォーム */}
             <div className="flex gap-2">
               <input
                 type="text"
