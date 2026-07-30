@@ -91,53 +91,68 @@ export default function AdminCMS() {
     }
   };
 
-  // ブラウザ側自動 WebP 超高圧縮 ＆ Firebase Storage アップロード
+  // ブラウザ側自動 WebP 圧縮 ＆ Firebase Storage 安全アップロード
   const handleUploadImageFile = async (file: File) => {
     if (!file) return;
     setIsUploadingMedia(true);
+
     try {
-      // 1. 画像の Canvas WebP 自動圧縮変換
-      const img = new Image();
-      const reader = new FileReader();
+      // 1. 安全な Blob 変換 (変換エラー時は原形ファイルを使用)
+      let uploadBlob: Blob = file;
 
-      const blob: Blob = await new Promise((resolve) => {
-        reader.onload = (e) => {
-          img.src = e.target?.result as string;
-          img.onload = () => {
-            const canvas = document.createElement('canvas');
-            const maxDim = 1920;
-            let width = img.width;
-            let height = img.height;
+      try {
+        uploadBlob = await new Promise<Blob>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+              try {
+                const canvas = document.createElement('canvas');
+                const maxDim = 1600;
+                let width = img.width;
+                let height = img.height;
 
-            if (width > maxDim || height > maxDim) {
-              if (width > height) {
-                height = Math.round((height * maxDim) / width);
-                width = maxDim;
-              } else {
-                width = Math.round((width * maxDim) / height);
-                height = maxDim;
+                if (width > maxDim || height > maxDim) {
+                  if (width > height) {
+                    height = Math.round((height * maxDim) / width);
+                    width = maxDim;
+                  } else {
+                    width = Math.round((width * maxDim) / height);
+                    height = maxDim;
+                  }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx?.drawImage(img, 0, 0, width, height);
+
+                canvas.toBlob(
+                  (b) => resolve(b || file),
+                  'image/webp',
+                  0.85
+                );
+              } catch (e) {
+                resolve(file);
               }
-            }
-
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            ctx?.drawImage(img, 0, 0, width, height);
-
-            canvas.toBlob(
-              (b) => resolve(b || file),
-              'image/webp',
-              0.85
-            );
+            };
+            img.onerror = () => resolve(file);
+            img.src = e.target?.result as string;
           };
-        };
-        reader.readAsDataURL(file);
-      });
+          reader.onerror = () => resolve(file);
+          reader.readAsDataURL(file);
+        });
+      } catch (convErr) {
+        console.warn('WebP conversion fallback to original file:', convErr);
+        uploadBlob = file;
+      }
 
       // 2. Firebase Storage へアップロード
       const cleanName = file.name.replace(/\.[^/.]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '_');
-      const storageRef = ref(storage, `media/${Date.now()}_${cleanName}.webp`);
-      await uploadBytes(storageRef, blob, { contentType: 'image/webp' });
+      const ext = uploadBlob.type === 'image/webp' ? 'webp' : (file.name.split('.').pop() || 'png');
+      const storageRef = ref(storage, `media/${Date.now()}_${cleanName}.${ext}`);
+
+      await uploadBytes(storageRef, uploadBlob, { contentType: uploadBlob.type || 'image/png' });
       const downloadUrl = await getDownloadURL(storageRef);
 
       setSelectedMediaUrl(downloadUrl);
@@ -147,7 +162,7 @@ export default function AdminCMS() {
       await handleGenerateAioAlt(downloadUrl);
     } catch (err: any) {
       console.error('Storage upload error:', err);
-      alert(`画像のアップロードでエラーが発生しました: ${err.message}`);
+      alert(`⚠️ 画像のアップロードでエラーが発生しました: ${err.message || '権限または接続をご確認ください'}`);
     } finally {
       setIsUploadingMedia(false);
     }
