@@ -91,21 +91,21 @@ export default function AdminCMS() {
     }
   };
 
-  // ブラウザ側自動 WebP 圧縮 ＆ Firestore データベース (SSOT) リアルタイム保存
+  // ブラウザ側自動 WebP 圧縮 ＆ Firebase Storage (Cloud Storage) ダイレクトアップロード
   const handleUploadImageFile = async (file: File) => {
     if (!file) return;
     setIsUploadingMedia(true);
 
     try {
-      // 1. 超高画質 ＆ 超軽量 WebP データ生成 (1秒未満で即完了)
-      const dataUrl: string = await new Promise((resolve) => {
+      // 1. 画像の WebP Blob 変換 (超軽量化)
+      const webpBlob: Blob = await new Promise((resolve) => {
         const reader = new FileReader();
         reader.onload = (e) => {
           const img = new Image();
           img.onload = () => {
             try {
               const canvas = document.createElement('canvas');
-              const maxDim = 1200;
+              const maxDim = 1600;
               let width = img.width;
               let height = img.height;
 
@@ -124,41 +124,45 @@ export default function AdminCMS() {
               const ctx = canvas.getContext('2d');
               ctx?.drawImage(img, 0, 0, width, height);
 
-              const webpDataUrl = canvas.toDataURL('image/webp', 0.80);
-              resolve(webpDataUrl || (e.target?.result as string));
+              canvas.toBlob((b) => resolve(b || file), 'image/webp', 0.85);
             } catch (err) {
-              resolve(e.target?.result as string);
+              resolve(file);
             }
           };
-          img.onerror = () => resolve(e.target?.result as string);
+          img.onerror = () => resolve(file);
           img.src = e.target?.result as string;
         };
-        reader.onerror = () => resolve('');
+        reader.onerror = () => resolve(file);
         reader.readAsDataURL(file);
       });
 
-      if (!dataUrl) {
-        throw new Error('画像の読み込みに失敗しました');
-      }
+      // 2. Firebase Cloud Storage へダイレクトアップロード
+      const cleanName = file.name.replace(/\.[^/.]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '_');
+      const storageRef = ref(storage, `media/${Date.now()}_${cleanName}.webp`);
+
+      await uploadBytes(storageRef, webpBlob, { contentType: 'image/webp' });
+      
+      // 3. 短くきれいな本物のパーマリンク URL (https://firebasestorage.googleapis.com/...) を取得
+      const storageUrl = await getDownloadURL(storageRef);
 
       const generatedAlt = `[AIO/LLMO] ${formTitle || '図解イラスト'}: 視覚的アーキテクチャ概念構造`;
-      const cleanName = file.name.replace(/\.[^/.]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '_');
       const docId = `${Date.now()}_${cleanName}`;
 
-      // 2. SSOT: Firestore の media コレクションへ直接リアルタイム保存
+      // 4. Firestore (SSOT) に Storage URL とメタデータを記録
       await setDoc(doc(db, 'media', docId), {
         name: file.name,
-        url: dataUrl,
+        url: storageUrl,
         alt: generatedAlt,
+        storagePath: storageRef.fullPath,
         createdAt: serverTimestamp()
       }, { merge: true });
 
-      setSelectedMediaUrl(dataUrl);
+      setSelectedMediaUrl(storageUrl);
       setMediaAioAlt(generatedAlt);
-      setMediaItems(prev => [{ name: file.name, url: dataUrl, alt: generatedAlt }, ...prev]);
+      setMediaItems(prev => [{ name: file.name, url: storageUrl, alt: generatedAlt }, ...prev]);
     } catch (err: any) {
-      console.error('Firestore media save error:', err);
-      alert(`⚠️ 画像の保存でエラーが発生しました: ${err.message}`);
+      console.error('Firebase Storage upload error:', err);
+      alert(`⚠️ Firebase Storage へのアップロードでエラーが発生しました: ${err.message || String(err)}`);
     } finally {
       setIsUploadingMedia(false);
     }
