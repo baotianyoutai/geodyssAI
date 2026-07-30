@@ -86,9 +86,17 @@ Issue作成 ──▶ ブランチ作成 ──▶ コード変更 ──▶ 1�
 
 ```
 WXR(XML) ──[ETL: Sprint1]──▶ Firestore(articles)  ※pos + neighbors + difficulty を事前計算
-Firestore ──[build / CSR]──▶ Astro ページ & 星海図(StellarChart island)
+Firestore ──[build / CSR / Real-time onSnapshot]──▶ Astro ページ & 星海図 & Admin CMS & Munchkin Navigator
 ブラウザ ──[AI Logic + App Check]──▶ Gemini（RAG チャット / 星海碑の要約生成）
 ```
+
+### 2.1.1 信頼できる唯一の情報源（SSOT）とデータ参照ルール ★最重要
+
+- **SSOT (Single Source of Truth)**:
+  - 記事データ、タイトル、カテゴリ、概要、本文 (`contentMd`)、カバー画像、および 768次元ベクトル (`text-embedding-004`) の**信頼できる唯一の情報源は Google Cloud Firestore データベース (`db.collection('articles')`)** である。
+- **ローカル JSON (`all-articles-data.json`) 参照禁止のルール**:
+  - `src/data/all-articles-data.json` などの静的ローカルファイルから記事データをインポート・読み込んで表示してはならない。
+  - すべての機能（Admin CMS, Munchkin Navigator AI チャット, 記事詳細 `[slug].astro`, 星海図 `StellarChart` 等）は、必ず **`firebase-client` / `firebase-server` 経由で Firestore から動的にデータをフェッチ・リアルタイム同期 (`onSnapshot` / `getDocs`)** すること。
 
 ### 2.2 ディレクトリ構成（description v1.2 統合版）
 
