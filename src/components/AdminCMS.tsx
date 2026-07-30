@@ -941,23 +941,40 @@ geodyssAI Admin Security System
                     </p>
                   </div>
 
-                  {/* 本文プレビュー (簡易 Markdown デコーダー描画) */}
+                  {/* 本文プレビュー (簡易 Markdown デコーダー ＆ 画像カードリアルタイム描画) */}
                   <div className="prose prose-invert prose-xs max-w-none border-t border-slate-800/80 pt-4 space-y-3 text-slate-300 leading-relaxed font-body">
                     {formContentMd ? (
                       formContentMd.split('\n\n').map((paragraph, i) => {
-                        if (paragraph.startsWith('## ')) {
-                          return <h2 key={i} className="text-lg font-bold text-sky-300 border-b border-slate-800 pb-1 mt-4">{paragraph.replace('## ', '')}</h2>;
+                        const trimmed = paragraph.trim();
+                        // 画像構文の判定: ! [alt] (url)
+                        const imgMatch = trimmed.match(/^!\[(.*?)\]\((.*?)\)$/);
+                        if (imgMatch) {
+                          const alt = imgMatch[1];
+                          const src = imgMatch[2];
+                          return (
+                            <div key={i} className="my-4 p-2 bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden shadow-lg space-y-2">
+                              <img src={src} alt={alt} className="w-full max-h-96 object-contain rounded-xl bg-slate-900" />
+                              {alt && (
+                                <p className="text-[11px] font-mono text-purple-300 text-center bg-purple-500/10 py-1 px-2 rounded-lg border border-purple-500/20">
+                                  🏷️ {alt}
+                                </p>
+                              )}
+                            </div>
+                          );
                         }
-                        if (paragraph.startsWith('### ')) {
-                          return <h3 key={i} className="text-sm font-bold text-slate-100 mt-3">{paragraph.replace('### ', '')}</h3>;
+                        if (trimmed.startsWith('## ')) {
+                          return <h2 key={i} className="text-lg font-bold text-sky-300 border-b border-slate-800 pb-1 mt-4">{trimmed.replace('## ', '')}</h2>;
                         }
-                        if (paragraph.startsWith('> ')) {
-                          return <blockquote key={i} className="border-l-2 border-amber-400 pl-3 italic text-amber-200/90 my-2">{paragraph.replace('> ', '')}</blockquote>;
+                        if (trimmed.startsWith('### ')) {
+                          return <h3 key={i} className="text-sm font-bold text-slate-100 mt-3">{trimmed.replace('### ', '')}</h3>;
                         }
-                        if (paragraph.startsWith('```')) {
+                        if (trimmed.startsWith('> ')) {
+                          return <blockquote key={i} className="border-l-2 border-amber-400 pl-3 italic text-amber-200/90 my-2">{trimmed.replace('> ', '')}</blockquote>;
+                        }
+                        if (trimmed.startsWith('```')) {
                           return (
                             <pre key={i} className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-[11px] font-mono text-sky-300 overflow-x-auto">
-                              <code>{paragraph.replace(/```[a-z]*/g, '').trim()}</code>
+                              <code>{trimmed.replace(/```[a-z]*/g, '').trim()}</code>
                             </pre>
                           );
                         }
@@ -1088,7 +1105,8 @@ geodyssAI Admin Security System
                                 type="button"
                                 onClick={() => {
                                   const altText = mediaAioAlt || item.name;
-                                  insertMarkdown(`![${altText}](`, `${item.url})`);
+                                  const imgTag = `\n\n![${altText}](${item.url})\n\n`;
+                                  setFormContentMd(prev => prev + imgTag);
                                   setShowMediaModal(false);
                                 }}
                                 className="w-full py-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-[10px] rounded-lg font-bold border border-emerald-500/30 transition-colors"
