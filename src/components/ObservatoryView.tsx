@@ -24,6 +24,24 @@ const CONSTELLATIONS = [
   { id: 'ml-python', label: 'Machine Learning / Python 座', color: '#10B981', categoryKey: 'machine' }
 ];
 
+const DEFAULT_COVER_IMAGES: Record<string, string> = {
+  'genai': 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1200&auto=format&fit=crop',
+  'agent': 'https://images.unsplash.com/photo-1677442136019-21780efad99a?q=80&w=1200&auto=format&fit=crop',
+  'cloud': 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1200&auto=format&fit=crop',
+  'claude': 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?q=80&w=1200&auto=format&fit=crop',
+  'dl': 'https://images.unsplash.com/photo-1509228468518-180dd4864904?q=80&w=1200&auto=format&fit=crop',
+  'logical': 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=1200&auto=format&fit=crop',
+  'machine': 'https://images.unsplash.com/photo-1555949963-ff9fe0c870eb?q=80&w=1200&auto=format&fit=crop'
+};
+
+const getCategoryCover = (category: string = '') => {
+  const cat = category.toLowerCase();
+  for (const [key, url] of Object.entries(DEFAULT_COVER_IMAGES)) {
+    if (cat.includes(key)) return url;
+  }
+  return 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1200&auto=format&fit=crop';
+};
+
 export function ObservatoryView({ articles: initialArticles = [] }: { articles: ArticleItem[] }) {
   const [articles, setArticles] = useState<ArticleItem[]>(initialArticles);
   const [selectedConstellation, setSelectedConstellation] = useState(CONSTELLATIONS[0].id);
@@ -211,17 +229,11 @@ export function ObservatoryView({ articles: initialArticles = [] }: { articles: 
                   <div className="space-y-3 p-4">
                     {/* カバー画像プレビュー */}
                     <div className="relative w-full h-36 rounded-xl overflow-hidden border border-slate-800/80 bg-slate-950">
-                      {art.heroImage ? (
-                        <img
-                          src={art.heroImage}
-                          alt={art.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-950 flex items-center justify-center p-3 text-center">
-                          <span className="text-xs font-mono text-sky-400/80 font-bold">✨ geodyssAI Knowledge Star</span>
-                        </div>
-                      )}
+                      <img
+                        src={art.heroImage || getCategoryCover(art.category)}
+                        alt={art.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
                       <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-transparent" />
                       
                       {/* カテゴリ ＆ DRAFT/READ バッジ */}
