@@ -117,7 +117,7 @@ export function ObservatoryView({ articles: initialArticles = [] }: { articles: 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* 左側：進捗 ＆ 観測ステータス */}
-        <div className="lg:col-span-1 p-6 bg-slate-950/80 border border-slate-800 rounded-2xl space-y-6 shadow-2xl backdrop-blur-md h-fit sticky top-24">
+        <div className="lg:col-span-1 p-6 bg-slate-950/80 border border-slate-800 rounded-2xl space-y-6 shadow-2xl backdrop-blur-md h-fit lg:sticky lg:top-24">
           
           <div className="flex items-center gap-3 border-b border-slate-800 pb-4">
             <span

@@ -6,6 +6,7 @@
     "rules": "storage.rules"
   },
   "hosting": {
+    "site": "my-geodyssai-pro-1744456051163",
     "public": "dist/client",
     "cleanUrls": true,
     "trailingSlash": false,
