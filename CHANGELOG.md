@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.1] - 2026-07-31
+
+### Added & Fixed
+- **Observatory (Catalog) Live Firestore SSOT Sync & Rich Card Grid UI (`ObservatoryView.tsx`, `firebase-server.ts`)**:
+  - Connected `ObservatoryView` to live Firestore `onSnapshot` listener (`db.collection('articles')`), ensuring real-time automatic updates when articles are created or edited in Admin CMS.
+  - Transformed article list into a modern 2-column responsive rich card grid with cover images, titles, excerpt capsules, category badges, and status indicators.
+  - Set clean default fallback cover image (`https://images.unsplash.com/...`).
+  - Fixed mobile responsive layout bug where the `CONSTELLATION LIGHT` widget overlapped article cards on scroll by scoping sticky positioning to large screens (`lg:sticky lg:top-24`).
+
 ## [1.4.0] - 2026-07-31
 
 ### Added & Refactored
