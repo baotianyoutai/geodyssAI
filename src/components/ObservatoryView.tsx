@@ -9,6 +9,7 @@ interface ArticleItem {
   category: string;
   difficulty: number;
   excerpt: string;
+  heroImage?: string;
   status?: string;
 }
 
@@ -41,6 +42,7 @@ export function ObservatoryView({ articles: initialArticles = [] }: { articles: 
             category: data.category || 'GenAI',
             difficulty: data.difficulty || 3,
             excerpt: data.excerpt || '',
+            heroImage: data.heroImage || '',
             status: data.status || 'draft'
           };
         });
@@ -113,7 +115,7 @@ export function ObservatoryView({ articles: initialArticles = [] }: { articles: 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* 左側：進捗 ＆ 観測ステータス */}
-        <div className="lg:col-span-1 p-6 bg-slate-950/80 border border-slate-800 rounded-2xl space-y-6 shadow-2xl backdrop-blur-md">
+        <div className="lg:col-span-1 p-6 bg-slate-950/80 border border-slate-800 rounded-2xl space-y-6 shadow-2xl backdrop-blur-md h-fit sticky top-24">
           
           <div className="flex items-center gap-3 border-b border-slate-800 pb-4">
             <span
@@ -169,7 +171,7 @@ export function ObservatoryView({ articles: initialArticles = [] }: { articles: 
 
         </div>
 
-        {/* 右側：記事リスト */}
+        {/* 右側：リッチカード形式 記事リスト */}
         <div className="lg:col-span-2 p-6 bg-slate-950/80 border border-slate-800 rounded-2xl space-y-6 shadow-2xl backdrop-blur-md">
           
           <div className="flex items-center justify-between border-b border-slate-800 pb-4">
@@ -181,7 +183,7 @@ export function ObservatoryView({ articles: initialArticles = [] }: { articles: 
             <div className="flex gap-2">
               <button
                 onClick={() => setFilterMode('all')}
-                className={`px-3 py-1 rounded-lg text-xs font-mono transition-colors ${
+                className={`px-3 py-1 rounded-lg text-xs font-mono transition-colors cursor-pointer ${
                   filterMode === 'all' ? 'bg-sky-500 text-slate-950 font-bold' : 'bg-slate-900 text-slate-400 hover:text-white'
                 }`}
               >
@@ -189,7 +191,7 @@ export function ObservatoryView({ articles: initialArticles = [] }: { articles: 
               </button>
               <button
                 onClick={() => setFilterMode('unread')}
-                className={`px-3 py-1 rounded-lg text-xs font-mono transition-colors ${
+                className={`px-3 py-1 rounded-lg text-xs font-mono transition-colors cursor-pointer ${
                   filterMode === 'unread' ? 'bg-sky-500 text-slate-950 font-bold' : 'bg-slate-900 text-slate-400 hover:text-white'
                 }`}
               >
@@ -199,33 +201,65 @@ export function ObservatoryView({ articles: initialArticles = [] }: { articles: 
           </div>
 
           {displayArticles.length > 0 ? (
-            <div className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               {displayArticles.map(art => (
                 <a
                   key={art.id || art.slug}
                   href={`/articles/${encodeURIComponent(art.slug)}`}
-                  className="block p-4 bg-slate-900/60 hover:bg-slate-900 border border-slate-800/80 hover:border-sky-500/40 rounded-xl transition-all group"
+                  className="group block bg-slate-900/50 hover:bg-slate-900/90 border border-slate-800/80 hover:border-sky-500/50 rounded-2xl overflow-hidden shadow-lg hover:shadow-[0_0_25px_rgba(56,189,248,0.25)] transition-all duration-300 flex flex-col justify-between"
                 >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300">
-                          Level {art.difficulty}
+                  <div className="space-y-3 p-4">
+                    {/* カバー画像プレビュー */}
+                    <div className="relative w-full h-36 rounded-xl overflow-hidden border border-slate-800/80 bg-slate-950">
+                      {art.heroImage ? (
+                        <img
+                          src={art.heroImage}
+                          alt={art.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-950 flex items-center justify-center p-3 text-center">
+                          <span className="text-xs font-mono text-sky-400/80 font-bold">✨ geodyssAI Knowledge Star</span>
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-transparent" />
+                      
+                      {/* カテゴリ ＆ DRAFT/READ バッジ */}
+                      <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between gap-2">
+                        <span className="px-2.5 py-0.5 bg-sky-500/20 text-sky-300 border border-sky-500/40 text-[10px] font-mono rounded-md font-bold backdrop-blur-md truncate max-w-[70%]">
+                          {art.category || 'GenAI'}
                         </span>
-                        <span className="text-[10px] font-mono text-slate-500 uppercase">
-                          {art.category}
-                        </span>
+                        {art.status === 'draft' ? (
+                          <span className="px-2 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[9px] font-mono rounded-md font-bold backdrop-blur-md">
+                            ✦ DRAFT
+                          </span>
+                        ) : art.status === 'read' ? (
+                          <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[9px] font-mono rounded-md font-bold backdrop-blur-md">
+                            ✓ READ
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 bg-slate-800/80 text-slate-300 border border-slate-700 text-[9px] font-mono rounded-md font-bold backdrop-blur-md">
+                            Lv.{art.difficulty}
+                          </span>
+                        )}
                       </div>
-                      <h4 className="text-sm font-bold text-slate-200 group-hover:text-sky-300 transition-colors">
-                        {art.title}
-                      </h4>
-                      <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
-                        {art.excerpt}
-                      </p>
                     </div>
-                    <span className="text-xs font-mono text-sky-400 group-hover:translate-x-1 transition-transform">
-                      →
-                    </span>
+
+                    {/* 記事タイトル */}
+                    <h4 className="text-sm font-bold font-display text-white group-hover:text-sky-300 transition-colors leading-snug line-clamp-2">
+                      {art.title}
+                    </h4>
+
+                    {/* 記事概要 (Excerpt) */}
+                    <p className="text-[11px] text-slate-400 leading-relaxed bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/60 italic line-clamp-3">
+                      {art.excerpt || '（記事の概要情報が入ります...）'}
+                    </p>
+                  </div>
+
+                  {/* カードフッター */}
+                  <div className="px-4 py-2.5 border-t border-slate-800/60 bg-slate-950/40 flex items-center justify-between text-[11px] font-mono text-slate-400 group-hover:text-sky-300 transition-colors">
+                    <span>記事を読む 📖</span>
+                    <span className="group-hover:translate-x-1 transition-transform">→</span>
                   </div>
                 </a>
               ))}
