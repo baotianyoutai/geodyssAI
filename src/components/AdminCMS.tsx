@@ -164,6 +164,20 @@ export default function AdminCMS() {
     }
   };
 
+  // 🧪 Firebase Storage (Cloud Storage) 単体接続・疎通チェックテスト
+  const handleTestStorageConnection = async () => {
+    try {
+      const testRef = ref(storage, `test_ping_${Date.now()}.txt`);
+      const blob = new Blob(['Firebase Storage connection test ping!'], { type: 'text/plain' });
+      await uploadBytes(testRef, blob);
+      const url = await getDownloadURL(testRef);
+      alert(`✅ 【接続成功！】Firebase Storage への書き込み・URL発行が正常動作しました！\n\n発行URL:\n${url}`);
+    } catch (err: any) {
+      console.error('Storage Test Error:', err);
+      alert(`⚠️ 【Firebase Storage 接続診断】\n\nFirebase Console 上で Storage の『Get Started』ボタンを押して初期化を行ってください。\n\n詳細エラー: ${err.message || String(err)}\n\nコンソールURL: https://console.firebase.google.com/project/my-geodyssai-pro-1744456051163/storage`);
+    }
+  };
+
   // ✨ Gemini Vision AI による AIO / LLMO (AI検索最適化) 視覚構造化 Alt 自動生成
   const handleGenerateAioAlt = async (imageUrl: string) => {
     if (!imageUrl) return;
@@ -1001,13 +1015,22 @@ geodyssAI Admin Security System
                   <span className="text-lg">🖼️</span>
                   <h3 className="text-sm font-bold text-white font-display">メディアライブラリ (Firebase Storage & AIO/LLMO)</h3>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setShowMediaModal(false)}
-                  className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-xl text-xs font-mono transition-colors cursor-pointer"
-                >
-                  ✕ 閉じる
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleTestStorageConnection}
+                    className="px-3 py-1 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/40 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1"
+                  >
+                    <span>🧪 Firebase Storage 疎通テスト</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowMediaModal(false)}
+                    className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-xl text-xs font-mono transition-colors cursor-pointer"
+                  >
+                    ✕ 閉じる
+                  </button>
+                </div>
               </div>
 
               {/* モーダルコンテンツ (スクロール可能) */}
