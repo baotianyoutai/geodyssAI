@@ -8,7 +8,6 @@ import {
   sendPasswordResetEmail,
   type User
 } from 'firebase/auth';
-import allArticlesData from '../data/all-articles-data.json';
 
 interface ArticleItem {
   id?: string;
@@ -20,6 +19,15 @@ interface ArticleItem {
   contentMd?: string;
   heroImage?: string;
   embedding?: number[];
+}
+
+export function getSafeArticleUrl(slug: string): string {
+  if (!slug) return '/articles/';
+  let cleanSlug = slug;
+  try {
+    cleanSlug = decodeURIComponent(slug);
+  } catch (e) {}
+  return `/articles/${encodeURIComponent(cleanSlug)}`;
 }
 
 export default function AdminCMS() {
@@ -158,12 +166,11 @@ geodyssAI Admin Security System
         setArticles(fetchedArticles);
         setCategoryList(Array.from(catsSet));
       } else {
-        // 初回フォールバック
-        setArticles(allArticlesData as any[]);
+        setArticles([]);
       }
     }, (err) => {
       console.warn('Firestore articles snapshot fallback info:', err);
-      setArticles(allArticlesData as any[]);
+      setArticles([]);
     });
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
@@ -516,7 +523,7 @@ geodyssAI Admin Security System
                           </td>
                           <td className="p-4 text-right space-x-2">
                             <a
-                              href={`/articles/${encodeURIComponent(art.slug)}`}
+                              href={getSafeArticleUrl(art.slug)}
                               target="_blank"
                               rel="noreferrer"
                               className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-sky-300 border border-sky-500/30 rounded-lg font-mono text-[11px] transition-colors inline-flex items-center gap-1"
@@ -559,7 +566,7 @@ geodyssAI Admin Security System
                   <span>{selectedArticle ? `記事編集: ${selectedArticle.title}` : '✨ 新規記事の追加'}</span>
                   {formSlug && (
                     <a
-                      href={`/articles/${encodeURIComponent(formSlug)}`}
+                      href={getSafeArticleUrl(formSlug)}
                       target="_blank"
                       rel="noreferrer"
                       className="text-xs font-mono text-sky-400 hover:underline bg-sky-500/10 px-2 py-0.5 border border-sky-500/30 rounded-md"

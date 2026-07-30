@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { app } from '../lib/firebase-client';
+import { app, db } from '../lib/firebase-client';
+import { collection, getDocs } from 'firebase/firestore';
 import { getAI, getGenerativeModel } from 'firebase/ai';
-import allArticlesData from '../data/all-articles-data.json';
 import { rankArticlesByRelevance } from '../lib/vector-search';
 
 interface Message {
@@ -65,14 +65,26 @@ export const MunchkinNavigator: React.FC<MunchkinNavigatorProps> = ({ articles =
       // 1. 公式 Firebase AI Logic SDK
       const ai = getAI(app);
 
-      // 2. Props記事および静的抽出データの全23+記事（ベクトルデータ付き）を統合
+      // 2. SSOT: Firestore articles コレクションから最新全記事をダイレクト取得
+      let firestoreCatalog: any[] = [];
+      try {
+        const snap = await getDocs(collection(db, 'articles'));
+        if (!snap.empty) {
+          firestoreCatalog = snap.docs.map(docSnap => ({
+            id: docSnap.id,
+            ...docSnap.data()
+          }));
+        }
+      } catch (fErr) {
+        console.warn('Firestore fetch in MunchkinNavigator info:', fErr);
+      }
+
       const propList = Array.isArray(articles) ? articles : [];
-      const jsonList = Array.isArray(allArticlesData) ? allArticlesData : [];
-      const fullCatalog = [...propList, ...jsonList];
-      const uniqueCatalog = Array.from(new Map(fullCatalog.map(item => [item.slug, item])).values());
+      const fullCatalog = [...propList, ...firestoreCatalog];
+      const uniqueCatalog = Array.from(new Map(fullCatalog.map(item => [item.slug || item.id, item])).values());
 
       // 既存の公開済み実在ルーティング記事の slug 集合
-      const activeSlugs = new Set(propList.map(a => decodeURIComponent(a.slug)));
+      const activeSlugs = new Set(uniqueCatalog.map(a => decodeURIComponent(a.slug || a.id)));
 
       // 🧠 text-embedding-004 コサイン類似度 ＋ ハイブリッド RAG ランク付け
       const targetList = await rankArticlesByRelevance(textToSend, uniqueCatalog as any, 5);
