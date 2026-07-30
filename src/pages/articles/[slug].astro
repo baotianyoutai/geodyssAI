@@ -8,13 +8,33 @@ import InfoBox from '../../components/InfoBox.astro';
 import { marked } from 'marked';
 import '../../styles/global.css';
 
-// ビルド時に全記事の静的ルーティングパスを生成
+// ビルド時に全記事の静的ルーティングパスを生成 (あらゆるエンコード形式に対応)
 export async function getStaticPaths() {
   const articles = await getArticles();
-  return articles.map(art => ({
-    params: { slug: decodeURIComponent(art.slug) },
-    props: { article: art, allArticles: articles }
-  }));
+  const paths: any[] = [];
+
+  articles.forEach(art => {
+    const rawSlug = art.slug;
+    let decodedSlug = rawSlug;
+    try {
+      decodedSlug = decodeURIComponent(rawSlug);
+    } catch (e) {}
+
+    // 生のスラッグとデコード済みスラッグの両方をエントリ登録
+    paths.push({
+      params: { slug: rawSlug },
+      props: { article: art, allArticles: articles }
+    });
+
+    if (decodedSlug !== rawSlug) {
+      paths.push({
+        params: { slug: decodedSlug },
+        props: { article: art, allArticles: articles }
+      });
+    }
+  });
+
+  return paths;
 }
 
 const { article, allArticles } = Astro.props;

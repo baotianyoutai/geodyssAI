@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { db } from '../lib/firebase-client';
+import { onSnapshot, collection } from 'firebase/firestore';
 
 interface ArticleItem {
   id: string;
@@ -7,33 +9,62 @@ interface ArticleItem {
   category: string;
   difficulty: number;
   excerpt: string;
+  heroImage?: string;
   status?: string;
 }
 
 const CONSTELLATIONS = [
-  { id: 'genai-foundations', label: 'GenAI 基礎座', color: '#3B82F6', categoryKey: 'dl' },
-  { id: 'ai-agents', label: 'AI Agents 座', color: '#8B5CF6', categoryKey: 'claude' },
-  { id: 'firebase-cloud', label: 'Firebase & Cloud 座', color: '#F59E0B', categoryKey: 'firebase' },
+  { id: 'all', label: '全アセット (All)', color: '#38BDF8', categoryKey: 'all' },
+  { id: 'genai-foundations', label: 'GenAI 基礎座', color: '#3B82F6', categoryKey: 'genai' },
+  { id: 'ai-agents', label: 'AI Agents 座', color: '#8B5CF6', categoryKey: 'agent' },
+  { id: 'firebase-cloud', label: 'Firebase & Cloud 座', color: '#F59E0B', categoryKey: 'cloud' },
   { id: 'claude', label: 'Claude 座', color: '#E07B54', categoryKey: 'claude' },
   { id: 'deep-learning', label: 'Deep Learning 座', color: '#2DD4BF', categoryKey: 'dl' },
-  { id: 'logical-thinking', label: 'Logical Thinking 座', color: '#F2B8CC', categoryKey: 'logical-thinking' },
-  { id: 'design-tools', label: 'Design & Tools 座', color: '#7DD3C0', categoryKey: 'design-tools' }
+  { id: 'logical-thinking', label: 'Logical Thinking 座', color: '#F2B8CC', categoryKey: 'logical' },
+  { id: 'ml-python', label: 'Machine Learning / Python 座', color: '#10B981', categoryKey: 'machine' }
 ];
 
-export function ObservatoryView({ articles = [] }: { articles: ArticleItem[] }) {
+const DEFAULT_COVER_IMAGE = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1200&auto=format&fit=crop';
+
+export function ObservatoryView({ articles: initialArticles = [] }: { articles: ArticleItem[] }) {
+  const [articles, setArticles] = useState<ArticleItem[]>(initialArticles);
   const [selectedConstellation, setSelectedConstellation] = useState(CONSTELLATIONS[0].id);
   const [filterMode, setFilterMode] = useState<'all' | 'unread'>('all');
 
+  // Firestore db.collection('articles') リアルタイム同期 (SSOT)
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'articles'), (snapshot) => {
+      if (!snapshot.empty) {
+        const list: ArticleItem[] = snapshot.docs.map(docSnap => {
+          const data = docSnap.data() as ArticleItem;
+          return {
+            id: docSnap.id,
+            slug: data.slug || docSnap.id,
+            title: data.title || docSnap.id,
+            category: data.category || 'GenAI',
+            difficulty: data.difficulty || 3,
+            excerpt: data.excerpt || '',
+            heroImage: data.heroImage || (data as any).hero_image || (data as any).image || '',
+            status: data.status || 'draft'
+          };
+        });
+        setArticles(list);
+      }
+    }, (err) => {
+      console.warn('Observatory Firestore live sync fallback info:', err);
+    });
+
+    return () => unsub();
+  }, []);
+
   const activeConstellation = CONSTELLATIONS.find(c => c.id === selectedConstellation) || CONSTELLATIONS[0];
 
-  // カテゴリ該当記事の抽出
+  // カテゴリ該当記事の抽出 (全アセット(all) または動的カテゴリ柔軟マッチング)
   const filteredArticles = articles.filter(art => {
+    if (activeConstellation.id === 'all') return true;
     const cat = (art.category || '').toLowerCase();
-    const matchCat = cat === activeConstellation.categoryKey ||
-                     (activeConstellation.id === 'firebase-cloud' && cat.includes('firebase')) ||
-                     (activeConstellation.id === 'ai-agents' && (cat.includes('agent') || cat.includes('claude'))) ||
-                     (activeConstellation.id === 'genai-foundations' && (cat.includes('dl') || cat.includes('rag')));
-    return matchCat;
+    const key = activeConstellation.categoryKey.toLowerCase();
+    return cat.includes(key) || key.includes(cat);
   });
 
   const displayArticles = filterMode === 'unread' 
@@ -86,7 +117,7 @@ export function ObservatoryView({ articles = [] }: { articles: ArticleItem[] }) 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* 左側：進捗 ＆ 観測ステータス */}
-        <div className="lg:col-span-1 p-6 bg-slate-950/80 border border-slate-800 rounded-2xl space-y-6 shadow-2xl backdrop-blur-md">
+        <div className="lg:col-span-1 p-6 bg-slate-950/80 border border-slate-800 rounded-2xl space-y-6 shadow-2xl backdrop-blur-md h-fit lg:sticky lg:top-24">
           
           <div className="flex items-center gap-3 border-b border-slate-800 pb-4">
             <span
@@ -142,7 +173,7 @@ export function ObservatoryView({ articles = [] }: { articles: ArticleItem[] }) 
 
         </div>
 
-        {/* 右側：記事リスト */}
+        {/* 右側：リッチカード形式 記事リスト */}
         <div className="lg:col-span-2 p-6 bg-slate-950/80 border border-slate-800 rounded-2xl space-y-6 shadow-2xl backdrop-blur-md">
           
           <div className="flex items-center justify-between border-b border-slate-800 pb-4">
@@ -154,7 +185,7 @@ export function ObservatoryView({ articles = [] }: { articles: ArticleItem[] }) 
             <div className="flex gap-2">
               <button
                 onClick={() => setFilterMode('all')}
-                className={`px-3 py-1 rounded-lg text-xs font-mono transition-colors ${
+                className={`px-3 py-1 rounded-lg text-xs font-mono transition-colors cursor-pointer ${
                   filterMode === 'all' ? 'bg-sky-500 text-slate-950 font-bold' : 'bg-slate-900 text-slate-400 hover:text-white'
                 }`}
               >
@@ -162,7 +193,7 @@ export function ObservatoryView({ articles = [] }: { articles: ArticleItem[] }) 
               </button>
               <button
                 onClick={() => setFilterMode('unread')}
-                className={`px-3 py-1 rounded-lg text-xs font-mono transition-colors ${
+                className={`px-3 py-1 rounded-lg text-xs font-mono transition-colors cursor-pointer ${
                   filterMode === 'unread' ? 'bg-sky-500 text-slate-950 font-bold' : 'bg-slate-900 text-slate-400 hover:text-white'
                 }`}
               >
@@ -172,33 +203,59 @@ export function ObservatoryView({ articles = [] }: { articles: ArticleItem[] }) 
           </div>
 
           {displayArticles.length > 0 ? (
-            <div className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               {displayArticles.map(art => (
                 <a
                   key={art.id || art.slug}
                   href={`/articles/${encodeURIComponent(art.slug)}`}
-                  className="block p-4 bg-slate-900/60 hover:bg-slate-900 border border-slate-800/80 hover:border-sky-500/40 rounded-xl transition-all group"
+                  className="group block bg-slate-900/50 hover:bg-slate-900/90 border border-slate-800/80 hover:border-sky-500/50 rounded-2xl overflow-hidden shadow-lg hover:shadow-[0_0_25px_rgba(56,189,248,0.25)] transition-all duration-300 flex flex-col justify-between"
                 >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300">
-                          Level {art.difficulty}
+                  <div className="space-y-3 p-4">
+                    {/* カバー画像プレビュー */}
+                    <div className="relative w-full h-36 rounded-xl overflow-hidden border border-slate-800/80 bg-slate-950">
+                      <img
+                        src={art.heroImage || DEFAULT_COVER_IMAGE}
+                        alt={art.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-transparent" />
+                      
+                      {/* カテゴリ ＆ DRAFT/READ バッジ */}
+                      <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between gap-2">
+                        <span className="px-2.5 py-0.5 bg-sky-500/20 text-sky-300 border border-sky-500/40 text-[10px] font-mono rounded-md font-bold backdrop-blur-md truncate max-w-[70%]">
+                          {art.category || 'GenAI'}
                         </span>
-                        <span className="text-[10px] font-mono text-slate-500 uppercase">
-                          {art.category}
-                        </span>
+                        {art.status === 'draft' ? (
+                          <span className="px-2 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[9px] font-mono rounded-md font-bold backdrop-blur-md">
+                            ✦ DRAFT
+                          </span>
+                        ) : art.status === 'read' ? (
+                          <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[9px] font-mono rounded-md font-bold backdrop-blur-md">
+                            ✓ READ
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 bg-slate-800/80 text-slate-300 border border-slate-700 text-[9px] font-mono rounded-md font-bold backdrop-blur-md">
+                            Lv.{art.difficulty}
+                          </span>
+                        )}
                       </div>
-                      <h4 className="text-sm font-bold text-slate-200 group-hover:text-sky-300 transition-colors">
-                        {art.title}
-                      </h4>
-                      <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
-                        {art.excerpt}
-                      </p>
                     </div>
-                    <span className="text-xs font-mono text-sky-400 group-hover:translate-x-1 transition-transform">
-                      →
-                    </span>
+
+                    {/* 記事タイトル */}
+                    <h4 className="text-sm font-bold font-display text-white group-hover:text-sky-300 transition-colors leading-snug line-clamp-2">
+                      {art.title}
+                    </h4>
+
+                    {/* 記事概要 (Excerpt) */}
+                    <p className="text-[11px] text-slate-400 leading-relaxed bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/60 italic line-clamp-3">
+                      {art.excerpt || '（記事の概要情報が入ります...）'}
+                    </p>
+                  </div>
+
+                  {/* カードフッター */}
+                  <div className="px-4 py-2.5 border-t border-slate-800/60 bg-slate-950/40 flex items-center justify-between text-[11px] font-mono text-slate-400 group-hover:text-sky-300 transition-colors">
+                    <span>記事を読む 📖</span>
+                    <span className="group-hover:translate-x-1 transition-transform">→</span>
                   </div>
                 </a>
               ))}

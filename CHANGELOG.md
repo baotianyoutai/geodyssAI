@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.1] - 2026-07-31
+
+### Added & Fixed
+- **Observatory (Catalog) Live Firestore SSOT Sync & Rich Card Grid UI (`ObservatoryView.tsx`, `firebase-server.ts`)**:
+  - Connected `ObservatoryView` to live Firestore `onSnapshot` listener (`db.collection('articles')`), ensuring real-time automatic updates when articles are created or edited in Admin CMS.
+  - Transformed article list into a modern 2-column responsive rich card grid with cover images, titles, excerpt capsules, category badges, and status indicators.
+  - Set clean default fallback cover image (`https://images.unsplash.com/...`).
+  - Fixed mobile responsive layout bug where the `CONSTELLATION LIGHT` widget overlapped article cards on scroll by scoping sticky positioning to large screens (`lg:sticky lg:top-24`).
+
+## [1.4.0] - 2026-07-31
+
+### Added & Refactored
+- **Firebase Cloud Storage (Cloud Storage for Firebase) Direct Integration (`AdminCMS.tsx`, `storage.rules`, `firebase.json`)**:
+  - Deployed `storage.rules` to enforce secure read/write permissions for Firebase Storage assets.
+  - Implemented `🧪 Firebase Storage 疎通テスト` ping diagnostic tool in Admin CMS.
+  - Migrated image asset uploads to direct Firebase Cloud Storage (`media/` folder), generating clean, short permalink URLs (`https://firebasestorage.googleapis.com/...`).
+  - Integrated Gemini Vision AI for automatic AIO/LLMO visual Alt metadata extraction and real-time Markdown image card rendering in Live Preview.
+
+## [1.3.0] - 2026-07-30
+
+### Added & Refactored
+- **Admin CMS Live Preview Split View & Dynamic Category Management (`AdminCMS.tsx`)**:
+  - Reimagined Admin CMS editor with a 50:50 Live Preview Split View featuring real-time hero image render and markdown toolbars.
+  - Added dynamic category management with interactive `<select>` dropdown and `＋ 新規カテゴリを追加` capability (e.g. `Machine Learning`).
+  - Added Gemini AI-powered 1-click excerpt generator (`✨ AIで要約を自動生成`).
+- **Firestore SSOT Real-time Architecture (`AdminCMS.tsx`, `MunchkinNavigator.tsx`, `AGENT.md`)**:
+  - Completely removed legacy `all-articles-data.json` imports across all frontend components and RAG chat modules.
+  - Connected `onSnapshot` and `getDocs` directly to Google Cloud Firestore (`db.collection('articles')`) as the Single Source of Truth (SSOT).
+  - Documented strict SSOT Firestore database rules in `AGENT.md` (§ 2.1.1).
+- **100% Article Direct Link Jumping & URL Encoding Safety (`[slug].astro`, `AdminCMS.tsx`)**:
+  - Resolved double URL encoding bugs (`getSafeArticleUrl`) and expanded Astro static/dynamic routing for seamless 100% link navigation across all 46 published/draft articles.
+
 ## [1.2.2] - 2026-07-25
 
 ### Added & Fixed

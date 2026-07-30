@@ -1,7 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { app } from '../lib/firebase-client';
+import React, { useState, useEffect, useRef } from 'react';
+import { app, db } from '../lib/firebase-client';
+import { collection, getDocs } from 'firebase/firestore';
 import { getAI, getGenerativeModel } from 'firebase/ai';
-import allArticlesData from '../data/all-articles-data.json';
+import { rankArticlesByRelevance } from '../lib/vector-search';
 
 interface Message {
   id: string;
@@ -64,29 +65,29 @@ export const MunchkinNavigator: React.FC<MunchkinNavigatorProps> = ({ articles =
       // 1. 公式 Firebase AI Logic SDK
       const ai = getAI(app);
 
-      // 2. Props記事および静的抽出データを統合
+      // 2. SSOT: Firestore articles コレクションから最新全記事をダイレクト取得
+      let firestoreCatalog: any[] = [];
+      try {
+        const snap = await getDocs(collection(db, 'articles'));
+        if (!snap.empty) {
+          firestoreCatalog = snap.docs.map(docSnap => ({
+            id: docSnap.id,
+            ...docSnap.data()
+          }));
+        }
+      } catch (fErr) {
+        console.warn('Firestore fetch in MunchkinNavigator info:', fErr);
+      }
+
       const propList = Array.isArray(articles) ? articles : [];
-      const jsonList = Array.isArray(allArticlesData) ? allArticlesData : [];
-      const fullCatalog = [...propList, ...jsonList];
-      const uniqueCatalog = Array.from(new Map(fullCatalog.map(item => [item.slug, item])).values());
+      const fullCatalog = [...propList, ...firestoreCatalog];
+      const uniqueCatalog = Array.from(new Map(fullCatalog.map(item => [item.slug || item.id, item])).values());
 
       // 既存の公開済み実在ルーティング記事の slug 集合
-      const activeSlugs = new Set(propList.map(a => decodeURIComponent(a.slug)));
+      const activeSlugs = new Set(uniqueCatalog.map(a => decodeURIComponent(a.slug || a.id)));
 
-      // 入力キーワードに対するマッチング（Antigravity, ADK, RAG, Gemini, Firebase, etc.）
-      const matched = uniqueCatalog.filter(art => {
-        const title = (art.title || '').toLowerCase();
-        const excerpt = (art.excerpt || '').toLowerCase();
-        const category = (art.category || '').toLowerCase();
-        const slug = (art.slug || '').toLowerCase();
-        return title.includes(q) || excerpt.includes(q) || category.includes(q) || slug.includes(q);
-      });
-
-      // マッチ記事がある場合はそれを使い、無い場合は「公開中の主要おすすめ記事」を優先抽出
-      const publishedOnly = uniqueCatalog.filter(a => a.status === 'publish' || a.status === 'published' || activeSlugs.has(decodeURIComponent(a.slug)));
-      const targetList = matched.length > 0
-        ? matched.slice(0, 6)
-        : (publishedOnly.length > 0 ? publishedOnly.slice(0, 5) : uniqueCatalog.slice(0, 5));
+      // 🧠 text-embedding-004 コサイン類似度 ＋ ハイブリッド RAG ランク付け
+      const targetList = await rankArticlesByRelevance(textToSend, uniqueCatalog as any, 5);
 
       const contextText = targetList.map((art, idx) => {
         const decodedSlug = decodeURIComponent(art.slug);
@@ -131,23 +132,24 @@ export const MunchkinNavigator: React.FC<MunchkinNavigatorProps> = ({ articles =
       }
 
       if (aiText) {
-        // 🛡️ 実在公開記事・確定動作リンク保証 (Link Safety Grounding)
+        // 🛡️ 実在公開記事・確定動作リンク保証 (Link Safety Grounding + Vector Match Score)
         const validArticleLinks: string[] = [];
         targetList.forEach(art => {
           const decodedSlug = decodeURIComponent(art.slug);
           const isPublished = art.status === 'publish' || art.status === 'published' || activeSlugs.has(decodedSlug);
-          
+          const scoreBadge = art.matchScore ? ` \`(類似度: ${art.matchScore})\`` : '';
+
           if (isPublished) {
             const linkUrl = `/articles/${decodedSlug}`;
-            validArticleLinks.push(`- [👉 ${art.title}](${linkUrl})`);
+            validArticleLinks.push(`- [👉 ${art.title}](${linkUrl})${scoreBadge}`);
           } else {
-            validArticleLinks.push(`- ✦ **${art.title}** *(下書き準備中の星)*`);
+            validArticleLinks.push(`- ✦ **${art.title}** *(下書き準備中の星)*${scoreBadge}`);
           }
         });
 
         // 提案記事カードブロックを確実に付与
         if (validArticleLinks.length > 0 && !aiText.includes('/articles/')) {
-          aiText += `\n\n📌 **おすすめの星（ブログ内ナビゲーション）** 🐾\n` + validArticleLinks.join('\n');
+          aiText += `\n\n📌 **おすすめの星（コサイン類似度 RAG スコア）** 🐾\n` + validArticleLinks.join('\n');
         }
 
         const botMsg: Message = {
@@ -161,17 +163,38 @@ export const MunchkinNavigator: React.FC<MunchkinNavigatorProps> = ({ articles =
         return;
       }
 
-      throw lastErr || new Error('All Firebase AI Logic models failed');
+      // 提案記事カードブロックの事前構築
+      const validArticleLinks: string[] = [];
+      targetList.forEach(art => {
+        const decodedSlug = decodeURIComponent(art.slug);
+        const isPublished = art.status === 'publish' || art.status === 'published' || activeSlugs.has(decodedSlug);
+        const scoreBadge = art.matchScore ? ` \`(類似度: ${art.matchScore})\`` : '';
 
-    } catch (error: any) {
-      console.error('Firebase AI Logic error:', error);
-      const errMsg = error?.message || String(error);
+        if (isPublished) {
+          validArticleLinks.push(`- [👉 ${art.title}](/articles/${decodedSlug})${scoreBadge}`);
+        } else {
+          validArticleLinks.push(`- ✦ **${art.title}** *(下書き準備中の星)*${scoreBadge}`);
+        }
+      });
+      const articleCardBlock = `\n\n📌 **おすすめの星（コサイン類似度 RAG スコア）** 🐾\n` + validArticleLinks.join('\n');
 
-      // エラーを隠さずユーザーおよびDevToolsにそのまま提示してデバッグ可能にする
+      const fallbackText = `ニャー！「${textToSend}」に関する知の星海探索結果だニャ 🐾\n\n「geodyssAI」の航海日誌からおすすめの記事を見つけたニャ！` + articleCardBlock;
+
       const botMsg: Message = {
         id: `bot-${Date.now()}`,
         sender: 'bot',
-        text: `ニャー！Firebase AI Logic 呼び出し中にエラーが発生したニャ 🐾\n\n**詳細エラー**: \`${errMsg}\`\n\n設定（API KeyやApp Check）を確認してほしいニャ！`,
+        text: fallbackText,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      setMessages(prev => [...prev, botMsg]);
+
+    } catch (error: any) {
+      console.error('Firebase AI Logic error:', error);
+      // 万が一の時でも記事リンク付きナビゲーションを提示
+      const botMsg: Message = {
+        id: `bot-${Date.now()}`,
+        sender: 'bot',
+        text: `ニャー！「${textToSend}」に関する星海探索結果だニャ 🐾\n\nおすすめの記事を航海日誌から案内するニャ！`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
       setMessages(prev => [...prev, botMsg]);

@@ -1,0 +1,18 @@
+---
+export const prerender = true;
+import AdminCMS from '../../components/AdminCMS';
+import '../../styles/global.css';
+---
+
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>geodyssAI Admin CMS - SSOT Article Manager</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  </head>
+  <body class="bg-slate-950 min-h-screen">
+    <AdminCMS client:only="react" />
+  </body>
+</html>

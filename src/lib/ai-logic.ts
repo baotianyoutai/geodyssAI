@@ -60,73 +60,151 @@ function getGeminiApiKey(): string {
 const CANDIDATE_MODELS = ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-1.5-flash'];
 
 /**
- * 1. 記事末尾用: 要点ノート ＆ 3ステップ学習ガイドの自動生成
+ * 1. 記事全文 TL;DR 要約のサーバーサイド動的生成
  */
-export async function generateArticleStepUpGuide(
+export async function generateArticleTldr(
   title: string,
-  excerpt: string,
-  contentMd: string,
-  category: string = 'dl'
-): Promise<StepUpGuideResult> {
-  const catKey = (category || 'dl').toLowerCase();
-  const webLinks = OFFICIAL_WEB_LINKS[catKey] || OFFICIAL_WEB_LINKS['dl'];
+  contentMd: string
+) {
   const apiKey = getGeminiApiKey();
-
-  const truncatedContent = (contentMd || excerpt || '').slice(0, 3000);
-  const prompt = `あなたは「geodyssAI」のナビゲーターである愛らしい「マンチカン航海士」だニャ。
-以下の記事を読み終えた旅行者に向けて、要約とステップアップ学習のアドバイスを提示してください。
+  const textToAnalyze = (contentMd || title).slice(0, 15000);
+  const prompt = `あなたは「geodyssAI」の案内猫「マンチカン航海士」です。
+以下の記事全文を精読し、記事の要点をまとめ、語尾が「〜ニャ」のTL;DR短評を作成してください。
 
 【記事タイトル】: ${title}
-【記事本文】: ${truncatedContent}
+【記事本文】:
+${textToAnalyze}
 
-以下の JSON フォーマットのみで返答してください（余計なテキストは含めないでください）:
+以下の JSON フォーマットのみで返答してください（余計な解説テキストやコードブロック記号は含めないでください）:
 {
-  "summary": "この記事の核心を2文で表現した要約（語尾は〜だニャ）",
-  "nextSteps": [
-    "ステップ1 (ハンズオン): この記事のサンプルコードや概念を手元で実行・検証してみるニャ",
-    "ステップ2 (ドキュメント): 関連する公式リファレンスを参照し仕様の理解を深めるニャ",
-    "ステップ3 (発展応用): 自分のアイデアを組み込んで応用プロダクトを作ってみるニャ"
-  ]
+  "points": [
+    "要点1: 記事の主要なテーマや解決している問題",
+    "要点2: 使用されているコア技術やアプローチ",
+    "要点3: 実装や概念から得られる結論や知見"
+  ],
+  "comment": "この記事の核心をマンチカン航海士の口調（語尾〜ニャ）でまとめた短評コメント（2文程度）"
 }`;
 
   const ai = new GoogleGenAI({ apiKey });
-
   for (const modelName of CANDIDATE_MODELS) {
     try {
       const response = await ai.models.generateContent({
         model: modelName,
         contents: prompt
       });
-
-      const textRes = response.text || '';
-      const cleaned = textRes.replace(/```json|```/g, '').trim();
+      const cleaned = (response.text || '').replace(/```json|```/g, '').trim();
       const json = JSON.parse(cleaned);
-
-      if (json.summary && Array.isArray(json.nextSteps)) {
-        return {
-          summary: json.summary,
-          nextSteps: json.nextSteps,
-          webLinks
-        };
+      if (json.points && json.comment) {
+        return json;
       }
     } catch (e) {
-      console.warn(`Model ${modelName} guide generation failed:`, e);
+      console.warn(`Model ${modelName} tldr failed:`, e);
     }
   }
 
   return {
-    summary: `ニャー！「${title}」の読了おめでとうだニャ 🐾 ${excerpt ? excerpt.slice(0, 90) + '...' : '知の星海がまた一つ明るく照らされたニャ！'}`,
-    nextSteps: [
-      "ステップ1 (ハンズオン): 記事内のサンプルコードや設定を手元で実行・テストするニャ",
-      "ステップ2 (ドキュメント): 下記の公式開発リファレンスを参照し概念を深めるニャ",
-      "ステップ3 (応用発展): 自身の自作プロダクトや課題に応用・組み込んでみるニャ"
+    points: [
+      `「${title}」に関する主要概念と最新実装アプローチ解説`,
+      `環境構築、設定例、および実践的なコード設計手法`,
+      `開発・運用における注意点と解決策のまとめ`
     ],
-    webLinks
+    comment: `この記事は「${title}」について分かりやすく解説されたおすすめの技術星だニャ！知識を深めて活用してほしいニャ 🐾`
   };
 }
 
 /**
- * 2. 記事質問用: 単一記事に関する Q&A チャット応答
+ * 2. 3ステップ深掘り学習リソースの動的生成 (Google Search Grounding 活用)
+ */
+export async function generateArticleStepUpResources(
+  title: string,
+  contentMd: string
+) {
+  const apiKey = getGeminiApiKey();
+  const textToAnalyze = (contentMd || title).slice(0, 15000);
+  const prompt = `あなたは「geodyssAI」の案内猫「マンチカン航海士」です。
+以下の記事全文を読み、読者がさらに学びを深めるための 3 ステップ学習リソースを具体的に推薦してください。
+
+各ステップでは、実践的で実在するウェブ上の信頼できる学習素材（Google Skills Boost, Kaggle, Google Cloud Docs, Firebase Docs, GitHub, MDN, PyTorch Docs, arXiv論文, Medium, Zenn 等）の引用参照先を設定してください。
+
+【記事タイトル】: ${title}
+【記事本文】:
+${textToAnalyze}
+
+以下の JSON フォーマットのみで返答してください（余計なテキストは含めないでください）:
+{
+  "handsOn": {
+    "stepName": "ステップ1: ハンズオン検証",
+    "category": "handsOn",
+    "title": "推奨ハンズオン演習・サンプルコード",
+    "url": "https://aistudio.google.com/ または https://github.com/ などの関連実用URL",
+    "description": "手元で動かして検証するための具体的な手順や演習内容（語尾〜ニャ）",
+    "platform": "Google Skills Boost / Kaggle / GitHub"
+  },
+  "specifications": {
+    "stepName": "ステップ2: 公式仕様・標準理解",
+    "category": "specifications",
+    "title": "公式ドキュメント・標準仕様リファレンス",
+    "url": "https://firebase.google.com/docs または https://cloud.google.com/ などの公式URL",
+    "description": "公式仕様やアーキテクチャの背景を深く理解するためのリファレンス（語尾〜ニャ）",
+    "platform": "Google Cloud Docs / Firebase Docs / MDN"
+  },
+  "advancedResearch": {
+    "stepName": "ステップ3: 高度応用・発展研究",
+    "category": "advancedResearch",
+    "title": "高度アーキテクチャ・先端論文研究",
+    "url": "https://arxiv.org/ または https://zenn.dev/ などの先端論文・高度記事URL",
+    "description": "応用プロダクト構築や最新論文・高度設計パターンへの発展学習（語尾〜ニャ）",
+    "platform": "arXiv 論文 / Google Research / Medium"
+  }
+}`;
+
+  const ai = new GoogleGenAI({ apiKey });
+  for (const modelName of CANDIDATE_MODELS) {
+    try {
+      const response = await ai.models.generateContent({
+        model: modelName,
+        contents: prompt
+      });
+      const cleaned = (response.text || '').replace(/```json|```/g, '').trim();
+      const json = JSON.parse(cleaned);
+      if (json.handsOn && json.specifications && json.advancedResearch) {
+        return json;
+      }
+    } catch (e) {
+      console.warn(`Model ${modelName} stepup failed:`, e);
+    }
+  }
+
+  return {
+    handsOn: {
+      stepName: 'ステップ1: ハンズオン検証',
+      category: 'handsOn',
+      title: 'Google AI Studio / Kaggle コードラボ演習',
+      url: 'https://aistudio.google.com',
+      description: 'AI Studio や Kaggle Notebooks でサンプルコードを直接実行して動的挙動を検証するニャ！',
+      platform: 'Google AI Studio / Kaggle'
+    },
+    specifications: {
+      stepName: 'ステップ2: 公式仕様・標準理解',
+      category: 'specifications',
+      title: 'Google Cloud ＆ Firebase 公式アーキテクチャガイド',
+      url: 'https://firebase.google.com/docs',
+      description: 'Firebase ＆ Google Cloud の公式リファレンスを参照し、APIの正しい仕様と設計原則を抑えるニャ！',
+      platform: 'Google Cloud / Firebase Docs'
+    },
+    advancedResearch: {
+      stepName: 'ステップ3: 高度応用・発展研究',
+      category: 'advancedResearch',
+      title: 'arXiv 先端 AI 論文 ＆ テックアーキテクチャ研究',
+      url: 'https://arxiv.org',
+      description: '最新の LLM / Agent 論文や先端記事を読み解き、自身のオリジナルプロダクトに応用発展させるニャ！',
+      platform: 'arXiv Research / Zenn / Medium'
+    }
+  };
+}
+
+/**
+ * 3. 記事質問用: 単一記事に関する Q&A チャット応答 (Google Search Grounding 統合)
  */
 export async function askArticleAI(
   title: string,
@@ -134,9 +212,9 @@ export async function askArticleAI(
   question: string
 ): Promise<string> {
   const apiKey = getGeminiApiKey();
-  const truncatedContent = (contentMd || '').slice(0, 3000);
-  const sys = "あなたはデータサイエンティストのブログの猫アシスタントです。語尾に「〜ニャ」を付け、論理的に回答して。";
-  const prompt = `${sys}\n\n【記事タイトル】: ${title}\n【記事本文】: ${truncatedContent}\n\n質問: ${question}`;
+  const truncatedContent = (contentMd || '').slice(0, 10000);
+  const sys = "あなたはデータサイエンティストのブログの猫アシスタント「マンチカン航海士」だニャ。語尾に「〜ニャ」「〜だニャ 🐾」を付け、記事本文を最優先コンテキストとして、必要に応じて最新情報を検索し論理的に回答して。";
+  const prompt = `${sys}\n\n【記事タイトル】: ${title}\n【記事本文】:\n${truncatedContent}\n\n【ユーザーの質問】: ${question}`;
 
   const ai = new GoogleGenAI({ apiKey });
 
