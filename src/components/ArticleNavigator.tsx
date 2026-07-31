@@ -44,8 +44,9 @@ async function callGeminiOrSmartEngine(prompt: string): Promise<string | null> {
 
   // 2. Direct REST API Call
   try {
-    const envKey = import.meta.env.PUBLIC_GEMINI_API_KEY || 'AIzaSyBPQroXo69568ahiG1Zydzy1r9gTcb7Rxo';
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${envKey}`;
+    const envKey = import.meta.env.PUBLIC_GEMINI_API_KEY || '';
+    if (!envKey) return null;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${envKey}`;
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
